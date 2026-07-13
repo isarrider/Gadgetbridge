@@ -37,6 +37,7 @@ class RecordedWorkoutSyncerSegmentsTest {
 
         RecordedWorkoutSyncer.processDetailedWorkout(
             workout,
+            ActivityTrack(),
             listOf(ActivityPoint()),
             listOf(
                 ActivityTrack.SetInfo(1100L, 60.0, 10, null, 1, null, 0, ExerciseCategory.CATEGORY_SQUAT, null)

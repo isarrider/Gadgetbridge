@@ -25,7 +25,9 @@ import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseLap
 import androidx.health.connect.client.records.ExerciseRoute
+import androidx.health.connect.client.records.ExerciseSegment
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.PowerRecord
@@ -41,9 +43,9 @@ import androidx.health.connect.client.units.Velocity
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityPoint
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityTrack
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryData
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryEntries
-import nodomain.freeyourgadget.gadgetbridge.model.ActivityTrack
 import nodomain.freeyourgadget.gadgetbridge.model.GPSCoordinate
 import nodomain.freeyourgadget.gadgetbridge.database.DBHelper
 import nodomain.freeyourgadget.gadgetbridge.entities.BaseActivitySummary
@@ -78,6 +80,9 @@ internal data class WorkoutWindow(val start: Instant, val end: Instant) {
  */
 @SuppressLint("RestrictedApi")
 internal object RecordedWorkoutSyncer {
+    /** HC's ExerciseLap accepts a length in the range 0..1,000,000 m; clamp to the upper bound. */
+    private const val LAP_MAX_LENGTH_METERS = 1_000_000
+
     suspend fun sync(
         healthConnectClient: HealthConnectClient,
         gbDevice: GBDevice,
@@ -156,6 +161,7 @@ internal object RecordedWorkoutSyncer {
                     correctElevation(workout, gbDevice, context, activityPoints)
                     processDetailedWorkout(
                         workout,
+                        loadedTrack.track,
                         activityPoints,
                         loadedTrack.track.sets,
                         workoutStartInstant,
@@ -366,6 +372,7 @@ internal object RecordedWorkoutSyncer {
 
     internal fun processDetailedWorkout(
         workout: BaseActivitySummary,
+        activityTrack: ActivityTrack,
         activityPoints: List<ActivityPoint>,
         sets: List<ActivityTrack.SetInfo>,
         workoutStartInstant: Instant,
@@ -390,12 +397,24 @@ internal object RecordedWorkoutSyncer {
             null
         }
 
-        val exerciseSegments = WorkoutSyncerUtils.buildExerciseSegments(
+        val setSegments = WorkoutSyncerUtils.buildExerciseSegments(
             sets,
             workoutStartInstant,
             workoutEndInstant,
             exerciseType
         )
+
+        // Interval structure (Xiaomi rowing, Garmin FIT laps): the track's segments become
+        // HC laps (work intervals, drop-REST) and segments (full work/rest, typed). Both lists
+        // derive from the same sanitised boundaries. Emit each only when there are >= 2 entries —
+        // a single entry spanning the whole session conveys nothing. Strength sets, when present,
+        // take the segments list instead.
+        val segmentBounds = buildSanitisedSegmentBounds(activityTrack, workoutStartInstant, workoutEndInstant, deviceName)
+        val laps = buildLaps(segmentBounds).takeIf { it.size >= 2 } ?: emptyList()
+        val segments = setSegments.ifEmpty { buildSegments(segmentBounds).takeIf { it.size >= 2 } ?: emptyList() }
+        if (laps.isNotEmpty() || segments.isNotEmpty()) {
+            LOG.info("Adding ${laps.size} lap(s) and ${segments.size} segment(s) for workout on device '$deviceName'.")
+        }
 
         recordsToInsert.add(
             ExerciseSessionRecord(
@@ -405,7 +424,8 @@ internal object RecordedWorkoutSyncer {
                 endZoneOffset = endOffset,
                 exerciseType = exerciseType,
                 title = workout.name ?: activityKind.getLabel(context),
-                segments = exerciseSegments,
+                laps = laps,
+                segments = segments,
                 exerciseRoute = exerciseRoute,
                 metadata = WorkoutSyncerUtils.workoutRecordMetadata(
                     metadata,
@@ -513,6 +533,121 @@ internal object RecordedWorkoutSyncer {
             LOG.error("[HC_SYNC] Failed to build GPS route for device '{}': {}. Skipping route.", deviceName, e.message)
             null
         }
+    }
+
+    /** A single sanitised interval boundary: its clamped, non-overlapping HC time window plus the
+     *  source [ActivityTrack.SegmentInfo] (intensity + optional per-segment distance). */
+    internal data class SegmentBound(val start: Instant, val end: Instant, val info: ActivityTrack.SegmentInfo)
+
+    /**
+     * Derive sanitised, HC-safe interval boundaries from the track's segments. Both the lap and
+     * segment lists are built from these, so the clamping/ordering work happens once here.
+     * HC requires each list to be sorted, non-overlapping and within [workoutStartInstant,
+     * workoutEndInstant]; a violation throws and fails the whole insert. Mirrors the defensive
+     * approach of [buildSanitisedRoute].
+     */
+    internal fun buildSanitisedSegmentBounds(
+        track: ActivityTrack,
+        workoutStartInstant: Instant,
+        workoutEndInstant: Instant,
+        deviceName: String
+    ): List<SegmentBound> {
+        return try {
+            val segments = track.segments
+            val infos = track.segmentInfos
+            val bounds = ArrayList<SegmentBound>()
+            var lastEnd: Instant? = null
+            var droppedEmpty = 0
+            var droppedNoTime = 0
+            var droppedDegenerate = 0
+            var clamped = 0
+
+            for (i in segments.indices) {
+                val seg = segments[i]
+                if (seg.isEmpty()) {
+                    droppedEmpty++
+                    continue
+                }
+                val info = if (i < infos.size) infos[i] else ActivityTrack.SegmentInfo()
+                val startDate = seg.first().time
+                val endDate = seg.last().time
+                if (startDate == null || endDate == null) {
+                    droppedNoTime++
+                    continue
+                }
+                var start = startDate.toInstant()
+                var end = endDate.toInstant()
+                if (start.isBefore(workoutStartInstant)) {
+                    start = workoutStartInstant
+                    clamped++
+                }
+                if (end.isAfter(workoutEndInstant)) {
+                    end = workoutEndInstant
+                    clamped++
+                }
+                // Non-overlap: a segment can never start before the previous one ended.
+                val prevEnd = lastEnd
+                if (prevEnd != null && start.isBefore(prevEnd)) {
+                    start = prevEnd
+                    clamped++
+                }
+                if (!start.isBefore(end)) {
+                    // Zero-length / reversed after clamping — HC's require(start < end) would throw.
+                    droppedDegenerate++
+                    continue
+                }
+                bounds.add(SegmentBound(start, end, info))
+                lastEnd = end
+            }
+
+            if (droppedEmpty > 0 || droppedNoTime > 0 || droppedDegenerate > 0 || clamped > 0) {
+                LOG.info(
+                    "[HC_SYNC] Segment sanitisation for device '{}': dropped {} empty, {} without timestamps, {} degenerate; clamped {}; kept {}.",
+                    deviceName, droppedEmpty, droppedNoTime, droppedDegenerate, clamped, bounds.size
+                )
+            }
+            bounds
+        } catch (e: Exception) {
+            LOG.error("[HC_SYNC] Failed to build segment boundaries for device '{}': {}. Skipping laps/segments.", deviceName, e.message)
+            emptyList()
+        }
+    }
+
+    /** Work-interval laps: one [ExerciseLap] per non-REST boundary. REST boundaries become gaps —
+     *  HC laps carry no intensity, so recovery is represented as absence (matches HC's interval
+     *  example). `length` is set only from a directly-parsed per-segment distance, never derived. */
+    internal fun buildLaps(bounds: List<SegmentBound>): List<ExerciseLap> {
+        val laps = ArrayList<ExerciseLap>(bounds.size)
+        for (b in bounds) {
+            if (b.info.intensity == ActivityTrack.SegmentIntensity.REST) {
+                continue
+            }
+            val distanceMeters = b.info.distanceMeters
+            val length = if (distanceMeters != null && distanceMeters > 0) {
+                Length.meters(distanceMeters.coerceAtMost(LAP_MAX_LENGTH_METERS).toDouble())
+            } else {
+                null
+            }
+            laps.add(ExerciseLap(startTime = b.start, endTime = b.end, length = length))
+        }
+        return laps
+    }
+
+    /** Full typed phase list: one [ExerciseSegment] per boundary (REST included). REST maps to
+     *  EXERCISE_SEGMENT_TYPE_REST, everything else to EXERCISE_SEGMENT_TYPE_UNKNOWN — both are in
+     *  HC's universal-segment set, so they are compatible with any session type. Segments carry no
+     *  length; per-interval distance lives on the laps instead. */
+    internal fun buildSegments(bounds: List<SegmentBound>): List<ExerciseSegment> {
+        val segments = ArrayList<ExerciseSegment>(bounds.size)
+        for (b in bounds) {
+            val segmentType = if (b.info.intensity == ActivityTrack.SegmentIntensity.REST) {
+                ExerciseSegment.EXERCISE_SEGMENT_TYPE_REST
+            } else {
+                ExerciseSegment.EXERCISE_SEGMENT_TYPE_UNKNOWN
+            }
+            segments.add(ExerciseSegment(startTime = b.start, endTime = b.end, segmentType = segmentType))
+        }
+        return segments
     }
 
     internal fun processAggregateWorkout(
