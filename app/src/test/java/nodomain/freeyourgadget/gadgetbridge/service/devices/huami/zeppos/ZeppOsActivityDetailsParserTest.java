@@ -49,8 +49,12 @@ public class ZeppOsActivityDetailsParserTest extends TestBase {
     private static final int TYPE_TIMESTAMP = 1;
     private static final int TYPE_STATUS = 4;
     private static final int TYPE_HEARTRATE = 8;
+    private static final int TYPE_LAP = 11;
+    private static final int TYPE_STRENGTH_SET = 15;
     private static final int TYPE_SWIMMING_INTERVAL = 20;
 
+    private static final int STATUS_PAUSE = 4;
+    private static final int STATUS_RESUME = 5;
     private static final int STATUS_STOP = 6;
 
     // ---- tests ----
@@ -111,7 +115,117 @@ public class ZeppOsActivityDetailsParserTest extends TestBase {
     }
 
     @Test
-    public void plainTrackProducesNoLengths() throws Exception {
+    public void lapsBecomeSegmentsCarryingTheirDistance() throws Exception {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        write(out, tlv(TYPE_TIMESTAMP, timestamp(BASE_MILLIS)));
+        for (int second = 1; second <= 11; second++) {
+            write(out, tlv(TYPE_HEARTRATE, heartRate(second * 1_000, 120 + second)));
+        }
+        // Two 5 s laps of 1000 m each, then a trailing second outside any lap.
+        write(out, tlv(TYPE_LAP, lap(1, 140, 300, 50, 1000, 5_000)));
+        write(out, tlv(TYPE_LAP, lap(2, 145, 305, 51, 1000, 5_000)));
+        write(out, tlv(TYPE_STATUS, status(11_000, STATUS_STOP)));
+
+        final ZeppOsActivityTrack track = parse(out.toByteArray());
+
+        assertEquals(2, track.getLaps().size());
+        final List<List<ActivityPoint>> segments = track.getSegments();
+        final List<ActivityTrack.SegmentInfo> infos = track.getSegmentInfos();
+        assertEquals(segments.size(), infos.size());
+        assertEquals(3, segments.size());
+
+        // Lap 1 closes at BASE + 5 s, so it holds the points at 0..5 s.
+        assertEquals(6, segments.get(0).size());
+        assertEquals(ActivityTrack.SegmentIntensity.ACTIVE, infos.get(0).getIntensity());
+        assertEquals(Integer.valueOf(1000), infos.get(0).getDistanceMeters());
+
+        // Lap 2 closes at BASE + 10 s, so it holds the points at 6..10 s.
+        assertEquals(5, segments.get(1).size());
+        assertEquals(Integer.valueOf(1000), infos.get(1).getDistanceMeters());
+
+        // The trailing point belongs to no lap and carries no lap metadata.
+        assertEquals(1, segments.get(2).size());
+        assertEquals(ActivityTrack.SegmentIntensity.UNKNOWN, infos.get(2).getIntensity());
+        assertNull(infos.get(2).getDistanceMeters());
+    }
+
+    @Test
+    public void pauseInsideALapKeepsTheBreakAndAttributesDistanceOnce() throws Exception {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        write(out, tlv(TYPE_TIMESTAMP, timestamp(BASE_MILLIS)));
+        write(out, tlv(TYPE_HEARTRATE, heartRate(1_000, 121)));
+        write(out, tlv(TYPE_HEARTRATE, heartRate(2_000, 122)));
+        write(out, tlv(TYPE_STATUS, status(3_000, STATUS_PAUSE)));
+        write(out, tlv(TYPE_STATUS, status(4_000, STATUS_RESUME)));
+        write(out, tlv(TYPE_HEARTRATE, heartRate(5_000, 123)));
+        write(out, tlv(TYPE_HEARTRATE, heartRate(6_000, 124)));
+        // A single 10 s lap spanning the pause.
+        write(out, tlv(TYPE_LAP, lap(1, 140, 300, 50, 800, 10_000)));
+        write(out, tlv(TYPE_STATUS, status(6_000, STATUS_STOP)));
+
+        final ZeppOsActivityTrack track = parse(out.toByteArray());
+
+        final List<ActivityTrack.SegmentInfo> infos = track.getSegmentInfos();
+        // The pause break survives, so the GPX export still gets its track segments.
+        assertTrue("expected the pause to split the track", track.getSegments().size() > 1);
+        // ...but the lap distance is only attributed once, to the chunk closing the lap.
+        int withDistance = 0;
+        for (final ActivityTrack.SegmentInfo info : infos) {
+            if (info.getDistanceMeters() != null) {
+                assertEquals(Integer.valueOf(800), info.getDistanceMeters());
+                withDistance++;
+            }
+        }
+        assertEquals(1, withDistance);
+    }
+
+    @Test
+    public void tracksWithoutLapsKeepTheirPauseSegments() throws Exception {
+        final byte[] bytes = stream(
+                tlv(TYPE_TIMESTAMP, timestamp(BASE_MILLIS)),
+                tlv(TYPE_HEARTRATE, heartRate(1_000, 121)),
+                tlv(TYPE_STATUS, status(2_000, STATUS_PAUSE)),
+                tlv(TYPE_STATUS, status(3_000, STATUS_RESUME)),
+                tlv(TYPE_HEARTRATE, heartRate(4_000, 122)),
+                tlv(TYPE_STATUS, status(5_000, STATUS_STOP))
+        );
+
+        final ZeppOsActivityTrack track = parse(bytes);
+
+        assertTrue(track.getLaps().isEmpty());
+        assertTrue(track.getSegments().size() > 1);
+        for (final ActivityTrack.SegmentInfo info : track.getSegmentInfos()) {
+            assertEquals(ActivityTrack.SegmentIntensity.UNKNOWN, info.getIntensity());
+        }
+    }
+
+    @Test
+    public void strengthSetsBecomeSetRecords() throws Exception {
+        final byte[] bytes = stream(
+                tlv(TYPE_TIMESTAMP, timestamp(BASE_MILLIS)),
+                tlv(TYPE_STRENGTH_SET, strengthSet(10, 200)),      // 20.0 kg
+                tlv(TYPE_STRENGTH_SET, strengthSet(8, 0xffff)),    // weight not reported
+                tlv(TYPE_STATUS, status(1_000, STATUS_STOP))
+        );
+
+        final ZeppOsActivityTrack track = parse(bytes);
+
+        final List<ActivityTrack.SetInfo> sets = track.getSets();
+        assertEquals(2, sets.size());
+
+        assertEquals(BASE_MILLIS / 1000, sets.get(0).startTimeSec);
+        assertEquals(Integer.valueOf(10), sets.get(0).repetitions);
+        assertEquals(20.0f, sets.get(0).weightKg, 0.001f);
+        assertEquals(Integer.valueOf(1), sets.get(0).setType);
+        assertEquals(Integer.valueOf(0), sets.get(0).messageIndex);
+
+        assertEquals(Integer.valueOf(8), sets.get(1).repetitions);
+        assertNull(sets.get(1).weightKg);
+        assertEquals(Integer.valueOf(1), sets.get(1).messageIndex);
+    }
+
+    @Test
+    public void plainTrackProducesNoLengthsLapsOrSets() throws Exception {
         final byte[] bytes = stream(
                 tlv(TYPE_TIMESTAMP, timestamp(BASE_MILLIS)),
                 tlv(TYPE_HEARTRATE, heartRate(1_000, 120)),
@@ -122,6 +236,7 @@ public class ZeppOsActivityDetailsParserTest extends TestBase {
 
         assertNotNull(track);
         assertTrue(track.getLengths().isEmpty());
+        assertTrue(track.getSets().isEmpty());
         assertEquals(1, track.getSegments().size());
     }
 
@@ -248,6 +363,36 @@ public class ZeppOsActivityDetailsParserTest extends TestBase {
                 .putInt(0)
                 .putShort((short) strokeDistance)
                 .putShort((short) calories)
+                .array();
+    }
+
+    private static byte[] lap(final int number,
+                              final int hr,
+                              final int pace,
+                              final int calories,
+                              final int distanceMeters,
+                              final int durationMillis) {
+        return payload(99)
+                .put(new byte[2])
+                .putShort((short) number)
+                .put((byte) 3)
+                .put((byte) hr)
+                .putShort((short) pace)
+                .putShort((short) calories)
+                .putShort((short) distanceMeters)
+                .put(new byte[4])
+                .putInt(durationMillis)
+                .put(new byte[99 - 20])
+                .array();
+    }
+
+    private static byte[] strengthSet(final int reps, final int weightTenthsKg) {
+        return payload(34)
+                .put(new byte[15])
+                .putShort((short) reps)
+                .put((byte) 0)
+                .putShort((short) weightTenthsKg)
+                .put(new byte[14])
                 .array();
     }
 }

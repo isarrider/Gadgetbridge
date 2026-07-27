@@ -10,8 +10,8 @@ public class ZeppOsActivityTrack extends ActivityTrack {
     public final List<Lap> laps = new ArrayList<>();
     public final List<SwimmingInterval> swimmingIntervals = new ArrayList<>();
 
-    public void addStrengthSet(final int reps, final float weightKg) {
-        strengthSets.add(new StrengthSet(reps, weightKg));
+    public void addStrengthSet(final int reps, final float weightKg, final long timeMillis) {
+        strengthSets.add(new StrengthSet(reps, weightKg, timeMillis));
     }
 
     public void addLap(final int number,
@@ -63,9 +63,14 @@ public class ZeppOsActivityTrack extends ActivityTrack {
         return swimmingIntervals;
     }
 
-    public record StrengthSet(int reps, float weightKg) {
+    /** @param timeMillis wall time at which the set TLV was seen, 0 if the parser had no
+     *                   timestamp yet. */
+    public record StrengthSet(int reps, float weightKg, long timeMillis) {
     }
 
+    /** The lap TLV carries no timestamp of its own, only a sequence number and a duration,
+     *  so lap windows have to be reconstructed by accumulating {@link #duration} from the
+     *  start of the track. */
     public record Lap(int number,
                       int hr,
                       int pace,

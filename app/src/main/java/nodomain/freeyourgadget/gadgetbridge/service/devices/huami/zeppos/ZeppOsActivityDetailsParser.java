@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +46,8 @@ public class ZeppOsActivityDetailsParser extends AbstractHuamiActivityDetailsPar
 
     /** FIT length_type: 1 = active (a swum length), 0 = idle. */
     private static final int LENGTH_TYPE_ACTIVE = 1;
+    /** FIT set_type: 1 = active, 0 = rest. */
+    private static final int SET_TYPE_ACTIVE = 1;
 
     private static final SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US);
 
@@ -181,13 +184,16 @@ public class ZeppOsActivityDetailsParser extends AbstractHuamiActivityDetailsPar
     /**
      * Converts the ZeppOS-specific structures collected while parsing into the
      * vendor-neutral {@link ActivityTrack} collections that the FIT exporter and the
-     * Health Connect syncer read: swimming intervals become per-length records.
+     * Health Connect syncer read: swimming intervals become per-length records, laps
+     * become segments, strength sets become set records.
      * <p>
      * The ZeppOS lists stay the source for the workout detail tables, which render per-row
      * values (HR, SWOLF, calories, pace) that the shared model has no field for.
      */
     private void populateStandardTrack() {
         populateLengths();
+        populateSets();
+        populateLapSegments();
     }
 
     /**
@@ -251,6 +257,113 @@ public class ZeppOsActivityDetailsParser extends AbstractHuamiActivityDetailsPar
             case 6 -> 6; // medley
             default -> null;
         };
+    }
+
+    /** Strength sets map straight onto FIT set messages (msg 27). */
+    private void populateSets() {
+        final List<ZeppOsActivityTrack.StrengthSet> strengthSets = activityTrack.getStrengthSets();
+        for (int i = 0; i < strengthSets.size(); i++) {
+            final ZeppOsActivityTrack.StrengthSet strengthSet = strengthSets.get(i);
+            activityTrack.addSet(new ActivityTrack.SetInfo(
+                    Math.round(strengthSet.timeMillis() / 1000d),
+                    null, // the TLV carries no set duration
+                    strengthSet.reps() > 0 ? strengthSet.reps() : null,
+                    strengthSet.weightKg() >= 0 ? strengthSet.weightKg() : null,
+                    SET_TYPE_ACTIVE,
+                    null,
+                    i,
+                    null,
+                    null
+            ));
+        }
+    }
+
+    /**
+     * Splits the collected points into one segment per device lap, which the FIT exporter
+     * turns into one lap message each.
+     * <p>
+     * The lap TLV has no timestamp of its own, only a sequence number and a duration, so
+     * lap windows are reconstructed by accumulating those durations from the first point of
+     * the track. Existing pause/resume breaks are preserved so the GPX export keeps its
+     * track segments; when a lap spans a pause, its distance is attributed to the chunk
+     * that closes the lap rather than being split across both.
+     */
+    private void populateLapSegments() {
+        final List<ZeppOsActivityTrack.Lap> laps = activityTrack.getLaps();
+        if (laps.isEmpty()) {
+            return;
+        }
+
+        final List<List<ActivityPoint>> segments = activityTrack.getSegments();
+        long firstTime = Long.MAX_VALUE;
+        for (final List<ActivityPoint> segment : segments) {
+            for (final ActivityPoint point : segment) {
+                firstTime = Math.min(firstTime, point.getTime().getTime());
+            }
+        }
+        if (firstTime == Long.MAX_VALUE) {
+            LOG.debug("Not re-segmenting by lap, track has no points");
+            return;
+        }
+
+        final long[] lapEnds = new long[laps.size()];
+        long lapEnd = firstTime;
+        for (int i = 0; i < laps.size(); i++) {
+            lapEnd += laps.get(i).duration();
+            lapEnds[i] = lapEnd;
+        }
+
+        final List<List<ActivityPoint>> newSegments = new ArrayList<>();
+        final List<ActivityTrack.SegmentInfo> newSegmentInfos = new ArrayList<>();
+        List<ActivityPoint> current = new ArrayList<>();
+        int lapIndex = 0;
+
+        for (int s = 0; s < segments.size(); s++) {
+            for (final ActivityPoint point : segments.get(s)) {
+                while (lapIndex < lapEnds.length && point.getTime().getTime() > lapEnds[lapIndex]) {
+                    // This chunk closes lap lapIndex, so it carries that lap's metadata.
+                    addSegment(newSegments, newSegmentInfos, current, lapSegmentInfo(laps.get(lapIndex)));
+                    current = new ArrayList<>();
+                    lapIndex++;
+                }
+                current.add(point);
+            }
+
+            final boolean lastSourceSegment = s == segments.size() - 1;
+            if (lastSourceSegment && lapIndex < laps.size()) {
+                // Trailing points close the final lap.
+                addSegment(newSegments, newSegmentInfos, current, lapSegmentInfo(laps.get(lapIndex)));
+                lapIndex++;
+            } else {
+                // A pause ends the segment mid-lap: no lap metadata, the lap is closed later.
+                addSegment(newSegments, newSegmentInfos, current, new ActivityTrack.SegmentInfo());
+            }
+            current = new ArrayList<>();
+        }
+
+        if (newSegments.isEmpty()) {
+            return;
+        }
+        activityTrack.replaceSegments(newSegments, newSegmentInfos);
+    }
+
+    private static ActivityTrack.SegmentInfo lapSegmentInfo(final ZeppOsActivityTrack.Lap lap) {
+        return new ActivityTrack.SegmentInfo(
+                ActivityTrack.SegmentIntensity.ACTIVE,
+                lap.distance() > 0 ? lap.distance() : null,
+                null
+        );
+    }
+
+    private static void addSegment(final List<List<ActivityPoint>> segments,
+                                   final List<ActivityTrack.SegmentInfo> segmentInfos,
+                                   final List<ActivityPoint> points,
+                                   final ActivityTrack.SegmentInfo info) {
+        if (points.isEmpty()) {
+            return;
+        }
+        segments.add(points);
+        segmentInfos.add(info);
     }
 
     private static int consumeTag(final ByteBuffer buf) {
@@ -474,7 +587,7 @@ public class ZeppOsActivityDetailsParser extends AbstractHuamiActivityDetailsPar
         final int weight = buf.getShort() & 0xffff;
         buf.get(new byte[14]); // ffff... ?
 
-        activityTrack.addStrengthSet(reps, weight != 0xffff ? weight / 10f : -1);
+        activityTrack.addStrengthSet(reps, weight != 0xffff ? weight / 10f : -1, timestamp + offset);
 
         trace("Consumed strength set: reps={}, weightKg={}", reps, weight);
     }
