@@ -158,6 +158,11 @@ public abstract class AbstractDeviceCoordinator implements DeviceCoordinator {
         return true;
     }
 
+    @Override
+    public boolean handlesScanResults() {
+        return false;
+    }
+
     @NonNull
     @Override
     public Collection<? extends ScanFilter> createBLEScanFilters() {
