@@ -450,6 +450,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.igpsport.IGPSportiGS630Coord
 import nodomain.freeyourgadget.gadgetbridge.devices.igpsport.IGPSportiGS630SCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.igpsport.IGPSportiGS800Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.innovo.InnovoPulseOximeterCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.ihealthtrack.IHealthTrackDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.itag.ITagCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.jabra.JabraEvolve255Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.jabra.JabraEvolve265Coordinator;
@@ -1319,6 +1320,7 @@ public enum DeviceType {
     BRAUN_BPW4500(BraunBPW4500DeviceCoordinator.class),
     TEUFEL_MYND(TeufelMyndCoordinator.class),
     IGPSPORT_BSC100MAX(IGPSportBSC100MaxCoordinator.class),
+    IHEALTH_TRACK(IHealthTrackDeviceCoordinator.class),
     IGPSPORT_BSC200(IGPSportBSC200Coordinator.class),
     IGPSPORT_BSC200S(IGPSportBSC200SCoordinator.class),
     IGPSPORT_BSC300(IGPSportBSC300Coordinator.class),
