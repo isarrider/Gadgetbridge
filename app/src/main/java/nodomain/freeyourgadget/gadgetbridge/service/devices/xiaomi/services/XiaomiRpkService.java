@@ -63,6 +63,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
     public static final int CMD_RPK_LAUNCHED = 6;
     public static final int CMD_RPK_SESSION_END = 7;
     public static final int CMD_RPK_MESSAGE = 8;
+    public static final int CMD_WECHAT_LICENSE_REQUEST = 10;
 
     // Messages waiting for CMD_RPK_LAUNCHED, by rpk id, oldest first
     private final Map<String, Queue<byte[]>> pendingMessages = new HashMap<>();
@@ -109,6 +110,9 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
                 setDeviceBusy();
                 getSupport().getDataUploadService().setCallback(this);
                 getSupport().getDataUploadService().requestUpload(XiaomiDataUploadService.TYPE_RPK, fwHelper.getBytes());
+                return;
+            case CMD_WECHAT_LICENSE_REQUEST:
+                LOG.debug("Watch requested a WeChat license, not supported");
                 return;
         }
 
