@@ -462,6 +462,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.itag.ITagCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.jabra.JabraEvolve255Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.jabra.JabraEvolve265Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.jabra.JabraEvolve65Coordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.jbl.JblTuneBuds2Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.jyou.BFH16DeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.jyou.TeclastH30.TeclastH30Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.jyou.y5.Y5Coordinator;
@@ -1338,6 +1339,7 @@ public enum DeviceType {
     BLE_GATT_CLIENT(BleGattClientCoordinator::new),
     MARSTEK_B2500(MarstekB2500DeviceCoordinator::new),
     GENERIC_HEADPHONES(GenericHeadphonesCoordinator::new),
+    JBL_TUNE_BUDS_2(JblTuneBuds2Coordinator::new),
     GENERIC_THERMAL_PRINTER(ThermalPrinterCoordinator::new),
     GENERIC_HEART_RATE(GenericHeartRateCoordinator::new),
     ULTRAHUMAN_RING_AIR(UltrahumanDeviceCoordinator::new),
