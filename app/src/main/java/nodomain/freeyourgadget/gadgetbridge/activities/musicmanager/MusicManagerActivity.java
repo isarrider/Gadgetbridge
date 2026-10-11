@@ -18,9 +18,11 @@ package nodomain.freeyourgadget.gadgetbridge.activities.musicmanager;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.InputType;
@@ -62,7 +64,7 @@ import java.util.stream.Collectors;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.AbstractGBActivity;
-import nodomain.freeyourgadget.gadgetbridge.activities.install.FwAppInstallerActivity;
+import nodomain.freeyourgadget.gadgetbridge.activities.install.InstallLauncher;
 import nodomain.freeyourgadget.gadgetbridge.activities.wifi.WifiSessionScreen;
 import nodomain.freeyourgadget.gadgetbridge.adapter.MusicListAdapter;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -108,9 +110,10 @@ public class MusicManagerActivity extends AbstractGBActivity {
     private int maxPlaylistCount = 0;
     private boolean deleteSupported = true;
     private String[] uploadMimeTypes = {"audio/*"};
+    private boolean uploadMultiple = false;
 
     private WifiSessionScreen wifiSessionScreen;
-    
+
     public GBDevice getGBDevice() {
         return mGBDevice;
     }
@@ -150,6 +153,7 @@ public class MusicManagerActivity extends AbstractGBActivity {
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType(uploadMimeTypes.length == 1 ? uploadMimeTypes[0] : "audio/*");
                 intent.putExtra(Intent.EXTRA_MIME_TYPES, uploadMimeTypes);
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, uploadMultiple);
                 wifiSessionScreen.holdForPicker();
                 openAudioActivityResultLauncher.launch(intent);
             }
@@ -387,20 +391,31 @@ public class MusicManagerActivity extends AbstractGBActivity {
     }
 
     ActivityResultLauncher<Intent> openAudioActivityResultLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            new ActivityResultCallback<ActivityResult>() {
-                @Override
-                public void onActivityResult(ActivityResult result) {
-                    wifiSessionScreen.releasePickerHold();
-                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                        Intent startIntent = new Intent(MusicManagerActivity.this, FwAppInstallerActivity.class);
-                        startIntent.putExtra(GBDevice.EXTRA_DEVICE, mGBDevice);
-                        startIntent.setAction(Intent.ACTION_VIEW);
-                        startIntent.setDataAndType(result.getData().getData(), null);
-                        startActivity(startIntent);
+        new ActivityResultContracts.StartActivityForResult(),
+        new ActivityResultCallback<>() {
+            @Override
+            public void onActivityResult(ActivityResult result) {
+                wifiSessionScreen.releasePickerHold();
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    final List<Uri> files = new ArrayList<>();
+                    final ClipData clipData = result.getData().getClipData();
+                    if (clipData != null) {
+                        for (int i = 0; i < clipData.getItemCount(); i++) {
+                            files.add(clipData.getItemAt(i).getUri());
+                        }
+                    } else if (result.getData().getData() != null) {
+                        files.add(result.getData().getData());
                     }
+
+                    final Intent startIntent = InstallLauncher.createIntent(MusicManagerActivity.this, mGBDevice, files, Bundle.EMPTY);
+                    if (startIntent == null) {
+                        GB.toast(getString(R.string.fwinstaller_file_not_compatible_to_device), Toast.LENGTH_LONG, GB.INFO);
+                        return;
+                    }
+                    startActivity(startIntent);
                 }
-            });
+            }
+        });
 
 
     public boolean openPopupMenu(View view, GBDeviceMusic music) {
@@ -611,6 +626,7 @@ public class MusicManagerActivity extends AbstractGBActivity {
         maxMusicCount = intent.getIntExtra("maxMusicCount", 0);
         maxPlaylistCount = intent.getIntExtra("maxPlaylistCount", 0);
         deleteSupported = intent.getBooleanExtra("deleteSupported", true);
+        uploadMultiple = intent.getBooleanExtra("uploadMultiple", false);
         final String[] mimeTypes = intent.getStringArrayExtra("uploadMimeTypes");
         if (mimeTypes != null && mimeTypes.length > 0) {
             uploadMimeTypes = mimeTypes;

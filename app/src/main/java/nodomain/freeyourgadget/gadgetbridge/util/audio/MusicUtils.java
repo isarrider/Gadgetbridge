@@ -3,6 +3,8 @@ package nodomain.freeyourgadget.gadgetbridge.util.audio;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
@@ -50,6 +52,7 @@ public class MusicUtils {
         String title = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
         String artist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
         final String album = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM);
+        final String trackNumber = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER);
 
         if (TextUtils.isEmpty(title)) {
             title = getNameWithoutExtension(fileName);
@@ -63,7 +66,7 @@ public class MusicUtils {
             extension = extension.toLowerCase();
         }
 
-        final AudioInfo audioInfo = new AudioInfo(fileName, fileSize, title, artist, album, mimeType, extension);
+        final AudioInfo audioInfo = new AudioInfo(fileName, fileSize, title, artist, album, trackNumber, mimeType, extension);
 
         try {
             final MediaExtractor mex = new MediaExtractor();
@@ -87,6 +90,59 @@ public class MusicUtils {
         }
 
         return audioInfo;
+    }
+
+    /**
+     * Returns the embedded picture from the audio file, with its largest side at most the size in
+     * pixels, or null if the file has no picture.
+     */
+    @Nullable
+    public static Bitmap albumArt(final Context context, final Uri uri, final int sizePx) {
+        @SuppressWarnings("resource") final MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+        try {
+            mmr.setDataSource(context, uri);
+            final byte[] picture = mmr.getEmbeddedPicture();
+            if (picture == null) {
+                return null;
+            }
+            LOG.debug("Got album art of {} bytes for {}", picture.length, uri);
+
+            final BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(picture, 0, picture.length, bounds);
+            int sampleSize = 1;
+            while (bounds.outWidth / (sampleSize * 2) >= sizePx && bounds.outHeight / (sampleSize * 2) >= sizePx) {
+                sampleSize *= 2;
+            }
+
+            final BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = sampleSize;
+            final Bitmap bitmap = BitmapFactory.decodeByteArray(picture, 0, picture.length, options);
+            if (bitmap == null) {
+                return null;
+            }
+            final int largestSide = Math.max(bitmap.getWidth(), bitmap.getHeight());
+            if (largestSide <= sizePx) {
+                return bitmap;
+            }
+            final Bitmap scaled = Bitmap.createScaledBitmap(
+                bitmap,
+                Math.max(1, bitmap.getWidth() * sizePx / largestSide),
+                Math.max(1, bitmap.getHeight() * sizePx / largestSide),
+                true
+            );
+            bitmap.recycle();
+            return scaled;
+        } catch (final RuntimeException e) {
+            LOG.error("Failed to read the album art of {}", uri, e);
+            return null;
+        } finally {
+            try {
+                mmr.release();
+            } catch (final IOException e) {
+                LOG.warn("Failed to release the media metadata retriever", e);
+            }
+        }
     }
 
     private static String getNameWithoutExtension(final String fileName) {

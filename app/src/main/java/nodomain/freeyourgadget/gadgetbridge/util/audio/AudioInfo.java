@@ -10,6 +10,7 @@ public class AudioInfo {
     private final String title;
     private final String artist;
     private final String album;
+    private final String trackNumber;
     private final String mimeType;
     private final String extension;
 
@@ -23,6 +24,7 @@ public class AudioInfo {
                      final String title,
                      final String artist,
                      final String album,
+                     final String trackNumber,
                      final String mimeType,
                      final String extension) {
         this.fileName = fileName;
@@ -30,6 +32,7 @@ public class AudioInfo {
         this.title = title;
         this.artist = artist;
         this.album = album;
+        this.trackNumber = trackNumber;
         this.mimeType = mimeType;
         this.extension = extension;
     }
@@ -52,6 +55,10 @@ public class AudioInfo {
 
     public String getAlbum() {
         return album;
+    }
+
+    public String getTrackNumber() {
+        return trackNumber;
     }
 
     public String getExtension() {
@@ -94,6 +101,7 @@ public class AudioInfo {
         tsb.append("title", title);
         tsb.append("artist", artist);
         tsb.append("album", album);
+        tsb.append("trackNumber", trackNumber);
         tsb.append("mimeType", mimeType);
         return tsb.toString();
     }

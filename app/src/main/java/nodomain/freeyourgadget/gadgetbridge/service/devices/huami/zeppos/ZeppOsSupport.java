@@ -33,9 +33,11 @@ import androidx.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -63,8 +65,10 @@ import nodomain.freeyourgadget.gadgetbridge.capabilities.loyaltycards.LoyaltyCar
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventDisplayMessage;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventScreenshot;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsMapsInstallHandler;
-import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsMusicInstallHandler;
+import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsMusicInstallItem;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.install.InstallItem;
+import nodomain.freeyourgadget.gadgetbridge.install.InstallSession;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
 import nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes;
 import nodomain.freeyourgadget.gadgetbridge.model.WorldClock;
@@ -100,7 +104,6 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ftp.Zep
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.operations.ZeppOsAgpsUpdateOperation;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.operations.ZeppOsFirmwareUpdateOperation;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.operations.ZeppOsGpxRouteUploadOperation;
-import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.operations.ZeppOsMusicUploadOperation;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.services.ZeppOsActivityFetchService;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.services.ZeppOsAgpsService;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.services.ZeppOsAlarmsService;
@@ -147,6 +150,8 @@ import nodomain.freeyourgadget.gadgetbridge.util.FileUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 import nodomain.freeyourgadget.gadgetbridge.util.RealtimeSamplesAggregator;
+import nodomain.freeyourgadget.gadgetbridge.util.UriHelper;
+import nodomain.freeyourgadget.gadgetbridge.util.audio.AudioInfo;
 
 public class ZeppOsSupport extends AbstractBluetoothDeviceSupport
         implements Huami2021Handler, HuamiFetcher.HuamiFetchSupport, ZeppOsFileTransferService.DownloadCallback {
@@ -605,30 +610,6 @@ public class ZeppOsSupport extends AbstractBluetoothDeviceSupport
             return;
         }
 
-        final ZeppOsMusicInstallHandler musicHandler = new ZeppOsMusicInstallHandler(uri, getContext());
-        if (musicHandler.isValid()) {
-            if (ftpMusicManager != null) {
-                ftpMusicManager.upload(musicHandler.getUri(), musicHandler.getAudioInfo());
-                return;
-            }
-            try {
-                final byte[] musicBytes = musicHandler.readFileBytes();
-                if (musicBytes == null) {
-                    return;
-                }
-                new ZeppOsMusicUploadOperation(
-                        this,
-                        musicHandler.getAudioInfo(),
-                        musicBytes,
-                        fileTransferService
-                ).perform();
-            } catch (final Exception e) {
-                GB.toast(getContext(), "Music install error: " + e.getLocalizedMessage(), Toast.LENGTH_LONG, GB.ERROR, e);
-            }
-
-            return;
-        }
-
         final ZeppOsMapsInstallHandler mapsHandler = new ZeppOsMapsInstallHandler(uri, getContext());
         if (mapsHandler.isValid()) {
             if (wifiFtpSession != null) {
@@ -645,6 +626,73 @@ public class ZeppOsSupport extends AbstractBluetoothDeviceSupport
         } catch (final IOException ex) {
             GB.toast(getContext(), "Firmware install error: " + ex.getLocalizedMessage(), Toast.LENGTH_LONG, GB.ERROR, ex);
         }
+    }
+
+    @Override
+    public void onInstall(@NonNull final InstallSession session) {
+        if (ftpMusicManager != null) {
+            ftpMusicManager.upload(session);
+            return;
+        }
+        uploadMusic(session, session.getItems(), 0);
+    }
+
+    /**
+     * Uploads the music item at the specified index via BLE. The next item starts when the upload of
+     * this item finishes.
+     */
+    private void uploadMusic(final InstallSession session, final List<InstallItem> items, final int index) {
+        if (index >= items.size()) {
+            return;
+        }
+        final InstallItem item = items.get(index);
+        if (!(item instanceof ZeppOsMusicInstallItem musicItem)) {
+            LOG.error("Unsupported install item {}", item.getClass());
+            session.failed(item, getContext().getString(R.string.fwapp_install_device_not_supported));
+            uploadMusic(session, items, index + 1);
+            return;
+        }
+
+        final byte[] bytes;
+        try (InputStream in = new BufferedInputStream(UriHelper.get(musicItem.getUri(), getContext()).openInputStream())) {
+            // FIXME we should be able to stream this
+            bytes = FileUtils.readAll(in, 50 * 1024 * 1024); // 50MB
+        } catch (final IOException e) {
+            LOG.error("Failed to read music file {}", item.getDisplayName(), e);
+            session.failed(item, e.getLocalizedMessage());
+            uploadMusic(session, items, index + 1);
+            return;
+        }
+
+        final AudioInfo audioInfo = musicItem.getAudioInfo();
+        LOG.debug("Uploading {} bytes for {}", bytes.length, item.getDisplayName());
+        fileTransferService.sendFile(
+                String.format(
+                        Locale.ROOT,
+                        "music://file?songName=%s&singer=%s&end=" + (index + 1 == items.size() ? 1 : 0),
+                        audioInfo.getTitle(),
+                        audioInfo.getArtist()
+                ),
+                audioInfo.getFileName(),
+                bytes,
+                false,
+                new ZeppOsFileTransferService.UploadCallback() {
+                    @Override
+                    public void onFileUploadFinish(final boolean success) {
+                        if (success) {
+                            session.installed(item);
+                        } else {
+                            session.failed(item, null);
+                        }
+                        uploadMusic(session, items, index + 1);
+                    }
+
+                    @Override
+                    public void onFileUploadProgress(final int progress) {
+                        session.progress(item, (int) (100L * progress / bytes.length));
+                    }
+                }
+        );
     }
 
     @Override

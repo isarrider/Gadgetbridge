@@ -39,6 +39,7 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInf
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiService;
 import nodomain.freeyourgadget.gadgetbridge.devices.miband.MiBandService;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.install.InstallSession;
 import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
 import nodomain.freeyourgadget.gadgetbridge.model.CalendarEventSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
@@ -336,6 +337,11 @@ public class ZeppOsBtleSupport extends AbstractBTLESingleDeviceSupport implement
     @Override
     public void onInstallApp(final Uri uri, @NonNull final Bundle options) {
         zeppOsSupport.onInstallApp(uri, options);
+    }
+
+    @Override
+    public void onInstall(@NonNull final InstallSession session) {
+        zeppOsSupport.onInstall(session);
     }
 
     @Override

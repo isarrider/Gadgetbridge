@@ -58,6 +58,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiExtendedSamplePro
 import nodomain.freeyourgadget.gadgetbridge.entities.AbstractActivitySample;
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.install.InstallHandlerV2;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryParser;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityTrackProvider;
 import nodomain.freeyourgadget.gadgetbridge.model.workouts.spec.WorkoutTemplateSpec;
@@ -132,6 +133,17 @@ public abstract class ZeppOsCoordinator extends HuamiCoordinator {
         };
     }
 
+    @Nullable
+    @Override
+    public InstallHandlerV2 findInstallHandlerV2(@NonNull final List<Uri> files, @NonNull final Context context) {
+        for (final Uri file : files) {
+            if (ZeppOsMusicInstallHandler.audioInfoOf(context, file) != null) {
+                return new ZeppOsMusicInstallHandler(context, this);
+            }
+        }
+        return null;
+    }
+
     @Override
     public InstallHandler findInstallHandler(final Uri uri, final Bundle options, final Context context) {
         if (supportsAgpsUpdates()) {
@@ -149,11 +161,6 @@ public abstract class ZeppOsCoordinator extends HuamiCoordinator {
         final ZeppOsMapsInstallHandler mapsInstallHandler = new ZeppOsMapsInstallHandler(uri, context);
         if (mapsInstallHandler.isValid()) {
             return mapsInstallHandler;
-        }
-
-        final ZeppOsMusicInstallHandler musicInstallHandler = new ZeppOsMusicInstallHandler(uri, context);
-        if (musicInstallHandler.isValid()) {
-            return musicInstallHandler;
         }
 
         final ZeppOsFwInstallHandler fwInstallHandler = new ZeppOsFwInstallHandler(

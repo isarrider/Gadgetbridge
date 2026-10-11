@@ -1,6 +1,5 @@
 package nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ftp;
 
-import android.net.Uri;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -30,7 +29,10 @@ import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
 import nodomain.freeyourgadget.gadgetbridge.entities.Device;
 import nodomain.freeyourgadget.gadgetbridge.entities.DeviceMusicFile;
 import nodomain.freeyourgadget.gadgetbridge.entities.DeviceMusicFileDao;
+import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsMusicInstallItem;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceMusic;
+import nodomain.freeyourgadget.gadgetbridge.install.InstallItem;
+import nodomain.freeyourgadget.gadgetbridge.install.InstallSession;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.ftp.WifiFtpSession;
 import nodomain.freeyourgadget.gadgetbridge.util.CheckSums;
@@ -81,6 +83,7 @@ public class ZeppOsFtpMusicManager {
             startEvent.type = 1;
             startEvent.deleteSupported = false;
             startEvent.uploadMimeTypes = new String[]{"audio/mpeg"};
+            startEvent.uploadMultiple = true;
             support.evaluateGBDeviceEvent(startEvent);
 
             final List<GBDeviceMusic> list = new ArrayList<>();
@@ -116,47 +119,68 @@ public class ZeppOsFtpMusicManager {
         });
     }
 
-    public void upload(final Uri uri, final AudioInfo audioInfo) {
+    /**
+     * Uploads the music items of the session, one after the other.
+     */
+    public void upload(final InstallSession installSession) {
         executor.execute(() -> {
-            final ZeppOsFtpInstallProgress progress = new ZeppOsFtpInstallProgress(
-                support.getContext(),
-                R.string.music_upload_in_progress,
-                R.string.music_upload_complete,
-                R.string.music_upload_failed
-            );
-            progress.update(0, 1);
+            final InternetHelperFtpClient client;
+            try {
+                client = session.acquire();
+            } catch (final Exception e) {
+                LOG.error("Failed to start the ftp session", e);
+                for (final InstallItem item : installSession.getItems()) {
+                    installSession.failed(item, e.getLocalizedMessage());
+                }
+                return;
+            }
 
             try {
-                final String hash = CheckSums.md5(support.getContext(), uri);
-
-                final MusicJson json = new MusicJson();
-                json.title = audioInfo.getTitle();
-                json.album = audioInfo.getAlbum() != null ? audioInfo.getAlbum() : "";
-                json.artist = audioInfo.getArtist();
-                json.size = audioInfo.getFileSize();
-                final String jsonStr = GSON.toJson(json);
-                final byte[] jsonBytes = jsonStr.getBytes(StandardCharsets.UTF_8);
-
-                LOG.info("Uploading music {} as {} - {}", audioInfo, hash, jsonStr);
-
-                final InternetHelperFtpClient client = session.acquire();
-                try {
-                    try (InputStream jsonStream = new ByteArrayInputStream(jsonBytes)) {
-                        client.uploadStream(jsonStream, UPLOAD_DIR + "/" + hash + JSON_EXTENSION, jsonBytes.length, null);
+                for (final InstallItem item : installSession.getItems()) {
+                    if (!(item instanceof ZeppOsMusicInstallItem musicItem)) {
+                        LOG.error("Unsupported install item {}", item.getClass());
+                        installSession.failed(item, support.getContext().getString(R.string.fwapp_install_device_not_supported));
+                        continue;
                     }
-                    client.uploadUri(uri, UPLOAD_DIR + "/" + hash + MP3_EXTENSION, audioInfo.getFileSize(), progress::update);
-                } finally {
-                    session.release();
+                    try {
+                        upload(client, musicItem, (bytes, total) ->
+                            installSession.progress(item, total > 0 ? (int) (bytes * 100 / total) : 0)
+                        );
+                        installSession.installed(item);
+                    } catch (final Exception e) {
+                        LOG.error("Failed to upload music {}", item.getDisplayName(), e);
+                        installSession.failed(item, e.getLocalizedMessage());
+                    }
                 }
-
-                store(hash, json);
-                LOG.debug("Uploaded music {}", hash);
-                progress.finish(true, null);
-            } catch (final Exception e) {
-                LOG.error("Failed to upload music", e);
-                progress.finish(false, e.getLocalizedMessage());
+            } finally {
+                session.release();
             }
         });
+    }
+
+    private void upload(final InternetHelperFtpClient client,
+                        final ZeppOsMusicInstallItem item,
+                        final InternetHelperFtpClient.ProgressListener progressListener) throws Exception {
+        final AudioInfo audioInfo = item.getAudioInfo();
+        final String hash = CheckSums.md5(support.getContext(), item.getUri());
+
+        final MusicJson json = new MusicJson();
+        json.title = audioInfo.getTitle();
+        json.album = audioInfo.getAlbum() != null ? audioInfo.getAlbum() : "";
+        json.artist = audioInfo.getArtist();
+        json.size = audioInfo.getFileSize();
+        final String jsonStr = GSON.toJson(json);
+        final byte[] jsonBytes = jsonStr.getBytes(StandardCharsets.UTF_8);
+
+        LOG.info("Uploading music {} as {} - {}", audioInfo, hash, jsonStr);
+
+        try (InputStream jsonStream = new ByteArrayInputStream(jsonBytes)) {
+            client.uploadStream(jsonStream, UPLOAD_DIR + "/" + hash + JSON_EXTENSION, jsonBytes.length, null);
+        }
+        client.uploadUri(item.getUri(), UPLOAD_DIR + "/" + hash + MP3_EXTENSION, audioInfo.getFileSize(), progressListener);
+
+        store(hash, json);
+        LOG.debug("Uploaded music {}", hash);
     }
 
     /**
