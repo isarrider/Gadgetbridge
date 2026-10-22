@@ -189,6 +189,7 @@ public class GBDaoGenerator {
         addLaxasFitActivitySample(schema, user, device);
         addPineTimeActivitySample(schema, user, device);
         addPolarH10ActivitySample(schema, user, device);
+        addPolarIgnite3ActivitySample(schema, user, device);
         addWithingsSteelHRActivitySample(schema, user, device);
         addWithingsScanwatchActivitySample(schema, user, device);
         addWithingsBreathingDisturbanceSample(schema, user, device);
@@ -2277,6 +2278,17 @@ public class GBDaoGenerator {
         sample.implementsSerializable();
         addCommonActivitySampleProperties("AbstractActivitySample", sample, user, device);
         sample.addIntProperty(SAMPLE_HEART_RATE).notNull().codeBeforeGetterAndSetter(OVERRIDE);
+        return sample;
+    }
+
+    private static Entity addPolarIgnite3ActivitySample(Schema schema, Entity user, Entity device) {
+        Entity sample = addEntity(schema, "PolarIgnite3ActivitySample");
+        sample.implementsSerializable();
+        addCommonActivitySampleProperties("AbstractActivitySample", sample, user, device);
+        sample.addIntProperty(SAMPLE_STEPS).notNull().codeBeforeGetterAndSetter(OVERRIDE);
+        sample.addIntProperty("distanceCm").notNull().codeBeforeGetterAndSetter(OVERRIDE);
+        sample.addIntProperty("activeCalories").notNull().codeBeforeGetterAndSetter(OVERRIDE);
+        addHeartRateProperties(sample);
         return sample;
     }
 
