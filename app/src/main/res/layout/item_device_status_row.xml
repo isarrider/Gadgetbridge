@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:paddingStart="16dp"
+    android:paddingEnd="8dp"
+    android:paddingVertical="8dp">
+
+    <FrameLayout
+        android:layout_width="40dp"
+        android:layout_height="40dp">
+
+        <ImageView
+            android:id="@+id/device_status_icon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_dropdown_icon_circle"
+            android:importantForAccessibility="no"
+            android:paddingLeft="4dp"
+            android:paddingTop="4dp"
+            android:paddingRight="2.5dp"
+            android:paddingBottom="2.5dp"
+            android:scaleType="fitCenter"
+            android:theme="@style/ThemeOverlay.App.DropdownDeviceIcon"
+            tools:ignore="RtlHardcoded" />
+
+        <View
+            android:id="@+id/device_status_dot"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_gravity="bottom|end"
+            android:background="@drawable/device_status_dot" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/device_status_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="1"
+            android:textColor="?attr/textColorPrimary"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/device_status_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="?attr/textColorSecondary"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/device_status_battery"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:textColor="?attr/textColorSecondary"
+        android:textSize="13sp" />
+
+    <ImageButton
+        android:id="@+id/device_status_retry"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/controlcenter_connect"
+        android:src="@drawable/ic_refresh"
+        app:tint="?attr/textColorSecondary"
+        xmlns:app="http://schemas.android.com/apk/res-auto" />
+</LinearLayout>

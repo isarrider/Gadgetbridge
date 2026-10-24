@@ -2,4 +2,5 @@
     <item name="bottom_nav_dashboard" type="id"/>
     <item name="bottom_nav_workouts" type="id"/>
     <item name="bottom_nav_devices" type="id"/>
+    <item name="toolbar_device_status" type="id"/>
 </resources>

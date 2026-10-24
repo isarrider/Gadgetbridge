@@ -27,12 +27,17 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -60,6 +65,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample;
 import nodomain.freeyourgadget.gadgetbridge.model.DailyTotals;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceService;
+import nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.kotlin.FloatingActionButtonExtensionsKt;
 
@@ -109,6 +115,34 @@ public class DevicesFragment extends Fragment implements HeaderShadePage {
                 }
             }
         }
+    }
+
+    @Override
+    public void onViewCreated(@NonNull final View view, @Nullable final Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        requireActivity().addMenuProvider(new MenuProvider() {
+            @Override
+            public void onCreateMenu(@NonNull final Menu menu, @NonNull final MenuInflater menuInflater) {
+                menuInflater.inflate(R.menu.devices_menu, menu);
+            }
+
+            @Override
+            public boolean onMenuItemSelected(@NonNull final MenuItem menuItem) {
+                if (menuItem.getItemId() == R.id.devices_sync_all) {
+                    GBApplication.deviceService().onFetchRecordedData(RecordedDataTypes.TYPE_SYNC);
+                    return true;
+                }
+                if (menuItem.getItemId() == R.id.devices_connect_all) {
+                    for (final GBDevice device : GBApplication.app().getDeviceManager().getDevices()) {
+                        if (!device.isInitialized() && !device.isConnecting()) {
+                            GBApplication.deviceService(device).connect();
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            }
+        }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
     }
 
     @Override

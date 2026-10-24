@@ -21,6 +21,9 @@ package nodomain.freeyourgadget.gadgetbridge.activities;
 
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_CONNECT;
 
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -115,6 +118,9 @@ public class ControlCenterv2 extends AppCompatActivity
     private BottomNavigationView navigationView;
     private boolean bottomNavigationEnabled;
     private boolean pageBottomBarShown;
+    public static final int DEVICE_STATUS_ORDER = 1000;
+    private DeviceStatusActionView deviceStatusView;
+    private MenuItem deviceStatusItem;
 
     enum NavTab {
         DASHBOARD("dashboard", R.id.bottom_nav_dashboard, R.string.bottom_nav_dashboard, R.drawable.ic_dashboard),
@@ -168,14 +174,14 @@ public class ControlCenterv2 extends AppCompatActivity
                     if (dev != null && !dev.isBusy()) {
                         swipeLayout.setRefreshing(false);
                     }
-                    updateConnectionSubtitle();
+                    updateDeviceStatus();
                     break;
                 case DeviceManager.ACTION_DEVICES_CHANGED:
                     LOG.debug("Devices changed, {} devices", GBApplication.app().getDeviceManager().getDevices().size());
                     if (rebuildBottomNav()) {
                         updateBottomNavigationVisibility();
                     }
-                    updateConnectionSubtitle();
+                    updateDeviceStatus();
                     break;
             }
         }
@@ -542,11 +548,89 @@ public class ControlCenterv2 extends AppCompatActivity
         GBApplication.deviceService().requestDeviceInfo();
     }
 
-    private void updateConnectionSubtitle() {
-        toolbar.setSubtitle(ConnectionStatusSubtitle.build(
-            toolbar,
-            GBApplication.app().getDeviceManager().getDevices()
-        ));
+    @Override
+    public boolean onCreateOptionsMenu(final Menu menu) {
+        deviceStatusView = new DeviceStatusActionView(toolbar.getContext());
+        deviceStatusView.setOnClickListener(v -> onDeviceStatusClicked());
+        deviceStatusView.setOnLongClickListener(v -> onDeviceStatusLongClicked());
+        // After the tab's own actions, so only the overflow comes after it
+        deviceStatusItem = menu.add(Menu.NONE, R.id.toolbar_device_status, DEVICE_STATUS_ORDER, R.string.bottom_nav_devices)
+                .setActionView(deviceStatusView);
+        deviceStatusItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        updateDeviceStatus();
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    private void updateDeviceStatus() {
+        if (deviceStatusItem == null) {
+            return;
+        }
+        final List<GBDevice> devices = GBApplication.app().getDeviceManager().getDevices();
+        deviceStatusItem.setVisible(!devices.isEmpty());
+        deviceStatusView.bind(devices);
+    }
+
+    private void onDeviceStatusClicked() {
+        final List<GBDevice> devices = GBApplication.app().getDeviceManager().getDevices();
+        if (devices.isEmpty() || requestBluetoothIfOff()) {
+            return;
+        }
+        if (devices.size() == 1) {
+            showDevicesTab();
+            return;
+        }
+        DeviceStatusMenu.show(deviceStatusView, devices, new DeviceStatusMenu.Callbacks() {
+            @Override
+            public void onDeviceSelected(@NonNull final GBDevice device) {
+                showDevicesTab();
+            }
+
+            @Override
+            public void onRetry(@NonNull final GBDevice device) {
+                GBApplication.deviceService(device).connect();
+            }
+
+            @Override
+            public void onManageDevices() {
+                showDevicesTab();
+            }
+        });
+    }
+
+    private boolean onDeviceStatusLongClicked() {
+        final List<GBDevice> devices = GBApplication.app().getDeviceManager().getDevices();
+        if (devices.size() != 1) {
+            return false;
+        }
+        final GBDevice device = devices.get(0);
+        if (device.isInitialized()) {
+            GBApplication.deviceService(device).onFetchRecordedData(RecordedDataTypes.TYPE_SYNC);
+        } else if (!requestBluetoothIfOff()) {
+            GBApplication.deviceService(device).connect();
+        }
+        return true;
+    }
+
+    /** Asks to turn Bluetooth on when it is off. Returns true if it asked. */
+    private boolean requestBluetoothIfOff() {
+        final BluetoothManager manager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
+        final BluetoothAdapter adapter = manager != null ? manager.getAdapter() : null;
+        if (adapter == null || adapter.isEnabled()) {
+            return false;
+        }
+        try {
+            startActivity(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE));
+        } catch (final SecurityException | ActivityNotFoundException e) {
+            LOG.warn("Failed to request enabling Bluetooth", e);
+        }
+        return true;
+    }
+
+    private void showDevicesTab() {
+        final int index = visibleTabs.indexOf(NavTab.DEVICES);
+        if (index >= 0) {
+            viewPager.setCurrentItem(index, true);
+        }
     }
 
     /**
@@ -614,6 +698,7 @@ public class ControlCenterv2 extends AppCompatActivity
             selectTab(NavTab.DASHBOARD);
         }
         updateConnectionSubtitle();
+        updateDeviceStatus();
         if (isLanguageInvalid || isThemeInvalid) {
             isLanguageInvalid = false;
             isThemeInvalid = false;

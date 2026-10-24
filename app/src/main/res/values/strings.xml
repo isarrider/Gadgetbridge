@@ -5069,6 +5069,22 @@
     <string name="bottom_nav_dashboard">Dashboard</string>
     <string name="bottom_nav_workouts">Workouts</string>
     <string name="bottom_nav_devices">Devices</string>
+    <string name="cd_device_connected">%1$s, connected</string>
+    <string name="cd_device_syncing">%1$s, syncing</string>
+    <string name="cd_device_disconnected">%1$s, not connected</string>
+    <plurals name="cd_devices_all_connected">
+        <item quantity="one">%d device, all connected</item>
+        <item quantity="other">%d devices, all connected</item>
+    </plurals>
+    <plurals name="cd_devices_syncing">
+        <item quantity="one">%d device, syncing</item>
+        <item quantity="other">%d devices, syncing</item>
+    </plurals>
+    <string name="cd_devices_some_disconnected">%1$d devices, %2$d not connected</string>
+    <string name="device_menu_sync_all">Sync all</string>
+    <string name="device_menu_connect_all">Connect all</string>
+    <string name="device_menu_manage">Manage devices</string>
+    <string name="badge_overflow">9+</string>
     <string name="pref_dashboard_cards_title">Show widgets on cards</string>
     <string name="pref_dashboard_cards_summary">Draw cards around the widgets on the dashboard</string>
     <string name="pref_dashboard_widget_settings">Widget settings</string>
