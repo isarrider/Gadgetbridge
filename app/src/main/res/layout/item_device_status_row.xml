@@ -74,12 +74,12 @@
         android:textSize="13sp" />
 
     <ImageButton
-        android:id="@+id/device_status_retry"
+        android:id="@+id/device_status_sync"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/controlcenter_connect"
-        android:src="@drawable/ic_refresh"
+        android:contentDescription="@string/controlcenter_fetch_activity_data"
+        android:src="@drawable/ic_sync"
         app:tint="?attr/textColorSecondary"
         xmlns:app="http://schemas.android.com/apk/res-auto" />
 </LinearLayout>

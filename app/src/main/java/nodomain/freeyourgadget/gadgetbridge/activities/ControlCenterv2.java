@@ -575,19 +575,20 @@ public class ControlCenterv2 extends AppCompatActivity
         if (devices.isEmpty() || requestBluetoothIfOff()) {
             return;
         }
-        if (devices.size() == 1) {
-            showDevicesTab();
-            return;
-        }
-        DeviceStatusMenu.show(deviceStatusView, devices, new DeviceStatusMenu.Callbacks() {
+        DeviceStatusMenu.show(deviceStatusView, new DeviceStatusMenu.Callbacks() {
             @Override
             public void onDeviceSelected(@NonNull final GBDevice device) {
                 showDevicesTab();
             }
 
             @Override
-            public void onRetry(@NonNull final GBDevice device) {
+            public void onConnect(@NonNull final GBDevice device) {
                 GBApplication.deviceService(device).connect();
+            }
+
+            @Override
+            public void onSync(@NonNull final GBDevice device) {
+                GBApplication.deviceService(device).onFetchRecordedData(RecordedDataTypes.TYPE_SYNC);
             }
 
             @Override
@@ -599,15 +600,11 @@ public class ControlCenterv2 extends AppCompatActivity
 
     private boolean onDeviceStatusLongClicked() {
         final List<GBDevice> devices = GBApplication.app().getDeviceManager().getDevices();
-        if (devices.size() != 1) {
-            return false;
+        if (devices.stream().noneMatch(GBDevice::isInitialized)) {
+            GB.toast(getString(R.string.info_no_devices_connected), Toast.LENGTH_SHORT, GB.WARN);
+            return true;
         }
-        final GBDevice device = devices.get(0);
-        if (device.isInitialized()) {
-            GBApplication.deviceService(device).onFetchRecordedData(RecordedDataTypes.TYPE_SYNC);
-        } else if (!requestBluetoothIfOff()) {
-            GBApplication.deviceService(device).connect();
-        }
+        GBApplication.deviceService().onFetchRecordedData(RecordedDataTypes.TYPE_SYNC);
         return true;
     }
 
