@@ -90,6 +90,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.HeartRateSample;
 import nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes;
 import nodomain.freeyourgadget.gadgetbridge.util.AndroidUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.BarShade;
+import nodomain.freeyourgadget.gadgetbridge.util.ToolbarIcons;
 import nodomain.freeyourgadget.gadgetbridge.util.DeviceHelper;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.GBChangeLog;
@@ -280,8 +281,16 @@ public class ControlCenterv2 extends AppCompatActivity
         NavTab target = (keep != null && visibleTabs.contains(keep)) ? keep : visibleTabs.get(0);
         nav.setSelectedItemId(target.itemId);
         viewPager.setCurrentItem(visibleTabs.indexOf(target), false);
+        setTitle(target.titleRes);
         rebuildingNav = false;
         return true;
+    }
+
+    @Override
+    public boolean onPreparePanel(final int featureId, @Nullable final View view, @NonNull final Menu menu) {
+        final boolean show = super.onPreparePanel(featureId, view, menu);
+        ToolbarIcons.resize(this, menu);
+        return show;
     }
 
     private void updateBottomNavigationVisibility() {
@@ -374,7 +383,14 @@ public class ControlCenterv2 extends AppCompatActivity
         ViewCompat.setOnApplyWindowInsetsListener(mainContent, (view, windowInsets) -> {
             Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             toolbar.setPadding(toolbarPaddingLeft, insets.top, toolbarPaddingRight, toolbarPaddingBottom);
+            toolbar.setMinimumHeight(insets.top + getResources().getDimensionPixelSize(R.dimen.toolbar_height));
             navigationView.setPadding(bottomNavPaddingLeft, bottomNavPaddingTop, bottomNavPaddingRight, insets.bottom);
+            // A wrap_content bar can measure too tall on the first layout pass
+            final ViewGroup.LayoutParams navParams = navigationView.getLayoutParams();
+            navParams.height = navigationView.getMinimumHeight() > 0
+                    ? navigationView.getMinimumHeight() + bottomNavPaddingTop + insets.bottom
+                    : ViewGroup.LayoutParams.WRAP_CONTENT;
+            navigationView.setLayoutParams(navParams);
             // #6894 - when the bottom nav is not visible, the FAB would show up behind the system navbar
             // A bottom bar of the page applies the system navbar inset itself
             final int contentPaddingBottom = navigationView.getVisibility() == View.VISIBLE || pageBottomBarShown ? 0 : insets.bottom;
@@ -425,6 +441,7 @@ public class ControlCenterv2 extends AppCompatActivity
                 if (navigationView.getSelectedItemId() != id) {
                     navigationView.setSelectedItemId(id);
                 }
+                setTitle(visibleTabs.get(position).titleRes);
 
                 bindTopShade();
             }
@@ -438,6 +455,10 @@ public class ControlCenterv2 extends AppCompatActivity
         });
         if (savedInstanceState == null) {
             selectDefaultTab();
+        }
+        final int currentTab = viewPager.getCurrentItem();
+        if (currentTab < visibleTabs.size()) {
+            setTitle(visibleTabs.get(currentTab).titleRes);
         }
 
         // Create the pages next to the current page when the main thread is idle,
