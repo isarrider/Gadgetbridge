@@ -47,12 +47,13 @@ class DeviceStatusActionView(context: Context) : View(context) {
 
     fun bind(devices: List<GBDevice>) {
         if (devices.isEmpty()) return
-        val single = devices.singleOrNull() ?: devices.filter { it.isInitialized }.singleOrNull()
+        val connected = devices.filter { it.isInitialized }
+        val single = devices.singleOrNull() ?: connected.singleOrNull()
         val shown = single ?: devices.maxBy { DeviceStatusDot.rank(it) }
         icon = AppCompatResources.getDrawable(context, if (single == null) R.drawable.ic_devices_wearables else glyph(single))
             ?.mutate()?.apply { setTint(iconColor) }
         dotColor = DeviceStatusDot.color(this, shown)
-        count = if (single == null) devices.size else 1
+        count = if (single == null) connected.size else 1
         contentDescription = describe(devices)
         setPulsing(shown.isBusy)
         invalidate()
