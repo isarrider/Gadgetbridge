@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.appcompat.content.res.AppCompatResources
@@ -25,6 +26,8 @@ import nodomain.freeyourgadget.gadgetbridge.util.kotlin.getParcelableCompat
 
 /** The dropdown under the toolbar's device action, listing every paired device. */
 object DeviceStatusMenu {
+    private const val MAX_VISIBLE_ROWS = 5.5f
+
     interface Callbacks {
         fun onDeviceSelected(device: GBDevice)
         fun onConnect(device: GBDevice)
@@ -47,12 +50,18 @@ object DeviceStatusMenu {
         }
 
         val rows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        content.addView(rows)
+        content.addView(object : ScrollView(context) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+                if (rows.childCount <= MAX_VISIBLE_ROWS) return
+                val cap = (rows.getChildAt(0).measuredHeight * MAX_VISIBLE_ROWS).toInt()
+                if (measuredHeight > cap) setMeasuredDimension(measuredWidth, cap)
+            }
+        }.apply { addView(rows) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         fun fill(changed: GBDevice? = null) {
             rows.removeAllViews()
             GBApplication.app().deviceManager.devices
                 .map { if (changed != null && it.address == changed.address) changed else it }
-                .sortedWith(compareBy<GBDevice> { DeviceStatusDot.rank(it) }.thenBy { it.aliasOrName.lowercase() })
                 .forEach { rows.addView(row(inflater, rows, it, popup, callbacks)) }
         }
         fill()
@@ -87,7 +96,8 @@ object DeviceStatusMenu {
         row.findViewById<ImageView>(R.id.device_status_icon).setImageResource(device.deviceCoordinator.defaultIconResource)
         DeviceStatusDot.apply(row.findViewById(R.id.device_status_dot), device)
         row.findViewById<TextView>(R.id.device_status_name).text = device.aliasOrName
-        row.findViewById<TextView>(R.id.device_status_state).text = device.getStateString(context)
+        row.findViewById<TextView>(R.id.device_status_state).text =
+            if (device.isBusy) device.busyTask else device.getStateString(context)
         val battery = row.findViewById<TextView>(R.id.device_status_battery)
         val level = device.getBatteryLevel(0)
         battery.visibility = if (device.isInitialized && level >= 0) View.VISIBLE else View.GONE
@@ -96,11 +106,13 @@ object DeviceStatusMenu {
         sync.visibility = if (device.isInitialized && !device.isBusy) View.VISIBLE else View.GONE
         sync.setOnClickListener { callbacks.onSync(device) }
         row.setOnClickListener {
-            if (device.isInitialized || device.isConnecting) {
-                popup.dismiss()
-                callbacks.onDeviceSelected(device)
-            } else {
-                callbacks.onConnect(device)
+            when {
+                device.isInitialized -> if (!device.isBusy) callbacks.onSync(device)
+                device.isConnecting -> {
+                    popup.dismiss()
+                    callbacks.onDeviceSelected(device)
+                }
+                else -> callbacks.onConnect(device)
             }
         }
         return row
