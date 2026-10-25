@@ -7,14 +7,14 @@
         android:icon="@drawable/ic_bar_chart"
         android:title="@string/activity_summaries_statistics"
         app:iconTint="?attr/actionmenu_icon_color"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/activity_action_filter"
         android:icon="@drawable/ic_filter_alt"
         android:title="@string/pref_header_filter"
         app:iconTint="?attr/actionmenu_icon_color"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/activity_action_manage_timestamp"
