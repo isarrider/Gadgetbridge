@@ -57,6 +57,9 @@ public class SoundcoreMotionPlusProtocol extends SoundcoreProtocolImplV1 {
         super(device);
     }
 
+    // Soundcore Packet reimplementation:
+    // This device does not have checksum byte at the end.
+    // ---------------
     @Override
     protected byte[] encodeRequest(final short command) {
         return encodeCommand(command, new byte[0]);
@@ -74,15 +77,6 @@ public class SoundcoreMotionPlusProtocol extends SoundcoreProtocolImplV1 {
     }
 
     @Override
-    protected GBDeviceEvent[] decodeCommand(final short command, final byte[] payload) {
-        if (command == CMD_NOTIFY_EQUALIZER) {
-            return new GBDeviceEvent[]{new GBDeviceEventUpdatePreferences(
-                    PREF_SOUNDCORE_EQUALIZER_PRESET, presetPreference(payload[0]))};
-        }
-        return super.decodeCommand(command, payload);
-    }
-
-    @Override
     protected SoundcorePacket decodePacket(final byte[] data) {
         if (data == null || data.length < HEADER_LENGTH
                 || data[0] != 0x09 || data[1] != (byte) 0xff
@@ -95,6 +89,16 @@ public class SoundcoreMotionPlusProtocol extends SoundcoreProtocolImplV1 {
         }
         return new SoundcorePacket((short) BLETypeConversions.toUint16(data, 5),
                 Arrays.copyOfRange(data, HEADER_LENGTH, length));
+    }
+    // ---------------
+
+    @Override
+    protected GBDeviceEvent[] decodeCommand(final short command, final byte[] payload) {
+        if (command == CMD_NOTIFY_EQUALIZER) {
+            return new GBDeviceEvent[]{new GBDeviceEventUpdatePreferences(
+                    PREF_SOUNDCORE_EQUALIZER_PRESET, presetPreference(payload[0]))};
+        }
+        return super.decodeCommand(command, payload);
     }
 
     @Override
