@@ -61,8 +61,6 @@ class SoundcoreMotionPlusCoordinator : SoundcoreEarbudsCoordinator() {
         R.string.soundcore_equalizer_preset_original,
     )
 
-    override fun supportsCustomEqualizerConfiguration(): Boolean = false
-
     override fun createProtocol(device: GBDevice): SoundcoreMotionPlusProtocol =
         SoundcoreMotionPlusProtocol(device)
 

@@ -298,8 +298,6 @@ abstract class SoundcoreEarbudsCoordinator : AbstractBLClassicDeviceCoordinator(
 
     open fun getVolumeMax(): Int = 100
 
-    open fun supportsCustomEqualizerConfiguration(): Boolean = true
-
     open fun getEqualizerVolumeRange(): IntRange = -6..6
 
     open fun getSupportedEqualizerBands(): IntArray = intArrayOf(
@@ -561,7 +559,6 @@ abstract class SoundcoreEarbudsCoordinator : AbstractBLClassicDeviceCoordinator(
                             )
                             screen(
                                 key = DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_CUSTOM,
-                                visibleWhen = { supportsCustomEqualizerConfiguration() },
                                 title = R.string.soundcore_equalizer_custom_title,
                                 summary = R.string.soundcore_equalizer_custom_summary,
                                 icon = R.drawable.ic_graphic_eq,
