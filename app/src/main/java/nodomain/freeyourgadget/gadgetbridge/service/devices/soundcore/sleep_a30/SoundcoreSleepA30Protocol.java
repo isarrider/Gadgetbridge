@@ -26,6 +26,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.zone.ZoneOffsetTransition;
+import java.time.zone.ZoneRules;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,6 +59,7 @@ import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 
 public class SoundcoreSleepA30Protocol extends SoundcoreProtocolImplV1 {
     private static final Logger LOG = LoggerFactory.getLogger(SoundcoreSleepA30Protocol.class);
+    private static final short CMD_SET_TIME = (short) 0xA601;
     private static final short CMD_SET_SLEEP_TRACKING = (short) 0x8415;
     private static final short CMD_ACK_SLEEP_SESSIONS = (short) 0x8915;
     private static final short CMD_ACK_SLEEP_STAGES = (short) 0x8315;
@@ -90,8 +95,42 @@ public class SoundcoreSleepA30Protocol extends SoundcoreProtocolImplV1 {
         super(device);
     }
 
-    // TODO: Implement encodeSetTime() using command 0xA601 once its timestamp timezone
-    // semantics and trailing six-byte field are understood (10-byte payload, LE32 seconds first).
+    @Override
+    @Nullable
+    public byte[] encodeSetTime() {
+        return encodeSetTime(Instant.now(), ZoneId.systemDefault());
+    }
+
+    @Nullable
+    byte[] encodeSetTime(final Instant now, final ZoneId zone) {
+        final long timestamp = now.getEpochSecond();
+        if (timestamp < 0 || timestamp > 0xffffffffL) {
+            LOG.warn("Cannot encode Sleep A30 time outside unsigned 32-bit seconds");
+            return null;
+        }
+        final ZoneRules rules = zone.getRules();
+        final ZoneOffsetTransition transition = rules.nextTransition(now);
+        final int currentOffset = 24 + rules.getOffset(now).getTotalSeconds() / 1800;
+        long nextTimestamp = 0xffffffffL;
+        int nextOffset = currentOffset;
+        if (transition != null) {
+            nextTimestamp = transition.getInstant().getEpochSecond();
+            if (nextTimestamp < 0 || nextTimestamp >= 0xffffffffL) {
+                LOG.warn("Cannot encode Sleep A30 timezone transition outside unsigned 32-bit seconds");
+                return null;
+            }
+            nextOffset = 24 + transition.getOffsetAfter().getTotalSeconds() / 1800;
+        }
+        // Offset codes are half-hour units biased by 24; quarter-hour offsets are truncated.
+        // Fixed zones use no-transition seconds (0xffffffff) and repeat the current offset.
+        final byte[] payload = ByteBuffer.allocate(10)
+                .put(BLETypeConversions.fromUint32((int) timestamp))
+                .put((byte) currentOffset)
+                .put(BLETypeConversions.fromUint32((int) nextTimestamp))
+                .put((byte) nextOffset)
+                .array();
+        return encodeCommand(CMD_SET_TIME, payload);
+    }
 
     @Override
     public byte[] encodeDeviceInfoRequest() {
