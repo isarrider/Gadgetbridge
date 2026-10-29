@@ -48,7 +48,7 @@ import nodomain.freeyourgadget.gadgetbridge.test.TestBase;
 /**
  * How {@link DeviceCommunicationService} treats a scan-only device: connecting to it stores it and
  * puts it to waiting for scan, and {@link DeviceCommunicationService#handleScanResult} hands
- * advertisements only to a device that has a struct, through a support that is created once and
+ * advertisements only to a device that has a struct and is waiting for scan, through a support that is created once and
  * never replaced under a live one, without letting a failing support or factory out.
  */
 public class DeviceCommunicationServiceScanResultTest extends TestBase {
@@ -68,17 +68,25 @@ public class DeviceCommunicationServiceScanResultTest extends TestBase {
 
     @Test
     public void connectToDeviceSendsAScanOnlyDeviceToWaitForScan() throws Exception {
-        final GBDevice scanOnly = spy(device);
-        final DeviceCoordinator coordinator = mock(DeviceCoordinator.class);
-        when(coordinator.isConnectable()).thenReturn(false);
-        when(coordinator.handlesScanResults()).thenReturn(true);
-        doReturn(coordinator).when(scanOnly).getDeviceCoordinator();
+        final GBDevice scanOnly = scanOnly(device);
 
         service.connectToDevice(scanOnly, true);
 
         assertEquals(GBDevice.State.WAITING_FOR_SCAN, scanOnly.getState());
         assertNotNull(service.getDeviceStruct(scanOnly));
         verifyNoMoreInteractions(factory);
+    }
+
+    @Test
+    public void anAdvertisementForADeviceThatIsNoLongerWaitingIsDropped() throws Exception {
+        final DeviceSupport support = mock(DeviceSupport.class);
+        service.createDeviceStruct(device).setDeviceSupport(support);
+        device.setState(GBDevice.State.NOT_CONNECTED);
+
+        service.handleScanResult(device, advertisement());
+
+        verifyNoMoreInteractions(factory);
+        verify(support, never()).onScanResult(any());
     }
 
     @Test
@@ -108,6 +116,7 @@ public class DeviceCommunicationServiceScanResultTest extends TestBase {
         final DeviceSupport support = mock(DeviceSupport.class);
         when(factory.createDeviceSupport(device)).thenReturn(support);
         service.createDeviceStruct(device);
+        device.setState(GBDevice.State.WAITING_FOR_SCAN);
         final ScanResult first = advertisement();
         final ScanResult second = advertisement();
 
@@ -125,6 +134,7 @@ public class DeviceCommunicationServiceScanResultTest extends TestBase {
     public void anExistingSupportIsNotReplaced() throws Exception {
         final DeviceSupport existing = mock(DeviceSupport.class);
         service.createDeviceStruct(device).setDeviceSupport(existing);
+        device.setState(GBDevice.State.WAITING_FOR_SCAN);
         final ScanResult result = advertisement();
 
         service.handleScanResult(device, result);
@@ -140,6 +150,7 @@ public class DeviceCommunicationServiceScanResultTest extends TestBase {
         final DeviceSupport second = mock(DeviceSupport.class);
         when(factory.createDeviceSupport(device)).thenReturn(first, second);
         final DeviceCommunicationService.DeviceStruct struct = service.createDeviceStruct(device);
+        device.setState(GBDevice.State.WAITING_FOR_SCAN);
         service.handleScanResult(device, advertisement());
 
         // what removeDeviceSupport leaves behind after disposing the support
@@ -157,6 +168,7 @@ public class DeviceCommunicationServiceScanResultTest extends TestBase {
     public void aFactoryThatFailsLeavesTheDeviceWithoutASupport() throws Exception {
         when(factory.createDeviceSupport(device)).thenThrow(new GBException("no support"));
         service.createDeviceStruct(device);
+        device.setState(GBDevice.State.WAITING_FOR_SCAN);
 
         service.handleScanResult(device, advertisement());
 
@@ -168,6 +180,7 @@ public class DeviceCommunicationServiceScanResultTest extends TestBase {
         final DeviceSupport support = mock(DeviceSupport.class);
         when(factory.createDeviceSupport(device)).thenReturn(support);
         service.createDeviceStruct(device);
+        device.setState(GBDevice.State.WAITING_FOR_SCAN);
         final ScanResult bad = advertisement();
         final ScanResult good = advertisement();
         doThrow(new IllegalStateException("garbled")).when(support).onScanResult(bad);
@@ -177,6 +190,15 @@ public class DeviceCommunicationServiceScanResultTest extends TestBase {
 
         verify(support).onScanResult(good);
         assertSame(support, service.getDeviceStruct(device).getDeviceSupport());
+    }
+
+    private static GBDevice scanOnly(final GBDevice device) {
+        final GBDevice scanOnly = spy(device);
+        final DeviceCoordinator coordinator = mock(DeviceCoordinator.class);
+        when(coordinator.isConnectable()).thenReturn(false);
+        when(coordinator.handlesScanResults()).thenReturn(true);
+        doReturn(coordinator).when(scanOnly).getDeviceCoordinator();
+        return scanOnly;
     }
 
     private static ScanResult advertisement() {

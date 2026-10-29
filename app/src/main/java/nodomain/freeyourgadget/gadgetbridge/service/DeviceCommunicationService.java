@@ -559,12 +559,13 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
      * <p>
      * The device struct is not created here: a device only gets one when it is put into
      * {@link GBDevice.State#WAITING_FOR_SCAN} (or connected) through the usual paths, and an
-     * advertisement from a device that is not waiting for scan is dropped.
+     * advertisement from a device that is not waiting for scan is dropped, also after a disconnect,
+     * which keeps the struct.
      */
     @VisibleForTesting
     void handleScanResult(final GBDevice device, final ScanResult scanResult) {
         final DeviceStruct struct = getDeviceStructOrNull(device);
-        if (struct == null) {
+        if (struct == null || device.getState() != GBDevice.State.WAITING_FOR_SCAN) {
             LOG.debug("handleScanResult - ignoring advertisement from {}, not waiting for scan", device.getAddress());
             return;
         }
