@@ -26,16 +26,12 @@ import org.slf4j.LoggerFactory;
 
 import androidx.annotation.NonNull;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Collections;
 
-import de.greenrobot.dao.AbstractDao;
-import de.greenrobot.dao.Property;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.casio.CasioLocationIndicatorActivity;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
@@ -52,9 +48,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.cards.MoreCardItem;
 import nodomain.freeyourgadget.gadgetbridge.devices.casio.Casio2C2DDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.casio.CasioLocationIndicatorSettingsCustomizer;
 import nodomain.freeyourgadget.gadgetbridge.devices.casio.gbx100.CasioGBX100SampleProvider;
-import nodomain.freeyourgadget.gadgetbridge.entities.CasioGBX100ActivitySampleDao;
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
-import nodomain.freeyourgadget.gadgetbridge.entities.GenericAltitudeSampleDao;
 import nodomain.freeyourgadget.gadgetbridge.entities.BaseActivitySummary;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample;
@@ -178,14 +172,6 @@ public class CasioGGB100DeviceCoordinator extends Casio2C2DDeviceCoordinator {
     @Override
     public int getAlarmSlotCount(GBDevice device) {
         return 5;
-    }
-
-    @Override
-    public Map<AbstractDao<?, ?>, Property> getAllDeviceDao(@NonNull final DaoSession session) {
-        Map<AbstractDao<?, ?>, Property> map = new HashMap<>(2);
-        map.put(session.getCasioGBX100ActivitySampleDao(), CasioGBX100ActivitySampleDao.Properties.DeviceId);
-        map.put(session.getGenericAltitudeSampleDao(), GenericAltitudeSampleDao.Properties.DeviceId);
-        return map;
     }
 
     @Override
