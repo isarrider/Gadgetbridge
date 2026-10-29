@@ -31,25 +31,33 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.robolectric.Shadows.shadowOf;
+import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_DISCONNECT;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.ScanResult;
+import android.content.Intent;
+import android.os.Looper;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.robolectric.Robolectric;
+import org.robolectric.RuntimeEnvironment;
+import org.robolectric.android.controller.ServiceController;
 
 import nodomain.freeyourgadget.gadgetbridge.GBException;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.BLEScanService;
 import nodomain.freeyourgadget.gadgetbridge.test.TestBase;
 
 /**
  * How {@link DeviceCommunicationService} treats a scan-only device: connecting to it stores it and
  * puts it to waiting for scan, and {@link DeviceCommunicationService#handleScanResult} hands
  * advertisements only to a device that has a struct and is waiting for scan, through a support that is created once and
- * never replaced under a live one, without letting a failing support or factory out.
+ * never replaced under a live one, without letting a failing support or factory out. Disconnecting
+ * it stops the scan.
  */
 public class DeviceCommunicationServiceScanResultTest extends TestBase {
     private static final String ADDRESS = "00:11:22:33:44:55";
@@ -87,6 +95,33 @@ public class DeviceCommunicationServiceScanResultTest extends TestBase {
 
         verifyNoMoreInteractions(factory);
         verify(support, never()).onScanResult(any());
+    }
+
+    @Test
+    public void disconnectingAScanOnlyDeviceStopsTheScan() throws Exception {
+        // created, unlike the others, so that it receives its own device updates
+        final ServiceController<DeviceCommunicationService> controller = Robolectric.buildService(DeviceCommunicationService.class).create();
+        try {
+            service = controller.get();
+            service.setDeviceSupportFactory(factory);
+            final GBDevice scanOnly = scanOnly(device);
+            service.waitForScanOnlyDevice(scanOnly);
+            shadowOf(Looper.getMainLooper()).idle();
+            while (shadowOf(RuntimeEnvironment.getApplication()).getNextStoppedService() != null) {
+                // only the stop caused by the disconnect counts
+            }
+
+            service.handleAction(new Intent(ACTION_DISCONNECT), ACTION_DISCONNECT, scanOnly);
+            shadowOf(Looper.getMainLooper()).idle();
+
+            assertEquals(GBDevice.State.NOT_CONNECTED, scanOnly.getState());
+            final Intent stopped = shadowOf(RuntimeEnvironment.getApplication()).getNextStoppedService();
+            assertNotNull("the scan must stop once no device is waiting for it", stopped);
+            assertEquals(BLEScanService.class.getName(), stopped.getComponent().getClassName());
+        } finally {
+            // or it keeps listening to preference changes in later tests
+            controller.destroy();
+        }
     }
 
     @Test

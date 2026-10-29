@@ -915,15 +915,21 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         return START_STICKY;
     }
 
-    private void handleAction(Intent intent, String action, GBDevice device) throws DeviceNotFoundException {
+    @VisibleForTesting
+    void handleAction(Intent intent, String action, GBDevice device) throws DeviceNotFoundException {
         if (ACTION_DISCONNECT.equals(intent.getAction())) {
             try {
                 removeDeviceSupport(device);
             } catch (DeviceNotFoundException e) {
                 LOG.error("Failed to find device in handleAction to disconnect: {}", device);
             }
-            device.setState(GBDevice.State.NOT_CONNECTED);
-            device.sendDeviceUpdateIntent(this);
+            if (isScanOnlyDevice(device)) {
+                // as a state change, so that the scan stops, see updateScanServiceForScanOnlyDevice
+                device.setUpdateState(GBDevice.State.NOT_CONNECTED, this);
+            } else {
+                device.setState(GBDevice.State.NOT_CONNECTED);
+                device.sendDeviceUpdateIntent(this);
+            }
             updateReceiversState();
             return;
         }
