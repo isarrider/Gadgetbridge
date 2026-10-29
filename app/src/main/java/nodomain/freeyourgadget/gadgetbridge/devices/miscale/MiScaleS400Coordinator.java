@@ -46,6 +46,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.ItemWithDetails;
 import nodomain.freeyourgadget.gadgetbridge.model.WeightSample;
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.miscale.MiScaleS400Decryptor;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.miscale.MiScaleS400DeviceSupport;
 
 public class MiScaleS400Coordinator extends AbstractBLEDeviceCoordinator {
@@ -102,6 +103,21 @@ public class MiScaleS400Coordinator extends AbstractBLEDeviceCoordinator {
     @Override
     public int getBondingStyle() {
         return BONDING_STYLE_NONE;
+    }
+
+    @Override
+    public boolean requiresAuthKey() {
+        return true;
+    }
+
+    @Override
+    public boolean validateAuthKey(@NonNull final String authKey) {
+        return MiScaleS400Decryptor.isValidBindKey(authKey);
+    }
+
+    @Override
+    public int[] getSupportedDeviceSpecificAuthenticationSettings() {
+        return new int[]{R.xml.devicesettings_pairingkey};
     }
 
     @Override

@@ -50,13 +50,6 @@ public class MiScaleS400SettingsCustomizer implements DeviceSpecificSettingsCust
 
     @Override
     public void customizeSettings(final DeviceSpecificSettingsHandler handler, final Prefs prefs, final String rootKey) {
-        final EditTextPreference pref = handler.findPreference(MiScaleS400DeviceSupport.PREF_MISCALE_S400_BIND_KEY);
-        if (pref != null) {
-            pref.setOnBindEditTextListener(editText -> {
-                editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-                editText.setSelection(editText.getText().length());
-            });
-        }
         final EditTextPreference profile = handler.findPreference(MiScaleS400DeviceSupport.PREF_MISCALE_S400_PROFILE);
         if (profile != null) {
             profile.setOnBindEditTextListener(editText -> {

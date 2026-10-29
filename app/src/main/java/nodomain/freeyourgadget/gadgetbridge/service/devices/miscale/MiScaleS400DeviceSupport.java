@@ -42,6 +42,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.MiScaleWeightSampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.miscale.MiScaleS400Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericHeartRateSample;
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericImpedanceSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.MiScaleWeightSample;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -49,7 +50,6 @@ import nodomain.freeyourgadget.gadgetbridge.service.AbstractDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 public class MiScaleS400DeviceSupport extends AbstractDeviceSupport {
-    public static final String PREF_MISCALE_S400_BIND_KEY = "pref_miscale_s400_bind_key";
     /** The scale's profile whose weigh-ins to store; empty or 0 stores every profile's. */
     public static final String PREF_MISCALE_S400_PROFILE = "pref_miscale_s400_profile";
 
@@ -97,7 +97,7 @@ public class MiScaleS400DeviceSupport extends AbstractDeviceSupport {
 
     @Override
     public void onScanResult(final ScanResult scanResult) {
-        final String bindKey = getDevicePrefs().getString(PREF_MISCALE_S400_BIND_KEY, null);
+        final String bindKey = getDevicePrefs().getString(DeviceSettingsPreferenceConst.PREF_AUTH_KEY, null);
         if (!MiScaleS400Decryptor.isValidBindKey(bindKey)) {
             if (!warnedMissingBindKey) {
                 warnedMissingBindKey = true;
@@ -145,7 +145,7 @@ public class MiScaleS400DeviceSupport extends AbstractDeviceSupport {
                 Integer.toHexString(MiScaleS400Decryptor.getProductId(stripServiceDataHeader(serviceData))),
                 hexdumpWithoutAddress(serviceData, result.getDevice().getAddress()));
 
-        final String bindKey = getDevicePrefs().getString(PREF_MISCALE_S400_BIND_KEY, null);
+        final String bindKey = getDevicePrefs().getString(DeviceSettingsPreferenceConst.PREF_AUTH_KEY, null);
         final byte[] payload = MiScaleS400Decryptor.decryptPayload(serviceData, getDevice().getAddress(), bindKey);
         if (payload == null) {
             LOG.warn("Failed to decrypt S400 frame from {} (wrong bind key?)", maskAddress(result.getDevice().getAddress()));
