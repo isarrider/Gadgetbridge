@@ -485,7 +485,18 @@ public abstract class GarminCoordinator extends AbstractBLEDeviceCoordinator {
                 return new GarminPrgInstallHandler(context, this);
             }
         }
+        for (final Uri file : files) {
+            final GarminFitFileInstallHandler handler = new GarminFitFileInstallHandler(file, Bundle.EMPTY, context);
+            if (handler.getFileType() == nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.FileType.FILETYPE.WORKOUTS) {
+                return new GarminWorkoutInstallHandler(context, this);
+            }
+        }
         return null;
+    }
+
+    @Override
+    public boolean supportsWorkoutFileImport(final GBDevice device) {
+        return supports(device, GarminCapability.WORKOUT_DOWNLOAD);
     }
 
     @Override

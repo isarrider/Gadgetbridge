@@ -181,6 +181,10 @@ public class GarminFitFileInstallHandler implements InstallHandler {
         return fileType;
     }
 
+    public FitFile getFitFile() {
+        return fitFile;
+    }
+
     private boolean parseFitFile(final InstallActivity installActivity, final GarminCoordinator coordinator, final GBDevice device) {
         final boolean installUnsupportedFiles = GBApplication.getDevicePrefs(device).installUnsupportedFiles();
 

@@ -1073,6 +1073,11 @@ public interface DeviceCoordinator {
         return null;
     }
 
+    /** Whether a WorkoutInstallHandler can import structured workout files on this device. */
+    default boolean supportsWorkoutFileImport(@NonNull final GBDevice device) {
+        return false;
+    }
+
     /**
      * The workout template capabilities of this device: sports, step types, durations, targets
      * and fields.

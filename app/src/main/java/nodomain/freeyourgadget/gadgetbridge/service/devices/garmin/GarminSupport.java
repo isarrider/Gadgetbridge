@@ -92,6 +92,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminFitFileInstallH
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminGpxRouteInstallHandler;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminPreferences;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminPrgInstallItem;
+import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminWorkoutInstallItem;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminCapability;
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.gps.GBLocationService;
@@ -1884,8 +1885,10 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
      */
     private void installItem(final InstallSession session, final List<InstallItem> items, final int index) {
         if (index >= items.size()) {
-            // Refresh app list
-            onAppInfoReq(GdiInstalledApps.AppType.WATCH_APP);
+            if (items.stream().anyMatch(i -> i instanceof GarminPrgInstallItem)) {
+                // Refresh app list
+                onAppInfoReq(GdiInstalledApps.AppType.WATCH_APP);
+            }
             if (getDevice().isBusy()) {
                 getDevice().unsetBusyTask();
                 getDevice().sendDeviceUpdateIntent(getContext());
@@ -1893,7 +1896,8 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
             return;
         }
         final InstallItem item = items.get(index);
-        if (!(item instanceof GarminPrgInstallItem prgItem)) {
+        final boolean workout = item instanceof GarminWorkoutInstallItem;
+        if (!workout && !(item instanceof GarminPrgInstallItem)) {
             LOG.error("Unsupported install item {}", item.getClass());
             session.failed(item, getContext().getString(R.string.fwapp_install_device_not_supported));
             installItem(session, items, index + 1);
@@ -1902,7 +1906,9 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
 
         final byte[] bytes;
         try {
-            bytes = prgItem.getFile().readBytes(getContext());
+            bytes = workout
+                    ? ((GarminWorkoutInstallItem) item).getBytes()
+                    : ((GarminPrgInstallItem) item).getFile().readBytes(getContext());
         } catch (final IOException e) {
             LOG.error("Failed to read {}", item.getDisplayName(), e);
             session.failed(item, getContext().getString(R.string.installation_failed_));
@@ -1926,6 +1932,15 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
                 installItem(session, items, index + 1);
             }
         };
+
+        if (workout) {
+            LOG.debug("Uploading {} bytes for workout {}", bytes.length, item.getDisplayName());
+            communicator.sendMessage(
+                    "upload workout " + item.getDisplayName(),
+                    fileTransferHandler.initiateUpload(bytes, FileType.FILETYPE.WORKOUTS, listener).getOutgoingMessage()
+            );
+            return;
+        }
 
         final String taskName = "upload prg " + item.getDisplayName();
         if (communicator instanceof CommunicatorV2 communicatorV2 && mlrEnabled()
