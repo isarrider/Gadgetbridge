@@ -28,10 +28,14 @@ import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericHrvValueSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericRespiratoryRateSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericSleepScoreSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.GenericMetricSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericSleepStageSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.GenericTrainingLoadAcuteSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.GenericTrainingLoadChronicSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericTemperatureSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.PolarIgnite3ActivitySample;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.MetricSample;
 import nodomain.freeyourgadget.gadgetbridge.model.TemperatureSample;
 import nodomain.freeyourgadget.gadgetbridge.proto.polar.PolarProto;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
@@ -62,6 +66,8 @@ public class PolarHealthSync {
     private final List<PolarHealthData.Value> respiration = new ArrayList<>();
     private final List<PolarHealthData.Value> sleepScores = new ArrayList<>();
     private final List<PolarWorkouts.Workout> workouts = new ArrayList<>();
+    private final List<PolarHealthData.TrainingLoad> trainingLoads = new ArrayList<>();
+    private final List<PolarHealthData.Value> restingMetabolicRates = new ArrayList<>();
     private int pending;
 
     public PolarHealthSync(final GBDevice device, final FileReader reader, final Runnable onFinished) {
@@ -94,16 +100,26 @@ public class PolarHealthSync {
         // Files are answered in order, so the zone is known once the activity file is parsed
         final ZoneId[] zone = {ZoneId.systemDefault()};
         read(directory + "ACT/ASAMPL0.BPB", payload -> {
-            final PolarProto.PbActivitySamples samples = PolarProto.PbActivitySamples.parseFrom(payload);
+            final PolarProto.PbActivitySamples samples = PolarHealthData.parseLenient(PolarProto.PbActivitySamples.parser(), payload);
             zone[0] = PolarHealthData.zone(samples.getStartTime());
             PolarHealthData.addSteps(minutes, samples);
         });
-        read(directory + "DSUM/DSUM.BPB", payload ->
-                PolarHealthData.addDailySummary(minutes, PolarProto.PbDailySummary.parseFrom(payload), day, zone[0]));
-        read(directory + "NR/AUTOS.BPB", payload ->
-                PolarHealthData.addHeartRates(minutes, PolarProto.PbAutomaticSampleSessions.parseFrom(payload), zone[0]));
+        read(directory + "DSUM/DSUM.BPB", payload -> {
+            final PolarProto.PbDailySummary summary = PolarProto.PbDailySummary.parseFrom(payload);
+            PolarHealthData.addDailySummary(minutes, summary, day, zone[0]);
+            // Until the day is over the watch reports the calories burnt so far, not the rate
+            if (summary.getBmrCalories() > 0 && day.isBefore(LocalDate.now(zone[0]))) {
+                restingMetabolicRates.add(new PolarHealthData.Value(day.atStartOfDay(zone[0]).toEpochSecond() * 1000L,
+                        summary.getBmrCalories()));
+            }
+        });
+        read(directory + "NR/AUTOS.BPB", payload -> {
+            final PolarProto.PbAutomaticSampleSessions sessions = PolarHealthData.parseLenient(PolarProto.PbAutomaticSampleSessions.parser(), payload);
+            PolarHealthData.addHeartRates(minutes, sessions, zone[0]);
+        });
         read(directory + "NR/RESPRATE.BPB", payload ->
-                respiration.addAll(PolarHealthData.respirationRates(PolarProto.PbRespirationRate.parseFrom(payload), zone[0])));
+                respiration.addAll(PolarHealthData.respirationRates(
+                        PolarHealthData.parseLenient(PolarProto.PbRespirationRate.parser(), payload), zone[0])));
         read(directory + "NR/NR.BPB", payload -> {
             final PolarProto.PbNightlyRecoveryStatus status = PolarProto.PbNightlyRecoveryStatus.parseFrom(payload);
             hrv.addAll(PolarHealthData.nightlyRecovery(status, true));
@@ -113,6 +129,13 @@ public class PolarHealthSync {
                 sleepScores.addAll(PolarHealthData.sleepScore(PolarProto.PbSleepScore.parseFrom(payload))));
         read(directory + "SLEEP/SLEEPRES.BPB", payload ->
                 sleepStages.addAll(PolarHealthData.sleepStages(PolarProto.PbSleepAnalysisResult.parseFrom(payload))));
+        read(directory + "TL/DAILYTLR.BPB", payload -> {
+            final PolarHealthData.TrainingLoad load = PolarHealthData.trainingLoad(
+                    PolarProto.PbDailyTrainingLoadAndRecoveryStatus.parseFrom(payload), day, zone[0]);
+            if (load != null) {
+                trainingLoads.add(load);
+            }
+        });
         readWorkouts(directory + "E/");
         read(directory + "SKINTEMP/TEMPCONT.BPB", payload ->
                 temperatures.addAll(PolarHealthData.skinTemperatures(
@@ -302,11 +325,41 @@ public class PolarHealthSync {
             }
             session.getGenericSleepScoreSampleDao().insertOrReplaceInTx(scores);
 
+            final List<GenericTrainingLoadAcuteSample> acute = new ArrayList<>();
+            final List<GenericTrainingLoadChronicSample> chronic = new ArrayList<>();
+            for (final PolarHealthData.TrainingLoad load : trainingLoads) {
+                final GenericTrainingLoadAcuteSample a = new GenericTrainingLoadAcuteSample();
+                a.setTimestamp(load.timestampMillis);
+                a.setDeviceId(deviceId);
+                a.setUserId(userId);
+                a.setValue(Math.round(load.acute));
+                acute.add(a);
+                final GenericTrainingLoadChronicSample c = new GenericTrainingLoadChronicSample();
+                c.setTimestamp(load.timestampMillis);
+                c.setDeviceId(deviceId);
+                c.setUserId(userId);
+                c.setValue(Math.round(load.chronic));
+                chronic.add(c);
+            }
+            session.getGenericTrainingLoadAcuteSampleDao().insertOrReplaceInTx(acute);
+            session.getGenericTrainingLoadChronicSampleDao().insertOrReplaceInTx(chronic);
+
+            final List<GenericMetricSample> metrics = new ArrayList<>();
+            for (final PolarHealthData.Value value : restingMetabolicRates) {
+                final GenericMetricSample sample = new GenericMetricSample();
+                sample.setTimestamp(value.timestampMillis);
+                sample.setDeviceId(deviceId);
+                sample.setUserId(userId);
+                sample.setMetric(MetricSample.Metric.GENERIC_RESTING_METABOLIC_RATE, value.value);
+                metrics.add(sample);
+            }
+            session.getGenericMetricSampleDao().insertOrReplaceInTx(metrics);
+
             for (final PolarWorkouts.Workout workout : workouts) {
                 storeWorkout(session, deviceId, userId, workout);
             }
 
-            LOG.info("Stored {} workouts", workouts.size());
+            LOG.info("Stored {} workouts, {} training load days, {} resting metabolic rates", workouts.size(), trainingLoads.size(), metrics.size());
             LOG.info("Stored {} HRV, {} respiration, {} sleep score samples", hrvSamples.size(), breathing.size(), scores.size());
             LOG.info("Stored {} activity minutes, {} sleep stages, {} skin temperatures",
                     activity.size(), stages.size(), skin.size());

@@ -574,6 +574,20 @@
         <item>@string/p_scheduled</item>
     </string-array>
 
+    <string-array name="polar_tap_sensitivity">
+        <item>@string/off</item>
+        <item>@string/polar_tap_sensitivity_very_low</item>
+        <item>@string/low</item>
+        <item>@string/polar_tap_sensitivity_medium</item>
+        <item>@string/high</item>
+    </string-array>
+    <string-array name="polar_tap_sensitivity_values">
+        <item>TAP_BUTTON_SENSITIVITY_OFF</item>
+        <item>TAP_BUTTON_SENSITIVITY_VERY_LOW</item>
+        <item>TAP_BUTTON_SENSITIVITY_LOW</item>
+        <item>TAP_BUTTON_SENSITIVITY_MEDIUM</item>
+        <item>TAP_BUTTON_SENSITIVITY_HIGH</item>
+    </string-array>
     <string-array name="polar_continuous_hr">
         <item>@string/off</item>
         <item>@string/polar_continuous_hr_always</item>

@@ -16,6 +16,8 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind;
 
 public class PolarIgnite3ActivitySampleProvider extends AbstractSampleProvider<PolarIgnite3ActivitySample> {
+    private static final float FULL_INTENSITY_STEPS_PER_MINUTE = 100f;
+
     public PolarIgnite3ActivitySampleProvider(GBDevice device, DaoSession session) {
         super(device, session);
     }
@@ -55,7 +57,8 @@ public class PolarIgnite3ActivitySampleProvider extends AbstractSampleProvider<P
 
     @Override
     public float normalizeIntensity(int rawIntensity) {
-        return rawIntensity;
+        // Steps per minute; brisk walking is about 100, so that fills the bar
+        return Math.max(0f, Math.min(rawIntensity / FULL_INTENSITY_STEPS_PER_MINUTE, 1f));
     }
 
     /**

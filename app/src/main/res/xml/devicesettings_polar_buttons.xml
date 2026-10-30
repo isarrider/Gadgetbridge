@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <ListPreference
+        android:defaultValue="TAP_BUTTON_SENSITIVITY_MEDIUM"
+        android:entries="@array/polar_tap_sensitivity"
+        android:entryValues="@array/polar_tap_sensitivity_values"
+        android:icon="@drawable/ic_touch"
+        android:key="polar_tap_sensitivity"
+        android:title="@string/polar_pref_tap_sensitivity"
+        app:useSimpleSummaryProvider="true" />
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:icon="@drawable/ic_lock_open"
+        android:key="polar_auto_button_lock"
+        android:layout="@layout/preference_checkbox"
+        android:title="@string/polar_pref_auto_button_lock" />
+</androidx.preference.PreferenceScreen>

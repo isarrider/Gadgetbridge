@@ -1946,3 +1946,100 @@ message PbGenericPeriod {
   repeated PbStringKeyValuePair data = 5;
   repeated PbGenericSubPeriod subperiods = 6;
 }
+
+// /U/0/WEATHER/FORECAST.BPB, which Polar Flow downloads ready made from Polar's server
+message PbWeatherIcon {
+  enum PbWeatherIconType {
+    UNKNOWN_ICON_TYPE = 0;
+    STANDARD_ICON = 1;
+    MIST_ICON = 2;
+  }
+  message PbStandardWeatherIcon {
+    enum PbTimeOfDay {
+      UNKNOWN_TIME_OF_DAY = 0;
+      DAY = 1;
+      NIGHT = 2;
+    }
+    enum PbCloudiness {
+      UNKNOWN_CLOUDINESS = 0;
+      NO_CLOUDS = 1;
+      FEW_CLOUDS = 2;
+      SCATTERED_CLOUDS = 3;
+      BROKEN_CLOUDS = 4;
+      OVERCAST_CLOUDS = 5;
+    }
+    message PbPrecipitation {
+      enum PbPrecipitationType {
+        UNKNOWN_PRECIPITATION_TYPE = 0;
+        DRIZZLE = 1;
+        RAIN = 2;
+        SNOW = 3;
+        SLEET = 4;
+      }
+      enum PbPrecipitationVolume {
+        UNKNOWN_PRECIPITATION_VOLUME = 0;
+        LIGHT_PRECIPITATION = 1;
+        MODERATE_PRECIPITATION = 2;
+        HEAVY_PRECIPITATION = 3;
+      }
+      optional PbPrecipitationType precipitation_type = 1;
+      optional PbPrecipitationVolume precipitation_volume = 2;
+    }
+    optional PbTimeOfDay time_of_day = 1;
+    optional PbCloudiness cloudiness = 2;
+    optional PbPrecipitation precipitation = 3;
+    optional bool thunder = 4;
+  }
+  optional PbWeatherIconType icon_type = 1;
+  optional PbStandardWeatherIcon standard_weather_icon = 2;
+}
+
+message PbHourlyWeatherForecast {
+  optional uint32 hour = 1;
+  optional PbWeatherIcon weather_icon = 2;
+  optional float temperature = 3;
+  optional float feels_like_temperature = 4;
+  optional uint32 humidity = 6;
+  optional float wind_speed = 7;
+  optional uint32 wind_direction = 8;
+  optional float precipitation = 9;
+  optional float sea_level_pressure = 10;
+}
+
+message PbMultihourWeatherForecast {
+  optional uint32 hour = 1;
+  optional uint32 length = 2;
+  optional PbWeatherIcon weather_icon = 3;
+  optional float min_temperature = 4;
+  optional float max_temperature = 5;
+}
+
+message PbDailyWeatherForecast {
+  message PbHourlyWeatherForecasts {
+    repeated PbHourlyWeatherForecast hourly_weather_forecasts = 1;
+  }
+  message PbMultihourWeatherForecasts {
+    repeated PbMultihourWeatherForecast multihour_weather_forecasts = 1;
+  }
+  optional PbDate date = 1;
+  optional PbHourlyWeatherForecasts hourly_weather_forecasts = 2;
+  optional PbMultihourWeatherForecasts three_hour_weather_forecasts = 3;
+  optional PbMultihourWeatherForecasts six_hour_weather_forecasts = 4;
+}
+
+message PbMobilePhoneCoordinates {
+  optional double latitude = 1;
+  optional double longitude = 2;
+}
+
+message PbWeatherForecast {
+  enum PbErrorCode {
+    UNKNOWN_ERROR = 0;
+    LOCATION_NOT_AVAILABLE_ERROR = 1;
+  }
+  optional PbOneLineText location = 1;
+  optional PbSystemDateTime forecast_time = 2;
+  repeated PbDailyWeatherForecast daily_forecasts = 3;
+  optional PbErrorCode error_code = 4;
+  optional PbMobilePhoneCoordinates mobilePhoneCoordinates = 5;
+}

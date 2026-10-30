@@ -162,4 +162,24 @@ public class PolarHealthDataTest {
         assertEquals(MIDNIGHT * 1000L + 300000, temperatures.get(1).timestampMillis);
         assertEquals(33f, temperatures.get(1).celsius, 0.001f);
     }
+
+    @Test
+    public void cutOffFilesKeepWhatWasWritten() throws Exception {
+        final byte[] whole = PolarProto.PbAutomaticSampleSessions.newBuilder()
+                .setDay(date())
+                .addSamples(PolarProto.PbAutomaticHeartRateSamples.newBuilder()
+                        .setTime(PolarProto.PbTime.newBuilder().setHour(1).setMinute(0).setSeconds(0))
+                        .addHeartRate(55))
+                .addSamples(PolarProto.PbAutomaticHeartRateSamples.newBuilder()
+                        .setTime(PolarProto.PbTime.newBuilder().setHour(2).setMinute(0).setSeconds(0))
+                        .addHeartRate(60).addHeartRate(61).addHeartRate(62))
+                .build().toByteArray();
+        final byte[] cut = java.util.Arrays.copyOf(whole, whole.length - 2);
+
+        final PolarProto.PbAutomaticSampleSessions sessions =
+                PolarHealthData.parseLenient(PolarProto.PbAutomaticSampleSessions.parser(), cut);
+
+        assertEquals(1, sessions.getSamplesCount());
+        assertEquals(55, sessions.getSamples(0).getHeartRate(0));
+    }
 }

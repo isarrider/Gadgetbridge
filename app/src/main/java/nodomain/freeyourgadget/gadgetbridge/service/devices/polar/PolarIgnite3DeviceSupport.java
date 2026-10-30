@@ -31,6 +31,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.ZoneId;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -54,7 +55,9 @@ import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.MusicSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.MusicStateSpec;
+import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
+import nodomain.freeyourgadget.gadgetbridge.model.weather.Weather;
 import nodomain.freeyourgadget.gadgetbridge.proto.polar.PolarProto;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
@@ -185,6 +188,7 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
         getFile(PATH_DEVICE_SETTINGS, this::handleDeviceSettings);
         getFile(PATH_GENERAL_PREFERENCES, this::handleGeneralPreferences);
         getFile(PATH_PHYSICAL_DATA, this::handlePhysicalData);
+        onSendWeather();
         syncHealthData();
     }
 
@@ -221,6 +225,25 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
             syncing = false;
         }
         super.dispose();
+    }
+
+    @Override
+    public void onSendWeather() {
+        putFile(PolarWeather.PATH, PolarWeather.forecast(Weather.getWeatherSpec(), ZoneId.systemDefault()).toByteArray());
+    }
+
+    @Override
+    public void onSetAlarms(final ArrayList<? extends Alarm> alarms) {
+        final PolarProto.PbUserDeviceSettings updated;
+        synchronized (this) {
+            if (deviceSettings == null) {
+                LOG.warn("Device settings not read yet, not setting the alarm");
+                return;
+            }
+            updated = PolarSettings.applyAlarm(deviceSettings, alarms.isEmpty() ? null : alarms.get(0));
+            deviceSettings = updated;
+        }
+        putFile(PATH_DEVICE_SETTINGS, updated.toByteArray());
     }
 
     @Override

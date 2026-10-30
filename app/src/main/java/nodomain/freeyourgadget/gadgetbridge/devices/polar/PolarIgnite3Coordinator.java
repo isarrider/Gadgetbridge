@@ -18,6 +18,10 @@ package nodomain.freeyourgadget.gadgetbridge.devices.polar;
 
 import android.content.Context;
 
+import nodomain.freeyourgadget.gadgetbridge.devices.GenericTrainingLoadAcuteSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.GenericTrainingLoadChronicSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.entities.GenericTrainingLoadAcuteSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.GenericTrainingLoadChronicSample;
 import nodomain.freeyourgadget.gadgetbridge.devices.GenericHrvValueSampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.GenericRespiratoryRateSampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.GenericSleepScoreSampleProvider;
@@ -87,6 +91,31 @@ public class PolarIgnite3Coordinator extends AbstractBLEDeviceCoordinator {
     }
 
     @Override
+    public boolean supportsTrainingLoad(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public TimeSampleProvider<? extends GenericTrainingLoadAcuteSample> getTrainingAcuteLoadSampleProvider(@NonNull final GBDevice device, @NonNull final DaoSession session) {
+        return new GenericTrainingLoadAcuteSampleProvider(device, session);
+    }
+
+    @Override
+    public TimeSampleProvider<? extends GenericTrainingLoadChronicSample> getTrainingChronicLoadSampleProvider(@NonNull final GBDevice device, @NonNull final DaoSession session) {
+        return new GenericTrainingLoadChronicSampleProvider(device, session);
+    }
+
+    @Override
+    public boolean supportsWeather(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public int getAlarmSlotCount(@NonNull final GBDevice device) {
+        return 1;
+    }
+
+    @Override
     public int getCannedRepliesSlotCount(final GBDevice device) {
         return PolarIgnite3DeviceSupport.CANNED_REPLY_SLOTS;
     }
@@ -95,10 +124,14 @@ public class PolarIgnite3Coordinator extends AbstractBLEDeviceCoordinator {
     public int[] getSupportedDeviceSpecificSettings(final GBDevice device) {
         return new int[]{
                 R.xml.devicesettings_polar_watch_notifications,
+                R.xml.devicesettings_navigation_notifications,
                 R.xml.devicesettings_canned_reply_16,
                 R.xml.devicesettings_ak102_dnd,
                 R.xml.devicesettings_polar_continuous_hr,
                 R.xml.devicesettings_inactivity_noshed,
+                R.xml.devicesettings_wearlocation,
+                R.xml.devicesettings_vibrations_enable,
+                R.xml.devicesettings_polar_buttons,
                 R.xml.devicesettings_timeformat,
         };
     }

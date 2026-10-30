@@ -2284,7 +2284,7 @@ public class GBDaoGenerator {
     private static Entity addPolarIgnite3ActivitySample(Schema schema, Entity user, Entity device) {
         Entity sample = addEntity(schema, "PolarIgnite3ActivitySample");
         sample.implementsSerializable();
-        addCommonActivitySampleProperties("AbstractActivitySample", sample, user, device);
+        addCommonActivitySampleProperties("AbstractPolarIgnite3ActivitySample", sample, user, device);
         sample.addIntProperty(SAMPLE_STEPS).notNull().codeBeforeGetterAndSetter(OVERRIDE);
         sample.addIntProperty("distanceCm").notNull().codeBeforeGetterAndSetter(OVERRIDE);
         sample.addIntProperty("activeCalories").notNull().codeBeforeGetterAndSetter(OVERRIDE);

@@ -24,6 +24,8 @@ import static nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.Dev
 import static nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_DO_NOT_DISTURB_START;
 import static nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_INACTIVITY_ENABLE_NOSHED;
 import static nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_TIMEFORMAT_12H;
+import static nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_VIBRATION_ENABLE;
+import static nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_WEARLOCATION;
 
 import android.content.SharedPreferences;
 
@@ -45,6 +47,7 @@ import java.util.Set;
 import java.util.TimeZone;
 
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser;
+import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
 import nodomain.freeyourgadget.gadgetbridge.model.DistanceUnit;
 import nodomain.freeyourgadget.gadgetbridge.proto.polar.PolarProto;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
@@ -73,6 +76,9 @@ final class PolarSettings {
     private static final String CONTINUOUS_HR_OFF = "off";
     private static final String CONTINUOUS_HR_ALWAYS = "always";
     private static final String CONTINUOUS_HR_NIGHT = "night";
+    static final String PREF_TAP_SENSITIVITY = "polar_tap_sensitivity";
+    static final String PREF_AUTO_BUTTON_LOCK = "polar_auto_button_lock";
+    private static final String WEAR_RIGHT = "right";
 
     /** Preference keys stored in UDEVSET.BPB */
     static final Set<String> DEVICE_SETTINGS_KEYS = new HashSet<>(Arrays.asList(
@@ -83,7 +89,11 @@ final class PolarSettings {
             PREF_DO_NOT_DISTURB_START,
             PREF_DO_NOT_DISTURB_END,
             PREF_CONTINUOUS_HR,
-            PREF_INACTIVITY_ENABLE_NOSHED
+            PREF_INACTIVITY_ENABLE_NOSHED,
+            PREF_WEARLOCATION,
+            PREF_VIBRATION_ENABLE,
+            PREF_TAP_SENSITIVITY,
+            PREF_AUTO_BUTTON_LOCK
     ));
 
     private PolarSettings() {
@@ -124,8 +134,18 @@ final class PolarSettings {
                 editor.putString(PREF_CONTINUOUS_HR, CONTINUOUS_HR_ALWAYS);
         }
 
-        editor.putBoolean(PREF_INACTIVITY_ENABLE_NOSHED, settings.getGeneralSettings().getInactivityAlert()
+        final PolarProto.PbUserDeviceGeneralSettings general = settings.getGeneralSettings();
+        editor.putBoolean(PREF_INACTIVITY_ENABLE_NOSHED, general.getInactivityAlert()
                 == PolarProto.PbUserDeviceGeneralSettings.PbInactivityAlert.INACTIVITY_ALERT_ON);
+        editor.putString(PREF_WEARLOCATION, general.getDeviceLocation() == PolarProto.PbDeviceLocation.DEVICE_LOCATION_WRIST_RIGHT
+                ? WEAR_RIGHT : "left");
+        editor.putBoolean(PREF_VIBRATION_ENABLE, general.getVibrationFeedbackMode()
+                == PolarProto.PbUserDeviceGeneralSettings.PbVibrationFeedbackMode.VIBRATION_FEEDBACK_ENABLED);
+        if (general.hasTapButtonSensitivity()) {
+            editor.putString(PREF_TAP_SENSITIVITY, general.getTapButtonSensitivity().name());
+        }
+        editor.putBoolean(PREF_AUTO_BUTTON_LOCK, general.getButtonLockMode()
+                == PolarProto.PbUserDeviceGeneralSettings.PbButtonLockMode.AUTO);
     }
 
     @Nullable
@@ -186,10 +206,28 @@ final class PolarSettings {
         }
         builder.setAutomaticMeasurementSettings(measurement.setAutomaticOhrMeasurement(ohr));
 
-        builder.setGeneralSettings(builder.getGeneralSettings().toBuilder()
+        final PolarProto.PbUserDeviceGeneralSettings.Builder general = builder.getGeneralSettings().toBuilder()
                 .setInactivityAlert(prefs.getBoolean(PREF_INACTIVITY_ENABLE_NOSHED, true)
                         ? PolarProto.PbUserDeviceGeneralSettings.PbInactivityAlert.INACTIVITY_ALERT_ON
-                        : PolarProto.PbUserDeviceGeneralSettings.PbInactivityAlert.INACTIVITY_ALERT_OFF));
+                        : PolarProto.PbUserDeviceGeneralSettings.PbInactivityAlert.INACTIVITY_ALERT_OFF)
+                .setDeviceLocation(WEAR_RIGHT.equals(prefs.getString(PREF_WEARLOCATION, "left"))
+                        ? PolarProto.PbDeviceLocation.DEVICE_LOCATION_WRIST_RIGHT
+                        : PolarProto.PbDeviceLocation.DEVICE_LOCATION_WRIST_LEFT)
+                .setVibrationFeedbackMode(prefs.getBoolean(PREF_VIBRATION_ENABLE, true)
+                        ? PolarProto.PbUserDeviceGeneralSettings.PbVibrationFeedbackMode.VIBRATION_FEEDBACK_ENABLED
+                        : PolarProto.PbUserDeviceGeneralSettings.PbVibrationFeedbackMode.VIBRATION_FEEDBACK_DISABLED)
+                .setButtonLockMode(prefs.getBoolean(PREF_AUTO_BUTTON_LOCK, false)
+                        ? PolarProto.PbUserDeviceGeneralSettings.PbButtonLockMode.AUTO
+                        : PolarProto.PbUserDeviceGeneralSettings.PbButtonLockMode.MANUAL);
+        final String tap = prefs.getString(PREF_TAP_SENSITIVITY, null);
+        if (tap != null) {
+            try {
+                general.setTapButtonSensitivity(PolarProto.PbUserDeviceGeneralSettings.PbTapButtonSensitivity.valueOf(tap));
+            } catch (final IllegalArgumentException ignored) {
+                // an unknown value leaves the watch's setting alone
+            }
+        }
+        builder.setGeneralSettings(general);
 
         setNextDaylightSavingTransition(builder);
 
@@ -310,6 +348,30 @@ final class PolarSettings {
 
     private static String timeString(final PolarProto.PbTime time) {
         return String.format(Locale.ROOT, "%02d:%02d", time.getHour(), time.getMinute());
+    }
+
+    private static final int WEEKDAYS = Alarm.ALARM_MON | Alarm.ALARM_TUE | Alarm.ALARM_WED | Alarm.ALARM_THU | Alarm.ALARM_FRI;
+
+    /**
+     * The watch has a single alarm that rings once, Monday to Friday or every day. Other day
+     * patterns are widened to the smallest of those that covers them.
+     */
+    static PolarProto.PbUserDeviceSettings applyAlarm(final PolarProto.PbUserDeviceSettings current, @Nullable final Alarm alarm) {
+        final PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode mode;
+        if (alarm == null || !alarm.getEnabled() || alarm.getUnused()) {
+            mode = PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode.ALARM_MODE_OFF;
+        } else if (alarm.getRepetition() == Alarm.ALARM_ONCE) {
+            mode = PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode.ALARM_MODE_ONCE;
+        } else if ((alarm.getRepetition() & ~WEEKDAYS) == 0) {
+            mode = PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode.ALARM_MODE_MON_TO_FRI;
+        } else {
+            mode = PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode.ALARM_MODE_EVERY_DAY;
+        }
+        final PolarProto.PbUserDeviceAlarmSettings.Builder settings = current.getAlarmSettings().toBuilder().setAlarmMode(mode);
+        if (alarm != null) {
+            settings.setAlarmTime(pbTime(LocalTime.of(alarm.getHour(), alarm.getMinute())));
+        }
+        return current.toBuilder().setAlarmSettings(settings).build();
     }
 
     private static PolarProto.PbTime pbTime(final LocalTime time) {

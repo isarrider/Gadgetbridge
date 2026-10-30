@@ -122,4 +122,30 @@ public class PolarSettingsTest extends TestBase {
         assertEquals(80, applied.getWeight().getValue(), 0);
         assertEquals(480, applied.getSleepGoal().getSleepGoalMinutes());
     }
+
+    private static nodomain.freeyourgadget.gadgetbridge.entities.Alarm alarm(final int repetition) {
+        final nodomain.freeyourgadget.gadgetbridge.entities.Alarm alarm = new nodomain.freeyourgadget.gadgetbridge.entities.Alarm();
+        alarm.setEnabled(true);
+        alarm.setRepetition(repetition);
+        alarm.setHour(6);
+        alarm.setMinute(45);
+        return alarm;
+    }
+
+    @Test
+    public void alarmDaysAreWidenedToWhatTheWatchKnows() {
+        final PolarProto.PbUserDeviceSettings watch = PolarProto.PbUserDeviceSettings.getDefaultInstance();
+
+        final PolarProto.PbUserDeviceAlarmSettings once = PolarSettings.applyAlarm(watch, alarm(nodomain.freeyourgadget.gadgetbridge.model.Alarm.ALARM_ONCE)).getAlarmSettings();
+        assertEquals(PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode.ALARM_MODE_ONCE, once.getAlarmMode());
+        assertEquals(6, once.getAlarmTime().getHour());
+        assertEquals(45, once.getAlarmTime().getMinute());
+
+        assertEquals(PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode.ALARM_MODE_MON_TO_FRI,
+                PolarSettings.applyAlarm(watch, alarm(nodomain.freeyourgadget.gadgetbridge.model.Alarm.ALARM_TUE)).getAlarmSettings().getAlarmMode());
+        assertEquals(PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode.ALARM_MODE_EVERY_DAY,
+                PolarSettings.applyAlarm(watch, alarm(nodomain.freeyourgadget.gadgetbridge.model.Alarm.ALARM_SAT)).getAlarmSettings().getAlarmMode());
+        assertEquals(PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode.ALARM_MODE_OFF,
+                PolarSettings.applyAlarm(watch, null).getAlarmSettings().getAlarmMode());
+    }
 }

@@ -3,6 +3,13 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.polar;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.MessageLite;
+import com.google.protobuf.Parser;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -19,7 +26,28 @@ import nodomain.freeyourgadget.gadgetbridge.proto.polar.PolarProto;
  * temperature) into plain values. All times are seconds or milliseconds since the epoch.
  */
 public final class PolarHealthData {
+    private static final Logger LOG = LoggerFactory.getLogger(PolarHealthData.class);
+
     private PolarHealthData() {
+    }
+
+    /**
+     * Parses a file the watch may still be writing to. Its last message can be cut off, and the
+     * parser would throw away everything before the cut; this keeps what was read.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T extends MessageLite> T parseLenient(final Parser<T> parser, final byte[] data)
+            throws InvalidProtocolBufferException {
+        try {
+            return parser.parseFrom(data);
+        } catch (final InvalidProtocolBufferException e) {
+            final MessageLite partial = e.getUnfinishedMessage();
+            if (partial == null) {
+                throw e;
+            }
+            LOG.debug("Using the readable part of a cut off file: {}", e.getMessage());
+            return (T) partial;
+        }
     }
 
     /** Steps and mean heart rate of one minute, -1 for "not measured". */
@@ -67,6 +95,19 @@ public final class PolarHealthData {
         Value(final long timestampMillis, final float value) {
             this.timestampMillis = timestampMillis;
             this.value = value;
+        }
+    }
+
+    /** Cardio load of one day: the short (acute) and the long term (chronic) average. */
+    public static final class TrainingLoad {
+        public final long timestampMillis;
+        public final float acute;
+        public final float chronic;
+
+        TrainingLoad(final long timestampMillis, final float acute, final float chronic) {
+            this.timestampMillis = timestampMillis;
+            this.acute = acute;
+            this.chronic = chronic;
         }
     }
 
@@ -223,6 +264,20 @@ public final class PolarHealthData {
             }
         }
         return result;
+    }
+
+    /** The day's training load, stamped at the start of the day; null if the watch could not calculate it. */
+    @Nullable
+    public static TrainingLoad trainingLoad(final PolarProto.PbDailyTrainingLoadAndRecoveryStatus status,
+                                            final LocalDate day, final ZoneId zone) {
+        if (!status.hasCardioLoads()) {
+            return null;
+        }
+        final PolarProto.PbDailyCardioLoads loads = status.getCardioLoads();
+        if (loads.getChronicLoad() <= 0 && loads.getAcuteLoad() <= 0) {
+            return null;
+        }
+        return new TrainingLoad(day.atStartOfDay(zone).toEpochSecond() * 1000L, loads.getAcuteLoad(), loads.getChronicLoad());
     }
 
     /** System times of the watch are UTC. */

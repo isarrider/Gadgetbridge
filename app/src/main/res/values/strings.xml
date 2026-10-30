@@ -5012,6 +5012,10 @@ The result is the average of all the measurements.</string>
     <string name="polar_pref_watch_notifications">Show notifications</string>
     <string name="polar_pref_watch_notification_preview">Show notification content</string>
     <string name="polar_pref_watch_notifications_training">Show notifications during training</string>
+    <string name="polar_pref_tap_sensitivity">Tap sensitivity</string>
+    <string name="polar_tap_sensitivity_very_low">Very low</string>
+    <string name="polar_tap_sensitivity_medium">Medium</string>
+    <string name="polar_pref_auto_button_lock">Lock buttons automatically</string>
     <string name="polar_pref_continuous_hr">Continuous heart rate tracking</string>
     <string name="polar_continuous_hr_always">Always</string>
     <string name="polar_continuous_hr_night">Night time only</string>
