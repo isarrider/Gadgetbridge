@@ -12,8 +12,10 @@ import java.time.LocalDate;
 import java.util.Date;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,6 +36,7 @@ import nodomain.freeyourgadget.gadgetbridge.entities.GenericTrainingLoadAcuteSam
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericTrainingLoadChronicSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericTemperatureSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.PolarIgnite3ActivitySample;
+import nodomain.freeyourgadget.gadgetbridge.entities.PolarIgnite3ActivitySampleDao;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.MetricSample;
 import nodomain.freeyourgadget.gadgetbridge.model.TemperatureSample;
@@ -253,16 +256,38 @@ public class PolarHealthSync {
             final Long userId = DBHelper.getUser(session).getId();
             final Long deviceId = DBHelper.getDevice(device, session).getId();
 
+            // The watch rotates its files, so a minute may be stored already with values this sync
+            // no longer has; keep those instead of overwriting them with "not measured"
+            final Map<Integer, PolarIgnite3ActivitySample> stored = new HashMap<>();
+            if (!minutes.isEmpty()) {
+                final TreeMap<Long, PolarHealthData.Minute> sorted = (TreeMap<Long, PolarHealthData.Minute>) minutes;
+                for (final PolarIgnite3ActivitySample sample : session.getPolarIgnite3ActivitySampleDao().queryBuilder()
+                        .where(PolarIgnite3ActivitySampleDao.Properties.DeviceId.eq(deviceId),
+                                PolarIgnite3ActivitySampleDao.Properties.Timestamp.between(
+                                        sorted.firstKey().intValue(), sorted.lastKey().intValue()))
+                        .list()) {
+                    stored.put(sample.getTimestamp(), sample);
+                }
+            }
+
             final List<PolarIgnite3ActivitySample> activity = new ArrayList<>(minutes.size());
             for (final Map.Entry<Long, PolarHealthData.Minute> entry : minutes.entrySet()) {
+                final PolarHealthData.Minute minute = entry.getValue();
+                final PolarIgnite3ActivitySample old = stored.get(entry.getKey().intValue());
                 final PolarIgnite3ActivitySample sample = new PolarIgnite3ActivitySample();
                 sample.setTimestamp(entry.getKey().intValue());
                 sample.setDeviceId(deviceId);
                 sample.setUserId(userId);
-                sample.setSteps(entry.getValue().steps);
-                sample.setDistanceCm(entry.getValue().distanceCm);
-                sample.setActiveCalories(entry.getValue().activeCalories);
-                sample.setHeartRate(entry.getValue().heartRate());
+                if (minute.steps < 0 && old != null) {
+                    sample.setSteps(old.getSteps());
+                    sample.setDistanceCm(old.getDistanceCm());
+                    sample.setActiveCalories(old.getActiveCalories());
+                } else {
+                    sample.setSteps(minute.steps);
+                    sample.setDistanceCm(minute.distanceCm);
+                    sample.setActiveCalories(minute.activeCalories);
+                }
+                sample.setHeartRate(minute.heartRate() < 0 && old != null ? old.getHeartRate() : minute.heartRate());
                 activity.add(sample);
             }
             new PolarIgnite3ActivitySampleProvider(device, session).addGBActivitySamples(activity);

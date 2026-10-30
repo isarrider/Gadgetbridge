@@ -176,6 +176,11 @@ public final class PftpFraming {
             return null;
         }
 
+        /** True while no message has been started, e.g. right after the last one was completed */
+        public boolean isIdle() {
+            return expectedSequence == -1 && buffer.size() == 0;
+        }
+
         public void reset() {
             buffer.reset();
             expectedSequence = -1;

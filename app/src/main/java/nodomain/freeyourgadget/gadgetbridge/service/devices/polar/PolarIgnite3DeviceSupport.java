@@ -351,16 +351,30 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
     }
 
     private void onMtuFrame(final byte[] frame) {
+        final boolean idle = mtuReassembler.isIdle();
         final PftpFraming.Message message;
         try {
             message = mtuReassembler.add(frame);
         } catch (final IllegalStateException e) {
+            if (idle) {
+                // The rest of an answer that already timed out, it must not fail the next request
+                LOG.warn("Dropping stray PFTP frame: {}", e.getMessage());
+                return;
+            }
             LOG.warn("Dropping broken PFTP response: {}", e.getMessage());
             completeCurrentOperation(null);
             return;
         }
         if (message != null) {
             completeCurrentOperation(message);
+            return;
+        }
+        // Large files take long; only give up when the watch stops sending
+        synchronized (this) {
+            if (currentOperation != null) {
+                handler.removeCallbacks(responseTimeout);
+                handler.postDelayed(responseTimeout, RESPONSE_TIMEOUT_MILLIS);
+            }
         }
     }
 

@@ -18,6 +18,7 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.polar.pftp;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
@@ -118,5 +119,18 @@ public class PftpFramingTest {
         final PftpFraming.Reassembler reassembler = new PftpFraming.Reassembler();
         reassembler.add(frames.get(0));
         assertThrows(IllegalStateException.class, () -> reassembler.add(frames.get(2)));
+    }
+
+    @Test
+    public void idleOnlyBetweenMessages() {
+        final List<byte[]> frames = PftpFraming.frames(new byte[600], FRAME_SIZE);
+        final PftpFraming.Reassembler reassembler = new PftpFraming.Reassembler();
+        assertTrue(reassembler.isIdle());
+        reassembler.add(frames.get(0));
+        assertFalse(reassembler.isIdle());
+        for (int i = 1; i < frames.size(); i++) {
+            reassembler.add(frames.get(i));
+        }
+        assertTrue(reassembler.isIdle());
     }
 }
