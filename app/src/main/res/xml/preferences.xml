@@ -526,6 +526,18 @@
             app:iconSpaceReserved="false">
 
             <PreferenceCategory
+                android:key="pref_header_workout_companions"
+                android:title="@string/menuitem_workout"
+                app:iconSpaceReserved="false">
+
+                <Preference
+                    android:key="workout_companions"
+                    android:summary="@string/workout_companions_summary"
+                    android:title="@string/workout_companions_title"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
+
+            <PreferenceCategory
                 android:key="pref_header_bluetooth"
                 android:title="@string/menuitem_bluetooth"
                 app:iconSpaceReserved="false">

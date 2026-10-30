@@ -6606,5 +6606,12 @@
     <string name="vendor_data_import_garmin_step_4">Download the zip file to this phone. Do not extract it.</string>
     <string name="vendor_data_import_garmin_step_5">Select the zip file.</string>
     <string name="vendor_data_import_garmin_unknown_product">Garmin product %1$d</string>
+    <string name="workout_companions_title">Workout companion apps</string>
+    <string name="workout_companions_summary">Manage apps allowed to send structured workouts to your devices</string>
+    <string name="workout_companions_none">No companion apps have been approved.</string>
+    <string name="workout_companions_request">Allow %1$s (%2$s) to send structured workouts to a device without asking each time? Choose a device below. You can revoke access in Settings.</string>
+    <string name="workout_companions_allow">Allow workout uploads</string>
+    <string name="workout_companions_revoke">Revoke workout upload access for %1$s on %2$s?</string>
     <string name="workout_batch_limit">A workout batch may contain up to 32 files and 20 MB in total.</string>
+    <string name="workout_companions_no_device">Pair a device with structured workout file support before approving a companion app.</string>
 </resources>

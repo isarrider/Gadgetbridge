@@ -274,6 +274,7 @@ public class GBApplication extends Application {
         deviceService = createDeviceService();
 
         if (!GBEnvironment.env().isTest()) {
+            nodomain.freeyourgadget.gadgetbridge.companion.WorkoutSyncWorker.recover(context);
             PeriodicDbExporter.INSTANCE.scheduleNextExecution(context);
             PeriodicZipExporter.INSTANCE.scheduleNextExecution(context);
             NotificationAppRepository.INSTANCE.loadInBackground();

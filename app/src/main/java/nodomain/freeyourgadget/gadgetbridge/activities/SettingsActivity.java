@@ -182,6 +182,13 @@ public class SettingsActivity extends AbstractSettingsActivityV2 implements Acti
         public void onCreatePreferences(final Bundle savedInstanceState, final String rootKey) {
             setPreferencesFromResource(R.xml.preferences, rootKey);
             index(R.xml.preferences);
+            final Preference workoutCompanions = findPreference("workout_companions");
+            if (workoutCompanions != null) {
+                workoutCompanions.setOnPreferenceClickListener(preference -> {
+                    startActivity(new Intent(requireContext(), nodomain.freeyourgadget.gadgetbridge.companion.WorkoutCompanionActivity.class));
+                    return true;
+                });
+            }
             index(R.xml.dashboard_preferences, R.string.bottom_nav_dashboard);
             index(R.xml.about_user, R.string.activity_prefs_about_you);
             index(R.xml.charts_preferences, R.string.activity_prefs_charts);

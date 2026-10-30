@@ -729,6 +729,18 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Service for capturing and forwarding notifications" />
         </service>
+        <activity android:name=".companion.WorkoutCompanionActivity"
+            android:exported="true" android:label="@string/workout_companions_title">
+            <intent-filter>
+                <action android:name="nodomain.freeyourgadget.gadgetbridge.action.REQUEST_WORKOUT_ACCESS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <service android:name=".companion.WorkoutSyncService" android:exported="true">
+            <intent-filter>
+                <action android:name="nodomain.freeyourgadget.gadgetbridge.action.WORKOUT_SYNC_SERVICE" />
+            </intent-filter>
+        </service>
         <service
             android:name=".service.DeviceCommunicationService"
             android:foregroundServiceType="connectedDevice" />
