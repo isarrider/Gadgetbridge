@@ -25,8 +25,12 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
 import de.greenrobot.dao.query.QueryBuilder;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
@@ -60,6 +64,8 @@ public class ZeppOsCalendarService extends AbstractZeppOsService {
     public static final byte CMD_CREATE_EVENT_ACK = 0x08;
     public static final byte CMD_DELETE_EVENT = 0x09;
     public static final byte CMD_DELETE_EVENT_ACK = 0x0a;
+    public static final byte CMD_CREATE_EVENT_V4 = 0x23;
+    public static final byte CMD_CREATE_EVENT_V4_ACK = 0x24;
 
     public static final String PREF_VERSION = "zepp_os_calendar_version";
 
@@ -89,7 +95,7 @@ public class ZeppOsCalendarService extends AbstractZeppOsService {
             case CMD_CAPABILITIES_RESPONSE:
                 version = payload[1];
                 getSupport().evaluateGBDeviceEvent(new GBDeviceEventUpdatePreferences(PREF_VERSION, version));
-                if (version != 1 && version != 3) {
+                if (version != 1 && version != 3 && version != 4) {
                     LOG.warn("Unsupported calendar service version {}", version);
                     return;
                 }
@@ -103,6 +109,7 @@ public class ZeppOsCalendarService extends AbstractZeppOsService {
                     LOG.error("zepp decodeAndUpdateCalendarEvents error", e);
                 }
                 return;
+            case CMD_CREATE_EVENT_V4_ACK:
             case CMD_CREATE_EVENT_ACK:
                 LOG.info("Calendar create event ACK, status = {}", payload[1]);
                 return;
@@ -128,6 +135,11 @@ public class ZeppOsCalendarService extends AbstractZeppOsService {
         }
 
         LOG.info("Sending calendar event {} to band", calendarEventSpec.getId());
+
+        if (version == 4) {
+            addEventV4(calendarEventSpec);
+            return;
+        }
 
         int length = 34;
         if (calendarEventSpec.getTitle() != null) {
@@ -198,6 +210,59 @@ public class ZeppOsCalendarService extends AbstractZeppOsService {
         }
 
         write("add calendar event", buf.array());
+    }
+
+    private void addEventV4(final CalendarEventSpec calendarEventSpec) {
+        int startTime = calendarEventSpec.getTimestamp();
+        if (calendarEventSpec.getAllDay()) {
+            startTime -= TimeZone.getDefault().getOffset(startTime * 1000L) / 1000;
+        }
+        int endTime = startTime + calendarEventSpec.getDurationInSeconds();
+        int reminder = -1;
+        final boolean syncReminders = getDevicePrefs().getBoolean(DeviceSettingsPreferenceConst.PREF_CALENDAR_SYNC_EVENT_REMINDERS, false);
+        if (syncReminders && calendarEventSpec.getReminders() != null && !calendarEventSpec.getReminders().isEmpty()) {
+            reminder = startTime - (int) (calendarEventSpec.getReminders().get(0) / 1000L);
+        }
+        int lastModified = (int) (System.currentTimeMillis() / 1000L);
+        write("add calendar event", encodeEventV4((int) calendarEventSpec.getId(), calendarEventSpec.getTitle(), calendarEventSpec.getDescription(), startTime, endTime, reminder, calendarEventSpec.getAllDay(), lastModified, calendarEventSpec.getLocation()));
+    }
+
+    private static byte[] formatDateV4(final int timestamp) {
+        final SimpleDateFormat date = new SimpleDateFormat("yyyyMMdd'T'HHmmss'Z'", Locale.ROOT);
+        date.setTimeZone(TimeZone.getTimeZone("UTC"));
+        final String text = date.format(new Date(timestamp * 1000L));
+        return text.getBytes(StandardCharsets.US_ASCII);
+    }
+
+    static byte[] encodeEventV4(final int id, final String title, final String description, final int start, final int end, final int reminder, final boolean allDay, final int modified, final String location) {
+        byte[] titleBytes = StringUtils.ensureNotNull(title).getBytes(StandardCharsets.UTF_8);
+        byte[] descriptionBytes = StringUtils.ensureNotNull(description).getBytes(StandardCharsets.UTF_8);
+        byte[] locationBytes = StringUtils.ensureNotNull(location).getBytes(StandardCharsets.UTF_8);
+        byte[] startBytes = formatDateV4(start);
+        byte[] endBytes = formatDateV4(end);
+        // 22 = command + ID + reminder + empty RRule + all day + unknown bytes + last modified + \0 bytes
+        final ByteBuffer buf = ByteBuffer.allocate(titleBytes.length + descriptionBytes.length + locationBytes.length + startBytes.length + endBytes.length + 22);
+        buf.order(ByteOrder.LITTLE_ENDIAN);
+        buf.put(CMD_CREATE_EVENT_V4);
+        buf.putInt(id);
+        buf.put(titleBytes);
+        buf.put((byte) 0x00);
+        buf.put(descriptionBytes);
+        buf.put((byte) 0x00);
+        buf.put(startBytes);
+        buf.put((byte) 0x00);
+        buf.put(endBytes);
+        buf.put((byte) 0x00);
+        buf.putInt(reminder);
+        buf.put((byte) 0x00);
+        buf.put((byte) (allDay ? 1 : 0));
+        //meaning of these two bytes not found
+        buf.put((byte) 0x00);
+        buf.put((byte) 130);
+        buf.putInt(modified);
+        buf.put(locationBytes);
+        buf.put((byte) 0x00);
+        return buf.array();
     }
 
     public void deleteEvent(final byte type, final long id) {
