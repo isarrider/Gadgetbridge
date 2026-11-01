@@ -5012,6 +5012,12 @@ The result is the average of all the measurements.</string>
     <string name="polar_pref_watch_notifications">Show notifications</string>
     <string name="polar_pref_watch_notification_preview">Show notification content</string>
     <string name="polar_pref_watch_notifications_training">Show notifications during training</string>
+    <string name="polar_pref_date_separator">Date separator</string>
+    <string name="polar_pref_first_day_of_week">First day of the week</string>
+    <string name="polar_pref_media_controls">Music controls</string>
+    <string name="polar_media_controls_training">During training</string>
+    <string name="polar_media_controls_not_training">When not training</string>
+    <string name="polar_pref_satellites">Satellite systems</string>
     <string name="polar_pref_tap_sensitivity">Tap sensitivity</string>
     <string name="polar_tap_sensitivity_very_low">Very low</string>
     <string name="polar_tap_sensitivity_medium">Medium</string>

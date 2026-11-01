@@ -574,6 +574,60 @@
         <item>@string/p_scheduled</item>
     </string-array>
 
+    <string-array name="polar_date_format" translatable="false">
+        <item>DD.MM.YYYY</item>
+        <item>MM.DD.YYYY</item>
+        <item>YYYY.MM.DD</item>
+    </string-array>
+    <string-array name="polar_date_format_values">
+        <item>DD_MM_YYYY</item>
+        <item>MM_DD_YYYY</item>
+        <item>YYYY_MM_DD</item>
+    </string-array>
+    <string-array name="polar_date_separator" translatable="false">
+        <item>.</item>
+        <item>/</item>
+        <item>-</item>
+    </string-array>
+    <string-array name="polar_date_separator_values">
+        <item>DOT</item>
+        <item>SLASH</item>
+        <item>HYPHEN</item>
+    </string-array>
+    <string-array name="polar_first_day_of_week">
+        <item>@string/alarm_mon_short</item>
+        <item>@string/alarm_sat_short</item>
+        <item>@string/alarm_sun_short</item>
+    </string-array>
+    <string-array name="polar_first_day_of_week_values">
+        <item>MONDAY</item>
+        <item>SATURDAY</item>
+        <item>SUNDAY</item>
+    </string-array>
+    <string-array name="polar_media_controls">
+        <item>@string/off</item>
+        <item>@string/always</item>
+        <item>@string/polar_media_controls_training</item>
+        <item>@string/polar_media_controls_not_training</item>
+    </string-array>
+    <string-array name="polar_media_controls_values">
+        <item>ALWAYS_OFF</item>
+        <item>ALWAYS_ON</item>
+        <item>ON_WHEN_TRAINING</item>
+        <item>ON_WHEN_NOT_TRAINING</item>
+    </string-array>
+    <string-array name="polar_satellites" translatable="false">
+        <item>GPS + GLONASS</item>
+        <item>GPS + Galileo</item>
+        <item>GPS + BeiDou</item>
+        <item>GPS + QZSS</item>
+    </string-array>
+    <string-array name="polar_satellites_values">
+        <item>gps_glonass</item>
+        <item>gps_galileo</item>
+        <item>gps_beidou</item>
+        <item>gps_qzss</item>
+    </string-array>
     <string-array name="polar_tap_sensitivity">
         <item>@string/off</item>
         <item>@string/polar_tap_sensitivity_very_low</item>

@@ -46,6 +46,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TimeZone;
 
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser;
 import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
 import nodomain.freeyourgadget.gadgetbridge.model.DistanceUnit;
@@ -78,6 +79,16 @@ final class PolarSettings {
     private static final String CONTINUOUS_HR_NIGHT = "night";
     static final String PREF_TAP_SENSITIVITY = "polar_tap_sensitivity";
     static final String PREF_AUTO_BUTTON_LOCK = "polar_auto_button_lock";
+    static final String PREF_MEDIA_CONTROLS = "polar_media_controls";
+    static final String PREF_SATELLITES = "polar_satellites";
+    static final String PREF_DATE_FORMAT = "polar_date_format";
+    static final String PREF_DATE_SEPARATOR = "polar_date_separator";
+    static final String PREF_FIRST_DAY_OF_WEEK = "polar_first_day_of_week";
+    /** GPS combined with one other system; SBAS is kept as the watch has it */
+    private static final String SATELLITES_GLONASS = "gps_glonass";
+    private static final String SATELLITES_GALILEO = "gps_galileo";
+    private static final String SATELLITES_BEIDOU = "gps_beidou";
+    private static final String SATELLITES_QZSS = "gps_qzss";
     private static final String WEAR_RIGHT = "right";
 
     /** Preference keys stored in UDEVSET.BPB */
@@ -93,7 +104,17 @@ final class PolarSettings {
             PREF_WEARLOCATION,
             PREF_VIBRATION_ENABLE,
             PREF_TAP_SENSITIVITY,
-            PREF_AUTO_BUTTON_LOCK
+            PREF_AUTO_BUTTON_LOCK,
+            PREF_MEDIA_CONTROLS,
+            PREF_SATELLITES
+    ));
+
+    /** Preference keys stored in PREFS.BPB */
+    static final Set<String> GENERAL_PREFERENCES_KEYS = new HashSet<>(Arrays.asList(
+            DeviceSettingsPreferenceConst.PREF_TIMEFORMAT,
+            PREF_DATE_FORMAT,
+            PREF_DATE_SEPARATOR,
+            PREF_FIRST_DAY_OF_WEEK
     ));
 
     private PolarSettings() {
@@ -146,6 +167,44 @@ final class PolarSettings {
         }
         editor.putBoolean(PREF_AUTO_BUTTON_LOCK, general.getButtonLockMode()
                 == PolarProto.PbUserDeviceGeneralSettings.PbButtonLockMode.AUTO);
+        if (settings.hasMediaControlSettings()) {
+            editor.putString(PREF_MEDIA_CONTROLS, settings.getMediaControlSettings().getMode().name());
+        }
+        if (settings.getGnssSettings().hasSatelliteSystemSettings()) {
+            final PolarProto.PbSatelliteSystemSettings satellites = settings.getGnssSettings().getSatelliteSystemSettings();
+            final String value = satellites.getGalileoEnabled() ? SATELLITES_GALILEO
+                    : satellites.getBeidouEnabled() ? SATELLITES_BEIDOU
+                    : satellites.getQzssEnabled() ? SATELLITES_QZSS
+                    : SATELLITES_GLONASS;
+            editor.putString(PREF_SATELLITES, value);
+        }
+    }
+
+    static void importGeneralPreferences(final PolarProto.PbGeneralPreferences preferences, final SharedPreferences.Editor editor) {
+        final PolarProto.PbLocalizationPreferences localization = preferences.getLocalizationPreferences();
+        if (localization.hasDateFormat()) {
+            editor.putString(PREF_DATE_FORMAT, localization.getDateFormat().name());
+        }
+        if (localization.hasDateFormatSeparator()) {
+            editor.putString(PREF_DATE_SEPARATOR, localization.getDateFormatSeparator().name());
+        }
+        if (localization.hasFirstdayOfWeek()) {
+            editor.putString(PREF_FIRST_DAY_OF_WEEK, localization.getFirstdayOfWeek().name());
+        }
+    }
+
+    /** The enum constant named by a preference, null if unset or unknown so the watch's value stays */
+    @Nullable
+    private static <E extends Enum<E>> E enumPref(final DevicePrefs prefs, final String key, final Class<E> type) {
+        final String value = prefs.getString(key, null);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(type, value);
+        } catch (final IllegalArgumentException e) {
+            return null;
+        }
     }
 
     @Nullable
@@ -219,15 +278,29 @@ final class PolarSettings {
                 .setButtonLockMode(prefs.getBoolean(PREF_AUTO_BUTTON_LOCK, false)
                         ? PolarProto.PbUserDeviceGeneralSettings.PbButtonLockMode.AUTO
                         : PolarProto.PbUserDeviceGeneralSettings.PbButtonLockMode.MANUAL);
-        final String tap = prefs.getString(PREF_TAP_SENSITIVITY, null);
+        final PolarProto.PbUserDeviceGeneralSettings.PbTapButtonSensitivity tap = enumPref(prefs, PREF_TAP_SENSITIVITY,
+                PolarProto.PbUserDeviceGeneralSettings.PbTapButtonSensitivity.class);
         if (tap != null) {
-            try {
-                general.setTapButtonSensitivity(PolarProto.PbUserDeviceGeneralSettings.PbTapButtonSensitivity.valueOf(tap));
-            } catch (final IllegalArgumentException ignored) {
-                // an unknown value leaves the watch's setting alone
-            }
+            general.setTapButtonSensitivity(tap);
         }
         builder.setGeneralSettings(general);
+
+        final PolarProto.PbMediaControlSettings.PbMediaControlMode media = enumPref(prefs, PREF_MEDIA_CONTROLS,
+                PolarProto.PbMediaControlSettings.PbMediaControlMode.class);
+        if (media != null) {
+            builder.setMediaControlSettings(builder.getMediaControlSettings().toBuilder().setMode(media));
+        }
+
+        final String satellites = prefs.getString(PREF_SATELLITES, null);
+        if (satellites != null && builder.getGnssSettings().hasSatelliteSystemSettings()) {
+            builder.setGnssSettings(builder.getGnssSettings().toBuilder().setSatelliteSystemSettings(
+                    builder.getGnssSettings().getSatelliteSystemSettings().toBuilder()
+                            .setGpsEnabled(true)
+                            .setGlonassEnabled(SATELLITES_GLONASS.equals(satellites))
+                            .setGalileoEnabled(SATELLITES_GALILEO.equals(satellites))
+                            .setBeidouEnabled(SATELLITES_BEIDOU.equals(satellites))
+                            .setQzssEnabled(SATELLITES_QZSS.equals(satellites))));
+        }
 
         setNextDaylightSavingTransition(builder);
 
@@ -264,15 +337,26 @@ final class PolarSettings {
     static PolarProto.PbGeneralPreferences applyGeneralPreferences(final PolarProto.PbGeneralPreferences current,
                                                                    final DevicePrefs prefs,
                                                                    final DistanceUnit distanceUnit) {
-        final PolarProto.PbLocalizationPreferences localization = current.getLocalizationPreferences().toBuilder()
+        final PolarProto.PbLocalizationPreferences.Builder localization = current.getLocalizationPreferences().toBuilder()
                 .setTimeFormat(PREF_TIMEFORMAT_12H.equals(prefs.getTimeFormat())
                         ? PolarProto.PbTimeFormat.TIME_FORMAT_12H
                         : PolarProto.PbTimeFormat.TIME_FORMAT_24H)
                 .setUnitSystem(distanceUnit == DistanceUnit.IMPERIAL
                         ? PolarProto.PbUnitSystem.IMPERIAL
-                        : PolarProto.PbUnitSystem.METRIC)
-                .build();
-        if (localization.equals(current.getLocalizationPreferences())) {
+                        : PolarProto.PbUnitSystem.METRIC);
+        final PolarProto.PbDateFormat dateFormat = enumPref(prefs, PREF_DATE_FORMAT, PolarProto.PbDateFormat.class);
+        if (dateFormat != null) {
+            localization.setDateFormat(dateFormat);
+        }
+        final PolarProto.PbDateFormatSeparator separator = enumPref(prefs, PREF_DATE_SEPARATOR, PolarProto.PbDateFormatSeparator.class);
+        if (separator != null) {
+            localization.setDateFormatSeparator(separator);
+        }
+        final PolarProto.PbStartDayOfWeek firstDay = enumPref(prefs, PREF_FIRST_DAY_OF_WEEK, PolarProto.PbStartDayOfWeek.class);
+        if (firstDay != null) {
+            localization.setFirstdayOfWeek(firstDay);
+        }
+        if (localization.build().equals(current.getLocalizationPreferences())) {
             return null;
         }
         return current.toBuilder()

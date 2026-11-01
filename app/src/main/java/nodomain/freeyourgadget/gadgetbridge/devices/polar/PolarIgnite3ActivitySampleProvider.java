@@ -71,6 +71,13 @@ public class PolarIgnite3ActivitySampleProvider extends AbstractSampleProvider<P
         return new PolarIgnite3ActivitySample();
     }
 
+    @Override
+    protected List<PolarIgnite3ActivitySample> getGBActivitySamples(final int timestamp_from, final int timestamp_to) {
+        final List<PolarIgnite3ActivitySample> samples = super.getGBActivitySamples(timestamp_from, timestamp_to);
+        overlaySleep(new PolarIgnite3SleepSessionProvider(getDevice(), getSession()), samples, timestamp_from, timestamp_to);
+        return samples;
+    }
+
     public Optional<PolarIgnite3ActivitySample> getSampleForTimestamp(int timestamp) {
         List<PolarIgnite3ActivitySample> foundSamples = this.getGBActivitySamples(timestamp, timestamp);
         if (foundSamples.isEmpty()) {

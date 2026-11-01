@@ -19,18 +19,24 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.polar;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.Nullable;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.ZoneId;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -41,10 +47,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.zip.GZIPInputStream;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
-import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInfo;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventMusicControl;
@@ -53,6 +60,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
+import nodomain.freeyourgadget.gadgetbridge.model.DeviceService;
 import nodomain.freeyourgadget.gadgetbridge.model.MusicSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.MusicStateSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
@@ -82,6 +90,7 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
 
     /** The watch has four free action buttons, which canned replies share with the notification's own actions */
     public static final int CANNED_REPLY_SLOTS = PolarNotifications.ACTION_SLOT_COUNT;
+    public static final int ALARM_SLOTS = PolarAlarms.MAX_ALARMS;
 
     private static final String PATH_DEVICE_SETTINGS = "/U/0/S/UDEVSET.BPB";
     private static final String PATH_GENERAL_PREFERENCES = "/U/0/S/PREFS.BPB";
@@ -133,6 +142,11 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
     private PolarProto.PbGeneralPreferences generalPreferences;
     @Nullable
     private PolarProto.PbUserPhysData physicalData;
+    /** Whether the alarms are behind the REST service instead of in the settings file */
+    private boolean restAlarms;
+    /** The alarms the watch reported last, null until it did */
+    @Nullable
+    private List<PolarAlarms.WatchAlarm> watchAlarms;
 
     public PolarIgnite3DeviceSupport() {
         super(LOG);
@@ -161,6 +175,8 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
             deviceSettings = null;
             generalPreferences = null;
             physicalData = null;
+            restAlarms = false;
+            watchAlarms = null;
         }
 
         builder.setDeviceState(GBDevice.State.INITIALIZING);
@@ -234,6 +250,25 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
 
     @Override
     public void onSetAlarms(final ArrayList<? extends Alarm> alarms) {
+        final List<String> commands;
+        synchronized (this) {
+            if (restAlarms) {
+                if (watchAlarms == null) {
+                    LOG.warn("The watch did not report its alarms yet, not setting them");
+                    return;
+                }
+                commands = PolarAlarms.commands(watchAlarms, alarms);
+            } else {
+                commands = null;
+            }
+        }
+        if (commands != null) {
+            // The watch answers with an alarms_changed event, which brings the new alarm ids
+            for (final String command : commands) {
+                putFile(command, new byte[0]);
+            }
+            return;
+        }
         final PolarProto.PbUserDeviceSettings updated;
         synchronized (this) {
             if (deviceSettings == null) {
@@ -305,6 +340,13 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
         versionInfo.fwVersion = version(info.getDeviceVersion());
         versionInfo.hwVersion = info.getHardwareCode();
         evaluateGBDeviceEvent(versionInfo);
+
+        if (info.getCapabilitiesList().contains(PolarAlarms.CAPABILITY)) {
+            synchronized (this) {
+                restAlarms = true;
+            }
+            putFile(PolarAlarms.subscribe(), new byte[0]);
+        }
     }
 
     private static String version(final PolarProto.PbVersion version) {
@@ -412,8 +454,56 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
             case PftpConstants.D2H_SYNC_REQUIRED:
                 syncHealthData();
                 return;
+            case PftpConstants.D2H_REST_API_EVENT:
+                handleRestApiEvent(params);
+                return;
             default:
                 LOG.debug("Unhandled PFTP notification {}: {}", id, GB.hexdump(params));
+        }
+    }
+
+    private void handleRestApiEvent(final byte[] params) {
+        final String json;
+        try {
+            final PolarProto.PbPftpDHRestApiEvent event = PolarProto.PbPftpDHRestApiEvent.parseFrom(params);
+            if (event.getEventCount() == 0) {
+                return;
+            }
+            final byte[] data = event.getEvent(0).toByteArray();
+            if (event.getUncompressed()) {
+                json = new String(data, StandardCharsets.UTF_8);
+            } else {
+                try (GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(data))) {
+                    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    final byte[] buffer = new byte[4096];
+                    for (int n; (n = in.read(buffer)) > 0; ) {
+                        out.write(buffer, 0, n);
+                    }
+                    json = out.toString("UTF-8");
+                }
+            }
+        } catch (final IOException e) {
+            LOG.warn("Failed to read REST API event", e);
+            return;
+        }
+        LOG.debug("REST API event: {}", json);
+        try {
+            final List<PolarAlarms.WatchAlarm> alarms = PolarAlarms.parseEvent(json);
+            if (alarms != null) {
+                synchronized (this) {
+                    watchAlarms = alarms;
+                }
+                final List<nodomain.freeyourgadget.gadgetbridge.entities.Alarm> changed =
+                        PolarAlarms.mirror(alarms, DBHelper.getAlarmsWithDefaults(getDevice()));
+                for (final nodomain.freeyourgadget.gadgetbridge.entities.Alarm alarm : changed) {
+                    DBHelper.store(alarm);
+                }
+                if (!changed.isEmpty()) {
+                    LocalBroadcastManager.getInstance(getContext()).sendBroadcast(new Intent(DeviceService.ACTION_SAVE_ALARMS));
+                }
+            }
+        } catch (final RuntimeException e) {
+            LOG.warn("Failed to parse REST API event {}", json, e);
         }
     }
 
@@ -423,7 +513,7 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
     public void onSendConfiguration(final String config) {
         if (PolarSettings.DEVICE_SETTINGS_KEYS.contains(config)) {
             writeDeviceSettings();
-        } else if (DeviceSettingsPreferenceConst.PREF_TIMEFORMAT.equals(config)) {
+        } else if (PolarSettings.GENERAL_PREFERENCES_KEYS.contains(config)) {
             writeGeneralPreferences();
         } else if (config.startsWith("activity_user_")) {
             writePhysicalData();
@@ -465,6 +555,9 @@ public class PolarIgnite3DeviceSupport extends AbstractBTLESingleDeviceSupport {
             synchronized (this) {
                 generalPreferences = preferences;
             }
+            final SharedPreferences.Editor editor = GBApplication.getDeviceSpecificSharedPrefs(getDevice().getAddress()).edit();
+            PolarSettings.importGeneralPreferences(preferences, editor);
+            editor.apply();
         } catch (final InvalidProtocolBufferException e) {
             LOG.warn("Failed to parse {}", PATH_GENERAL_PREFERENCES, e);
             return;

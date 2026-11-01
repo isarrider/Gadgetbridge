@@ -182,4 +182,38 @@ public class PolarHealthDataTest {
         assertEquals(1, sessions.getSamplesCount());
         assertEquals(55, sessions.getSamples(0).getHeartRate(0));
     }
+
+    @Test
+    public void nightlyHistoryEndsOnTheDayItWasWritten() {
+        final PolarProto.PbNightlyRecoveryHistory history = PolarProto.PbNightlyRecoveryHistory.newBuilder()
+                .setLastModified(PolarProto.PbSystemDateTime.newBuilder().setDate(date())
+                        .setTime(PolarProto.PbTime.newBuilder().setHour(10).setMinute(0).setSeconds(0)))
+                .addNightlyRecoveryRmssdValues(56).addNightlyRecoveryRmssdValues(-1).addNightlyRecoveryRmssdValues(80)
+                .addNightlyRecoveryMeanRespintValues(4000).addNightlyRecoveryMeanRespintValues(-1).addNightlyRecoveryMeanRespintValues(5000)
+                .build();
+
+        final List<PolarHealthData.Night> nights = PolarHealthData.nightlyHistory(history, PLUS_TWO);
+
+        // the middle night was not measured
+        assertEquals(2, nights.size());
+        assertEquals((MIDNIGHT - 2 * 86400 + 4 * 3600) * 1000L, nights.get(0).timestampMillis);
+        assertEquals(56, nights.get(0).rmssd);
+        assertEquals(15f, nights.get(0).respirationRate, 0.001f);
+        assertEquals((MIDNIGHT + 4 * 3600) * 1000L, nights.get(1).timestampMillis);
+        assertEquals(80, nights.get(1).rmssd);
+        assertEquals(12f, nights.get(1).respirationRate, 0.001f);
+    }
+
+    @Test
+    public void nightlyRecoveryIsStampedInItsNight() {
+        final PolarHealthData.Night night = PolarHealthData.nightlyRecovery(PolarProto.PbNightlyRecoveryStatus.newBuilder()
+                .setSleepResultDate(date())
+                .setMeanNightlyRecoveryRMSSD(80)
+                .setMeanNightlyRecoveryRespirationInterval(4000)
+                .build(), PLUS_TWO);
+
+        assertEquals((MIDNIGHT + 4 * 3600) * 1000L, night.timestampMillis);
+        assertEquals(80, night.rmssd);
+        assertEquals(15f, night.respirationRate, 0.001f);
+    }
 }

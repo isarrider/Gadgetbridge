@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <ListPreference
+        android:defaultValue="DD_MM_YYYY"
+        android:entries="@array/polar_date_format"
+        android:entryValues="@array/polar_date_format_values"
+        android:icon="@drawable/ic_calendar_today"
+        android:key="polar_date_format"
+        android:title="@string/miband2_prefs_dateformat"
+        app:useSimpleSummaryProvider="true" />
+    <ListPreference
+        android:defaultValue="DOT"
+        android:entries="@array/polar_date_separator"
+        android:entryValues="@array/polar_date_separator_values"
+        android:icon="@drawable/ic_calendar_today"
+        android:key="polar_date_separator"
+        android:title="@string/polar_pref_date_separator"
+        app:useSimpleSummaryProvider="true" />
+    <ListPreference
+        android:defaultValue="MONDAY"
+        android:entries="@array/polar_first_day_of_week"
+        android:entryValues="@array/polar_first_day_of_week_values"
+        android:icon="@drawable/ic_calendar_today"
+        android:key="polar_first_day_of_week"
+        android:title="@string/polar_pref_first_day_of_week"
+        app:useSimpleSummaryProvider="true" />
+    <ListPreference
+        android:defaultValue="ON_WHEN_TRAINING"
+        android:entries="@array/polar_media_controls"
+        android:entryValues="@array/polar_media_controls_values"
+        android:icon="@drawable/ic_music_note"
+        android:key="polar_media_controls"
+        android:title="@string/polar_pref_media_controls"
+        app:useSimpleSummaryProvider="true" />
+    <ListPreference
+        android:defaultValue="gps_glonass"
+        android:entries="@array/polar_satellites"
+        android:entryValues="@array/polar_satellites_values"
+        android:icon="@drawable/ic_gps_location"
+        android:key="polar_satellites"
+        android:title="@string/polar_pref_satellites"
+        app:useSimpleSummaryProvider="true" />
+</androidx.preference.PreferenceScreen>

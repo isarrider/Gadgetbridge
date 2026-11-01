@@ -8,6 +8,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Date;
 import java.time.ZoneId;
@@ -38,6 +41,7 @@ import nodomain.freeyourgadget.gadgetbridge.entities.GenericTemperatureSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.PolarIgnite3ActivitySample;
 import nodomain.freeyourgadget.gadgetbridge.entities.PolarIgnite3ActivitySampleDao;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryData;
 import nodomain.freeyourgadget.gadgetbridge.model.MetricSample;
 import nodomain.freeyourgadget.gadgetbridge.model.TemperatureSample;
 import nodomain.freeyourgadget.gadgetbridge.proto.polar.PolarProto;
@@ -52,6 +56,9 @@ public class PolarHealthSync {
 
     private static final String ROOT = "/U/0/";
     private static final Pattern DAY_DIRECTORY = Pattern.compile("^(\\d{4})(\\d{2})(\\d{2})/$");
+    /** The 24/7 heart rate, in files the watch starts anew once Polar Flow took and deleted the last ones */
+    private static final String AUTOMATIC_SAMPLES_DIRECTORY = "AUTOS/";
+    private static final Pattern AUTOMATIC_SAMPLES_FILE = Pattern.compile("^AUTOS\\d{3}\\.(BPB|GZB)$");
 
     /** Reads a file of the watch and reports its content, or null when it could not be read. */
     public interface FileReader {
@@ -65,10 +72,12 @@ public class PolarHealthSync {
     private final Map<Long, PolarHealthData.Minute> minutes = PolarHealthData.newMinutes();
     private final List<PolarHealthData.SleepStageValue> sleepStages = new ArrayList<>();
     private final List<PolarHealthData.Temperature> temperatures = new ArrayList<>();
-    private final List<PolarHealthData.Value> hrv = new ArrayList<>();
+    private final List<PolarHealthData.Night> nights = new ArrayList<>();
     private final List<PolarHealthData.Value> respiration = new ArrayList<>();
     private final List<PolarHealthData.Value> sleepScores = new ArrayList<>();
     private final List<PolarWorkouts.Workout> workouts = new ArrayList<>();
+    /** The GPS track of the workouts that have one, by start time */
+    private final Map<Long, byte[]> routes = new HashMap<>();
     private final List<PolarHealthData.TrainingLoad> trainingLoads = new ArrayList<>();
     private final List<PolarHealthData.Value> restingMetabolicRates = new ArrayList<>();
     private int pending;
@@ -89,10 +98,35 @@ public class PolarHealthSync {
                         if (matcher.matches()) {
                             readDay(LocalDate.of(Integer.parseInt(matcher.group(1)),
                                     Integer.parseInt(matcher.group(2)), Integer.parseInt(matcher.group(3))), ROOT + entry.getName());
+                        } else if (AUTOMATIC_SAMPLES_DIRECTORY.equals(entry.getName())) {
+                            readAutomaticSamples(ROOT + entry.getName());
                         }
                     }
                 } catch (final InvalidProtocolBufferException e) {
                     LOG.warn("Unreadable directory listing", e);
+                }
+            }
+            finishOne();
+        });
+        read(ROOT + "NR/NRHIST.BPB", payload -> nights.addAll(PolarHealthData.nightlyHistory(
+                PolarProto.PbNightlyRecoveryHistory.parseFrom(payload), ZoneId.systemDefault())));
+    }
+
+    private void readAutomaticSamples(final String directory) {
+        pending++;
+        reader.get(directory, (path, payload) -> {
+            if (payload != null) {
+                try {
+                    for (final PolarProto.PbPFtpEntry entry : PolarProto.PbPFtpDirectory.parseFrom(payload).getEntriesList()) {
+                        final String name = entry.getName();
+                        if (AUTOMATIC_SAMPLES_FILE.matcher(name).matches()) {
+                            read(directory + name, data -> PolarHealthData.addHeartRates(minutes, PolarHealthData.parseLenient(
+                                    PolarProto.PbAutomaticSampleSessions.parser(), name.endsWith(".GZB") ? gunzip(data) : data),
+                                    ZoneId.systemDefault()));
+                        }
+                    }
+                } catch (final InvalidProtocolBufferException e) {
+                    LOG.warn("Unreadable directory listing {}", directory, e);
                 }
             }
             finishOne();
@@ -124,9 +158,11 @@ public class PolarHealthSync {
                 respiration.addAll(PolarHealthData.respirationRates(
                         PolarHealthData.parseLenient(PolarProto.PbRespirationRate.parser(), payload), zone[0])));
         read(directory + "NR/NR.BPB", payload -> {
-            final PolarProto.PbNightlyRecoveryStatus status = PolarProto.PbNightlyRecoveryStatus.parseFrom(payload);
-            hrv.addAll(PolarHealthData.nightlyRecovery(status, true));
-            respiration.addAll(PolarHealthData.nightlyRecovery(status, false));
+            final PolarHealthData.Night night = PolarHealthData.nightlyRecovery(
+                    PolarProto.PbNightlyRecoveryStatus.parseFrom(payload), zone[0]);
+            if (night != null) {
+                nights.add(night);
+            }
         });
         read(directory + "SLEEPSCO/SLEEPSCO.BPB", payload ->
                 sleepScores.addAll(PolarHealthData.sleepScore(PolarProto.PbSleepScore.parseFrom(payload))));
@@ -172,20 +208,27 @@ public class PolarHealthSync {
         read(directory + "TSESS.BPB", payload -> session[0] = PolarProto.PbTrainingSession.parseFrom(payload), null);
         read(directory + "00/BASE.BPB", payload -> base[0] = PolarProto.PbExerciseBase.parseFrom(payload), null);
         final byte[][] samples = new byte[1][];
-        read(directory + "00/SAMPLES.GZB", payload -> {
-            try (java.util.zip.GZIPInputStream in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(payload))) {
-                samples[0] = readAll(in);
-            } catch (final java.io.IOException e) {
-                LOG.warn("Unreadable samples of {}", directory, e);
-            }
-        }, () -> {
+        read(directory + "00/SAMPLES.GZB", payload -> samples[0] = gunzip(payload), null);
+        final byte[][] route = new byte[1][];
+        read(directory + "00/ROUTE.GZB", payload -> route[0] = gunzip(payload), () -> {
             if (session[0] != null) {
                 final PolarWorkouts.Workout workout = PolarWorkouts.parse(session[0], base[0], samples[0]);
                 if (workout != null) {
                     workouts.add(workout);
+                    if (route[0] != null && route[0].length > 0) {
+                        routes.put(workout.startMillis, route[0]);
+                    }
                 }
             }
         });
+    }
+
+    private static byte[] gunzip(final byte[] data) throws InvalidProtocolBufferException {
+        try (java.util.zip.GZIPInputStream in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(data))) {
+            return readAll(in);
+        } catch (final java.io.IOException e) {
+            throw new InvalidProtocolBufferException(e);
+        }
     }
 
     private static byte[] readAll(final java.io.InputStream in) throws java.io.IOException {
@@ -230,8 +273,29 @@ public class PolarHealthSync {
         }
     }
 
+    /** Keeps a GPS track as a file next to the other exported data, for the track provider. */
+    @Nullable
+    private String saveRoute(final long startMillis, final byte[] route) {
+        try {
+            final File file = new File(device.getDeviceCoordinator().getWritableExportDirectory(device, true),
+                    "polarRoutes" + File.separator + startMillis + ".bpb");
+            final File parent = file.getParentFile();
+            if (parent != null) {
+                //noinspection ResultOfMethodCallIgnored
+                parent.mkdirs();
+            }
+            try (FileOutputStream out = new FileOutputStream(file)) {
+                out.write(route);
+            }
+            return file.getAbsolutePath();
+        } catch (final IOException e) {
+            LOG.warn("Failed to save the route of the workout at {}", startMillis, e);
+            return null;
+        }
+    }
+
     private static void storeWorkout(final DaoSession session, final Long deviceId, final Long userId,
-                                     final PolarWorkouts.Workout workout) {
+                                     final PolarWorkouts.Workout workout, @Nullable final String routePath) {
         final BaseActivitySummaryDao dao = session.getBaseActivitySummaryDao();
         BaseActivitySummary summary = dao.queryBuilder().where(
                 BaseActivitySummaryDao.Properties.DeviceId.eq(deviceId),
@@ -245,8 +309,20 @@ public class PolarHealthSync {
         }
         summary.setEndTime(new Date(workout.endMillis));
         summary.setActivityKind(workout.kind.getCode());
-        summary.setSummaryData(workout.summaryJson);
         summary.setRawSummaryData(workout.samples);
+        if (routePath != null) {
+            summary.setRawDetailsPath(routePath);
+            // The workout screen only shows a map for workouts flagged to have one
+            final ActivitySummaryData data = ActivitySummaryData.fromJson(workout.summaryJson);
+            if (data != null) {
+                data.setHasGps(true);
+                summary.setSummaryData(data.toJson());
+            } else {
+                summary.setSummaryData(workout.summaryJson);
+            }
+        } else {
+            summary.setSummaryData(workout.summaryJson);
+        }
         dao.insertOrReplace(summary);
     }
 
@@ -318,12 +394,18 @@ public class PolarHealthSync {
             session.getGenericTemperatureSampleDao().insertOrReplaceInTx(skin);
 
             final List<GenericHrvValueSample> hrvSamples = new ArrayList<>();
-            for (final PolarHealthData.Value value : hrv) {
+            for (final PolarHealthData.Night night : nights) {
+                if (night.respirationRate > 0) {
+                    respiration.add(new PolarHealthData.Value(night.timestampMillis, night.respirationRate));
+                }
+                if (night.rmssd <= 0) {
+                    continue;
+                }
                 final GenericHrvValueSample sample = new GenericHrvValueSample();
-                sample.setTimestamp(value.timestampMillis);
+                sample.setTimestamp(night.timestampMillis);
                 sample.setDeviceId(deviceId);
                 sample.setUserId(userId);
-                sample.setValue(Math.round(value.value));
+                sample.setValue(night.rmssd);
                 hrvSamples.add(sample);
             }
             session.getGenericHrvValueSampleDao().insertOrReplaceInTx(hrvSamples);
@@ -381,7 +463,8 @@ public class PolarHealthSync {
             session.getGenericMetricSampleDao().insertOrReplaceInTx(metrics);
 
             for (final PolarWorkouts.Workout workout : workouts) {
-                storeWorkout(session, deviceId, userId, workout);
+                final byte[] route = routes.get(workout.startMillis);
+                storeWorkout(session, deviceId, userId, workout, route != null ? saveRoute(workout.startMillis, route) : null);
             }
 
             LOG.info("Stored {} workouts, {} training load days, {} resting metabolic rates", workouts.size(), trainingLoads.size(), metrics.size());

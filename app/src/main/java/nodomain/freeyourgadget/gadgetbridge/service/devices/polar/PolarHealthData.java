@@ -312,21 +312,67 @@ public final class PolarHealthData {
         return result;
     }
 
-    /** Overnight HRV (RMSSD in ms) and breathing rate, stamped with the time the watch computed them. */
+    /** Overnight HRV (RMSSD in ms) and breathing rate of one night. */
+    public static final class Night {
+        public final long timestampMillis;
+        /** 0 if not measured */
+        public final int rmssd;
+        /** breaths per minute, 0 if not measured */
+        public final float respirationRate;
+
+        Night(final long timestampMillis, final int rmssd, final float respirationRate) {
+            this.timestampMillis = timestampMillis;
+            this.rmssd = rmssd;
+            this.respirationRate = respirationRate;
+        }
+    }
+
+    /**
+     * Nightly values are stamped in the middle of the night they belong to, so they fall into
+     * that night's sleep session; 04:00 of the day the night ended is inside it for most sleepers.
+     */
+    private static long nightTimestamp(final LocalDate day, final ZoneId zone) {
+        return day.atTime(4, 0).atZone(zone).toEpochSecond() * 1000L;
+    }
+
+    /** The interval between breaths in milliseconds, as breaths per minute */
+    private static float breathsPerMinute(final int intervalMillis) {
+        return intervalMillis > 0 ? 60000f / intervalMillis : 0f;
+    }
+
+    /** The night the watch computed its Nightly Recharge for. */
+    @Nullable
+    public static Night nightlyRecovery(final PolarProto.PbNightlyRecoveryStatus status, final ZoneId zone) {
+        if (!status.hasSleepResultDate()) {
+            return null;
+        }
+        final PolarProto.PbDate date = status.getSleepResultDate();
+        return new Night(nightTimestamp(LocalDate.of(date.getYear(), date.getMonth(), date.getDay()), zone),
+                Math.max(status.getMeanNightlyRecoveryRMSSD(), 0),
+                breathsPerMinute(status.getMeanNightlyRecoveryRespirationInterval()));
+    }
+
+    /** The nights the watch keeps for its baseline, about four weeks back. */
     @NonNull
-    public static List<Value> nightlyRecovery(final PolarProto.PbNightlyRecoveryStatus status, final boolean rmssd) {
-        final List<Value> result = new ArrayList<>(1);
-        if (!status.hasCreatedTimestamp() || !status.getCreatedTimestamp().hasDate()) {
-            return result;
+    public static List<Night> nightlyHistory(final PolarProto.PbNightlyRecoveryHistory history, final ZoneId zone) {
+        final List<Night> nights = new ArrayList<>();
+        if (!history.hasLastModified() || !history.getLastModified().hasDate()) {
+            return nights;
         }
-        final long time = millis(status.getCreatedTimestamp());
-        if (rmssd && status.getMeanNightlyRecoveryRMSSD() > 0) {
-            result.add(new Value(time, status.getMeanNightlyRecoveryRMSSD()));
-        } else if (!rmssd && status.getMeanNightlyRecoveryRespirationInterval() > 0) {
-            // The interval between breaths in milliseconds
-            result.add(new Value(time, 60000f / status.getMeanNightlyRecoveryRespirationInterval()));
+        final PolarProto.PbDate date = history.getLastModified().getDate();
+        final LocalDate newest = LocalDate.of(date.getYear(), date.getMonth(), date.getDay());
+        final int count = history.getNightlyRecoveryRmssdValuesCount();
+        for (int i = 0; i < count; i++) {
+            final int rmssd = history.getNightlyRecoveryRmssdValues(i);
+            final int interval = i < history.getNightlyRecoveryMeanRespintValuesCount()
+                    ? history.getNightlyRecoveryMeanRespintValues(i) : -1;
+            if (rmssd <= 0 && interval <= 0) {
+                continue;
+            }
+            nights.add(new Night(nightTimestamp(newest.minusDays(count - 1 - i), zone),
+                    Math.max(rmssd, 0), breathsPerMinute(interval)));
         }
-        return result;
+        return nights;
     }
 
     @NonNull

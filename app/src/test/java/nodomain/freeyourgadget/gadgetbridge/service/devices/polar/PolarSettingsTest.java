@@ -148,4 +148,59 @@ public class PolarSettingsTest extends TestBase {
         assertEquals(PolarProto.PbUserDeviceAlarmSettings.PbAlarmMode.ALARM_MODE_OFF,
                 PolarSettings.applyAlarm(watch, null).getAlarmSettings().getAlarmMode());
     }
+
+    @Test
+    public void satellitesAndMusicControlsAreApplied() throws Exception {
+        final PolarProto.PbUserDeviceSettings watch = PolarProto.PbUserDeviceSettings.parseFrom(GB.hexStringToByteArray(UDEVSET)).toBuilder()
+                .setGnssSettings(PolarProto.PbGnssSettings.newBuilder().setSatelliteSystemSettings(
+                        PolarProto.PbSatelliteSystemSettings.newBuilder().setGpsEnabled(true).setGlonassEnabled(true).setSbasEnabled(true)))
+                .build();
+        final SharedPreferences prefs = prefs();
+        final SharedPreferences.Editor editor = prefs.edit();
+        PolarSettings.importDeviceSettings(watch, editor);
+        editor.commit();
+        assertEquals("gps_glonass", prefs.getString(PolarSettings.PREF_SATELLITES, null));
+
+        prefs.edit().putString(PolarSettings.PREF_SATELLITES, "gps_galileo")
+                .putString(PolarSettings.PREF_MEDIA_CONTROLS, "ALWAYS_ON").commit();
+        final PolarProto.PbUserDeviceSettings applied = PolarSettings.applyDeviceSettings(watch, new DevicePrefs(prefs, null));
+
+        assertNotNull(applied);
+        final PolarProto.PbSatelliteSystemSettings satellites = applied.getGnssSettings().getSatelliteSystemSettings();
+        assertEquals(true, satellites.getGpsEnabled());
+        assertEquals(false, satellites.getGlonassEnabled());
+        assertEquals(true, satellites.getGalileoEnabled());
+        assertEquals(true, satellites.getSbasEnabled());
+        assertEquals(PolarProto.PbMediaControlSettings.PbMediaControlMode.ALWAYS_ON, applied.getMediaControlSettings().getMode());
+    }
+
+    @Test
+    public void dateFormatAndFirstDayAreImportedAndApplied() {
+        final PolarProto.PbGeneralPreferences watch = PolarProto.PbGeneralPreferences.newBuilder()
+                .setLocalizationPreferences(PolarProto.PbLocalizationPreferences.newBuilder()
+                        .setTimeFormat(PolarProto.PbTimeFormat.TIME_FORMAT_24H)
+                        .setUnitSystem(PolarProto.PbUnitSystem.METRIC)
+                        .setDateFormat(PolarProto.PbDateFormat.DD_MM_YYYY)
+                        .setDateFormatSeparator(PolarProto.PbDateFormatSeparator.DOT)
+                        .setFirstdayOfWeek(PolarProto.PbStartDayOfWeek.MONDAY))
+                .build();
+        final SharedPreferences prefs = prefs();
+        final SharedPreferences.Editor editor = prefs.edit();
+        PolarSettings.importGeneralPreferences(watch, editor);
+        editor.putString(DeviceSettingsPreferenceConst.PREF_TIMEFORMAT, "24h");
+        editor.commit();
+        assertEquals("DD_MM_YYYY", prefs.getString(PolarSettings.PREF_DATE_FORMAT, null));
+        assertNull(PolarSettings.applyGeneralPreferences(watch, new DevicePrefs(prefs, null),
+                nodomain.freeyourgadget.gadgetbridge.model.DistanceUnit.METRIC));
+
+        prefs.edit().putString(PolarSettings.PREF_DATE_FORMAT, "YYYY_MM_DD")
+                .putString(PolarSettings.PREF_FIRST_DAY_OF_WEEK, "SUNDAY").commit();
+        final PolarProto.PbGeneralPreferences applied = PolarSettings.applyGeneralPreferences(watch, new DevicePrefs(prefs, null),
+                nodomain.freeyourgadget.gadgetbridge.model.DistanceUnit.METRIC);
+
+        assertNotNull(applied);
+        assertEquals(PolarProto.PbDateFormat.YYYY_MM_DD, applied.getLocalizationPreferences().getDateFormat());
+        assertEquals(PolarProto.PbStartDayOfWeek.SUNDAY, applied.getLocalizationPreferences().getFirstdayOfWeek());
+        assertEquals(PolarProto.PbDateFormatSeparator.DOT, applied.getLocalizationPreferences().getDateFormatSeparator());
+    }
 }

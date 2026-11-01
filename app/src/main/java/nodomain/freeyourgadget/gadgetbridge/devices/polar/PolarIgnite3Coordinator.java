@@ -18,6 +18,10 @@ package nodomain.freeyourgadget.gadgetbridge.devices.polar;
 
 import android.content.Context;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import nodomain.freeyourgadget.gadgetbridge.devices.ComputedHrvSummarySampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.GenericTrainingLoadAcuteSampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.GenericTrainingLoadChronicSampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericTrainingLoadAcuteSample;
@@ -32,6 +36,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.TimeSampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.entities.AbstractActivitySample;
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityTrackProvider;
+import nodomain.freeyourgadget.gadgetbridge.model.HrvSummarySample;
 import nodomain.freeyourgadget.gadgetbridge.model.HrvValueSample;
 import nodomain.freeyourgadget.gadgetbridge.model.RespiratoryRateSample;
 import nodomain.freeyourgadget.gadgetbridge.model.SleepScoreSample;
@@ -112,7 +117,7 @@ public class PolarIgnite3Coordinator extends AbstractBLEDeviceCoordinator {
 
     @Override
     public int getAlarmSlotCount(@NonNull final GBDevice device) {
-        return 1;
+        return PolarIgnite3DeviceSupport.ALARM_SLOTS;
     }
 
     @Override
@@ -122,18 +127,22 @@ public class PolarIgnite3Coordinator extends AbstractBLEDeviceCoordinator {
 
     @Override
     public int[] getSupportedDeviceSpecificSettings(final GBDevice device) {
-        return new int[]{
-                R.xml.devicesettings_polar_watch_notifications,
-                R.xml.devicesettings_navigation_notifications,
-                R.xml.devicesettings_canned_reply_16,
-                R.xml.devicesettings_ak102_dnd,
-                R.xml.devicesettings_polar_continuous_hr,
-                R.xml.devicesettings_inactivity_noshed,
-                R.xml.devicesettings_wearlocation,
-                R.xml.devicesettings_vibrations_enable,
-                R.xml.devicesettings_polar_buttons,
-                R.xml.devicesettings_timeformat,
-        };
+        final List<Integer> settings = new ArrayList<>();
+        settings.add(R.xml.devicesettings_polar_watch_notifications);
+        // Navigation goes out as notifications, only once that is allowed in the app settings
+        if (supportsNavigation(device)) {
+            settings.add(R.xml.devicesettings_navigation_notifications);
+        }
+        settings.add(R.xml.devicesettings_canned_reply_16);
+        settings.add(R.xml.devicesettings_ak102_dnd);
+        settings.add(R.xml.devicesettings_polar_continuous_hr);
+        settings.add(R.xml.devicesettings_inactivity_noshed);
+        settings.add(R.xml.devicesettings_wearlocation);
+        settings.add(R.xml.devicesettings_vibrations_enable);
+        settings.add(R.xml.devicesettings_polar_buttons);
+        settings.add(R.xml.devicesettings_timeformat);
+        settings.add(R.xml.devicesettings_polar_watch);
+        return settings.stream().mapToInt(Integer::intValue).toArray();
     }
 
     @Override
@@ -230,6 +239,12 @@ public class PolarIgnite3Coordinator extends AbstractBLEDeviceCoordinator {
     @Override
     public boolean supportsSleepRespiratoryRate(@NonNull final GBDevice device) {
         return true;
+    }
+
+    @Override
+    public TimeSampleProvider<? extends HrvSummarySample> getHrvSummarySampleProvider(@NonNull final GBDevice device,
+                                                                                      @NonNull final DaoSession session) {
+        return new ComputedHrvSummarySampleProvider(getHrvValueSampleProvider(device, session), device, session);
     }
 
     @Override
