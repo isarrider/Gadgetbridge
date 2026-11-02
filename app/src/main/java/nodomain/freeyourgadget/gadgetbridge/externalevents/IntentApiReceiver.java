@@ -76,6 +76,7 @@ public class IntentApiReceiver extends BroadcastReceiver {
     public static final String COMMAND_TRIGGER_DATABASE_EXPORT = "nodomain.freeyourgadget.gadgetbridge.command.TRIGGER_DATABASE_EXPORT";
     public static final String COMMAND_TRIGGER_ZIP_EXPORT = "nodomain.freeyourgadget.gadgetbridge.command.TRIGGER_ZIP_EXPORT";
     public static final String COMMAND_SEND_WATCH_APP_MESSAGE = "nodomain.freeyourgadget.gadgetbridge.command.SEND_WATCH_APP_MESSAGE";
+    public static final String COMMAND_SET_COMPANION_APP_STATUS = "nodomain.freeyourgadget.gadgetbridge.command.SET_COMPANION_APP_STATUS";
     public static final String COMMAND_DEBUG_SEND_NOTIFICATION = "nodomain.freeyourgadget.gadgetbridge.command.DEBUG_SEND_NOTIFICATION";
     public static final String COMMAND_DEBUG_INCOMING_CALL = "nodomain.freeyourgadget.gadgetbridge.command.DEBUG_INCOMING_CALL";
     public static final String COMMAND_DEBUG_END_CALL = "nodomain.freeyourgadget.gadgetbridge.command.DEBUG_END_CALL";
@@ -162,15 +163,8 @@ public class IntentApiReceiver extends BroadcastReceiver {
                 break;
 
             case COMMAND_SEND_WATCH_APP_MESSAGE: {
-                final DeviceService deviceService = getDeviceService(intent);
-                final GBDevice device = deviceService != null ? deviceService.getDevice() : null;
-                if (device == null) {
-                    LOG.warn("Watch app message needs the device extra with a known device");
-                    return;
-                }
-                if (!GBApplication.getDeviceSpecificSharedPrefs(device.getAddress())
-                        .getBoolean(THIRD_PARTY_APPS_WATCH_APP_MESSAGES, false)) {
-                    LOG.warn("Intent API watch app messages not allowed for {}", device.getAliasOrName());
+                final DeviceService deviceService = getWatchAppMessagesDeviceService(intent);
+                if (deviceService == null) {
                     return;
                 }
                 final String appId = intent.getStringExtra("appId");
@@ -179,8 +173,25 @@ public class IntentApiReceiver extends BroadcastReceiver {
                     LOG.warn("Watch app message needs the appId and payload extras");
                     return;
                 }
-                LOG.info("Sending a message to watch app {} on {}", appId, device.getAliasOrName());
+                LOG.info("Sending a message to watch app {} on {}", appId, deviceService.getDevice().getAliasOrName());
                 deviceService.onSendWatchAppMessage(appId, payload.getBytes(StandardCharsets.UTF_8));
+                break;
+            }
+
+            case COMMAND_SET_COMPANION_APP_STATUS: {
+                final DeviceService deviceService = getWatchAppMessagesDeviceService(intent);
+                if (deviceService == null) {
+                    return;
+                }
+                final String appId = intent.getStringExtra("appId");
+                if (appId == null || !intent.hasExtra("connected")) {
+                    LOG.warn("Companion app status needs the appId and connected extras");
+                    return;
+                }
+                final boolean connected = intent.getBooleanExtra("connected", false);
+                LOG.info("Setting the companion app of watch app {} on {} to {}", appId,
+                        deviceService.getDevice().getAliasOrName(), connected ? "connected" : "disconnected");
+                deviceService.onSetCompanionAppStatus(appId, connected);
                 break;
             }
 
@@ -371,6 +382,7 @@ public class IntentApiReceiver extends BroadcastReceiver {
         intentFilter.addAction(COMMAND_TRIGGER_DATABASE_EXPORT);
         intentFilter.addAction(COMMAND_TRIGGER_ZIP_EXPORT);
         intentFilter.addAction(COMMAND_SEND_WATCH_APP_MESSAGE);
+        intentFilter.addAction(COMMAND_SET_COMPANION_APP_STATUS);
         intentFilter.addAction(COMMAND_DEBUG_SEND_NOTIFICATION);
         intentFilter.addAction(COMMAND_DEBUG_INCOMING_CALL);
         intentFilter.addAction(COMMAND_DEBUG_END_CALL);
@@ -547,6 +559,25 @@ public class IntentApiReceiver extends BroadcastReceiver {
             return null;
         }
         final DeviceService deviceService = globalService.forDevice(device);
+        return deviceService;
+    }
+
+    /**
+     * @return the service of the device in the device extra if it allows watch app messages, null otherwise
+     */
+    @Nullable
+    private static DeviceService getWatchAppMessagesDeviceService(@NonNull final Intent intent) {
+        final DeviceService deviceService = getDeviceService(intent);
+        final GBDevice device = deviceService != null ? deviceService.getDevice() : null;
+        if (device == null) {
+            LOG.warn("Watch app commands need the device extra with a known device");
+            return null;
+        }
+        if (!GBApplication.getDeviceSpecificSharedPrefs(device.getAddress())
+                .getBoolean(THIRD_PARTY_APPS_WATCH_APP_MESSAGES, false)) {
+            LOG.warn("Intent API watch app messages not allowed for {}", device.getAliasOrName());
+            return null;
+        }
         return deviceService;
     }
 }

@@ -588,6 +588,14 @@ public class GBDeviceService implements DeviceService {
     }
 
     @Override
+    public void onSetCompanionAppStatus(@NonNull final String appId, final boolean connected) {
+        Intent intent = createIntent().setAction(ACTION_SET_COMPANION_APP_STATUS)
+                .putExtra(EXTRA_WATCH_APP_ID, appId)
+                .putExtra(EXTRA_COMPANION_APP_CONNECTED, connected);
+        invokeService(intent);
+    }
+
+    @Override
     public void onPowerOff() {
         Intent intent = createIntent().setAction(ACTION_POWER_OFF);
         invokeService(intent);

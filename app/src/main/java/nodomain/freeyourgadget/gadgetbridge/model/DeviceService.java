@@ -88,6 +88,7 @@ public interface DeviceService extends EventHandler {
     String ACTION_SET_LED_COLOR = PREFIX + ".action.set_led_color";
     String ACTION_POWER_OFF = PREFIX + ".action.power_off";
     String ACTION_SEND_WATCH_APP_MESSAGE = PREFIX + ".action.send_watch_app_message";
+    String ACTION_SET_COMPANION_APP_STATUS = PREFIX + ".action.set_companion_app_status";
     String ACTION_CAMERA_STATUS_CHANGE = PREFIX + ".action.camera_status_change";
     String ACTION_REQUEST_MUSIC_LIST = PREFIX + ".action.request_music_list";
     String ACTION_REQUEST_MUSIC_OPERATION = PREFIX + ".action.request_music_operation";
@@ -139,6 +140,7 @@ public interface DeviceService extends EventHandler {
     String EXTRA_LED_COLOR = "led_color";
     String EXTRA_WATCH_APP_ID = "watch_app_id";
     String EXTRA_WATCH_APP_PAYLOAD = "watch_app_payload";
+    String EXTRA_COMPANION_APP_CONNECTED = "companion_app_connected";
     String EXTRA_GPS_LOCATION = "gps_location";
     String EXTRA_CAMERA_EVENT = "event";
     String EXTRA_CAMERA_FILENAME = "filename";

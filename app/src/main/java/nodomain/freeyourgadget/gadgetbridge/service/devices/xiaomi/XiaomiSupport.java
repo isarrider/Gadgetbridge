@@ -401,6 +401,11 @@ public class XiaomiSupport extends AbstractBluetoothDeviceSupport {
     }
 
     @Override
+    public void onSetCompanionAppStatus(@NonNull final String appId, final boolean connected) {
+        rpkService.setCompanionAppStatus(appId, connected);
+    }
+
+    @Override
     public void onFetchRecordedData(final int dataTypes) {
         healthService.onFetchRecordedData(dataTypes);
     }

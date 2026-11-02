@@ -147,6 +147,66 @@ public class XiaomiRpkMessageFlowTest {
     }
 
     @Test
+    public void unknownAppStatusFetchesListThenSends() {
+        allowWatchAppMessages();
+        // companionApp instead of APP_ID because we want to test behaviour for an installed app.
+        final String companionApp = RuntimeEnvironment.getApplication().getPackageName();
+        service.setCompanionAppStatus(companionApp, false);
+        Mockito.verify(support).sendCommand(Mockito.anyString(), Mockito.eq(XiaomiRpkService.COMMAND_TYPE),
+                Mockito.eq(XiaomiRpkService.CMD_RPK_LIST));
+        Assert.assertTrue(sentCommands().isEmpty());
+
+        service.handleCommand(rpkList(companionApp));
+        final XiaomiProto.Command status = single(sentCommands());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, status.getSubtype());
+        Assert.assertEquals(companionApp, status.getRpk().getRpkAppStatus().getApp().getId());
+        Assert.assertEquals(SHA, status.getRpk().getRpkAppStatus().getApp().getSha());
+        Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_DISCONNECTED, status.getRpk().getRpkAppStatus().getStatus());
+    }
+
+    @Test
+    public void appMissingOnTheBandStatusIsKept() {
+        allowWatchAppMessages();
+        final String companionApp = RuntimeEnvironment.getApplication().getPackageName();
+        service.setCompanionAppStatus(companionApp, false);
+        service.handleCommand(rpkList("org.example.other"));
+        Assert.assertTrue(sentCommands().isEmpty());
+
+        // a later launch notification for it gets the kept status
+        service.handleCommand(launched(companionApp));
+        Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_DISCONNECTED, sentStatus());
+    }
+
+    @Test
+    public void companionAppNotListeningIsSentAndRemembered() {
+        allowWatchAppMessages();
+        final String companionApp = RuntimeEnvironment.getApplication().getPackageName();
+        service.handleCommand(rpkList(companionApp));
+        service.setCompanionAppStatus(companionApp, false);
+        Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_DISCONNECTED, sentStatus());
+
+        Mockito.clearInvocations(support);
+        service.handleCommand(launched(companionApp));
+        Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_DISCONNECTED, sentStatus());
+    }
+
+    @Test
+    public void companionAppListeningAgainIsSentAndRemembered() {
+        allowWatchAppMessages();
+        final String companionApp = RuntimeEnvironment.getApplication().getPackageName();
+        service.handleCommand(rpkList(companionApp));
+        service.setCompanionAppStatus(companionApp, false);
+
+        Mockito.clearInvocations(support);
+        service.setCompanionAppStatus(companionApp, true);
+        Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_CONNECTED, sentStatus());
+
+        Mockito.clearInvocations(support);
+        service.handleCommand(launched(companionApp));
+        Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_CONNECTED, sentStatus());
+    }
+
+    @Test
     public void messageFromWatchWhileNotAllowedIsDropped() {
         service.handleCommand(messageFromWatch(APP_ID, "{\"t\":\"ping\"}"));
         Assert.assertTrue(watchAppMessageBroadcasts().isEmpty());

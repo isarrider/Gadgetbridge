@@ -83,6 +83,10 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
     private final Map<String, Queue<byte[]>> pendingMessages = new HashMap<>();
     // Rpk ids to launch once the rpk list arrives
     private final Set<String> awaitingList = new HashSet<>();
+    // Whether the companion app of each rpk id said it is listening, kept across band reconnects
+    private final Map<String, Boolean> companionAppConnected = new HashMap<>();
+    // Rpk ids to send the companion app status to once the rpk list arrives
+    private final Set<String> awaitingStatus = new HashSet<>();
 
 
     // Not null if we're installing a firmware
@@ -170,6 +174,17 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         awaitingList.clear();
     }
 
+    private void sendAwaitingStatuses() {
+        for (final String appId : awaitingStatus) {
+            if (shaMap.containsKey(appId)) {
+                sendAppStatus(rpkRef(appId, shaMap.get(appId)), companionAppStatus(appId));
+            } else {
+                LOG.warn("Rpk {} not installed, known: {}", appId, shaMap.keySet());
+            }
+        }
+        awaitingStatus.clear();
+    }
+
     private void onWearAppLaunched(final RpkInfoList app) {
         final RpkInfoList ref = rpkRef(app.getId(), app.getSha());
         final Queue<byte[]> payloads = pendingMessages.remove(app.getId());
@@ -190,7 +205,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
      * on the watch.
      * Here, uninstalled means the companion app is not installed, connected means that there's an
      * active connection to the companion app, and disconnected means that connection was severed
-     * (when third party app messages are disabled).
+     * (when third party app messages are disabled, or the companion app said it is not listening).
      */
     private int companionAppStatus(final String appId) {
         if (!watchAppMessagesAllowed()) {
@@ -201,7 +216,31 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
             LOG.debug("Companion app {} not installed", appId);
             return RPK_APP_STATUS_UNINSTALLED;
         }
+        final Boolean connected = companionAppConnected.get(appId);
+        if (connected != null && !connected) {
+            LOG.debug("Companion app {} said it is not listening", appId);
+            return RPK_APP_STATUS_DISCONNECTED;
+        }
         return RPK_APP_STATUS_CONNECTED;
+    }
+
+    /**
+     * The companion app of a wear app says whether it is listening, just as an app binding or unbinding
+     * the official app's SDK would.
+     * Tell the wear app the new status now, and answer later status requests with this new status.
+     *
+     * @param appId rpk id as reported in the rpk list
+     */
+    public void setCompanionAppStatus(final String appId, final boolean connected) {
+        companionAppConnected.put(appId, connected);
+        if (!shaMap.containsKey(appId)) {
+            // sha is only known from the rpk list, which is fetched on demand
+            LOG.debug("Rpk {} not in the cached list, requesting it", appId);
+            awaitingStatus.add(appId);
+            requestRpkList();
+            return;
+        }
+        sendAppStatus(rpkRef(appId, shaMap.get(appId)), companionAppStatus(appId));
     }
 
     private void sendAppStatus(final RpkInfoList app, final int status) {
@@ -238,6 +277,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         // Otherwise messages from before the disconnect would go out with the next one, possibly much later
         pendingMessages.clear();
         awaitingList.clear();
+        awaitingStatus.clear();
     }
 
     static RpkInfoList rpkRef(final String id, final ByteString sha) {
@@ -338,6 +378,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         getSupport().evaluateGBDeviceEvent(appInfoCmd);
 
         launchAwaitingApps();
+        sendAwaitingStatuses();
     }
 
 

@@ -2,6 +2,7 @@ package nodomain.freeyourgadget.gadgetbridge.externalevents;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.robolectric.Shadows.shadowOf;
@@ -86,6 +87,44 @@ public class IntentApiReceiverTest extends TestBase {
         assertNull(nextStartedService());
     }
 
+    @Test
+    public void companionAppStatus_sentToDeviceThatAllowsIt() {
+        allowWatchAppMessages(ADDRESS);
+
+        receiver.onReceive(getContext(), companionAppStatus(ADDRESS, false));
+
+        final Intent forwarded = nextStartedService();
+        assertNotNull(forwarded);
+        assertEquals(DeviceService.ACTION_SET_COMPANION_APP_STATUS, forwarded.getAction());
+        assertEquals(APP_ID, forwarded.getStringExtra(DeviceService.EXTRA_WATCH_APP_ID));
+        assertFalse(forwarded.getBooleanExtra(DeviceService.EXTRA_COMPANION_APP_CONNECTED, true));
+    }
+
+    @Test
+    public void companionAppStatus_rejectedWhenDeviceDoesNotAllowIt() {
+        receiver.onReceive(getContext(), companionAppStatus(ADDRESS, false));
+
+        assertNull(nextStartedService());
+    }
+
+    @Test
+    public void companionAppStatus_rejectedWithoutDevice() {
+        allowWatchAppMessages(ADDRESS);
+
+        receiver.onReceive(getContext(), companionAppStatus(null, false));
+
+        assertNull(nextStartedService());
+    }
+
+    @Test
+    public void companionAppStatus_rejectedWithoutConnected() {
+        allowWatchAppMessages(ADDRESS);
+
+        receiver.onReceive(getContext(), companionAppStatus(ADDRESS, null));
+
+        assertNull(nextStartedService());
+    }
+
     private void allowWatchAppMessages(final String address) {
         GBApplication.getDeviceSpecificSharedPrefs(address).edit()
                 .putBoolean(IntentApiReceiver.THIRD_PARTY_APPS_WATCH_APP_MESSAGES, true)
@@ -96,6 +135,18 @@ public class IntentApiReceiverTest extends TestBase {
         final Intent intent = new Intent(IntentApiReceiver.COMMAND_SEND_WATCH_APP_MESSAGE)
                 .putExtra("appId", APP_ID)
                 .putExtra("payload", PAYLOAD);
+        if (address != null) {
+            intent.putExtra(IntentApiReceiver.EXTRA_DEVICE, address);
+        }
+        return intent;
+    }
+
+    private Intent companionAppStatus(final String address, final Boolean connected) {
+        final Intent intent = new Intent(IntentApiReceiver.COMMAND_SET_COMPANION_APP_STATUS)
+                .putExtra("appId", APP_ID);
+        if (connected != null) {
+            intent.putExtra("connected", connected.booleanValue());
+        }
         if (address != null) {
             intent.putExtra(IntentApiReceiver.EXTRA_DEVICE, address);
         }

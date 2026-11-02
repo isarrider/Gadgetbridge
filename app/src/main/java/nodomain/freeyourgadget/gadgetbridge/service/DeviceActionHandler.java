@@ -352,6 +352,15 @@ public class DeviceActionHandler {
                 deviceSupport.onSendWatchAppMessage(appId, payload);
                 break;
             }
+            case ACTION_SET_COMPANION_APP_STATUS: {
+                final String appId = intentCopy.getStringExtra(EXTRA_WATCH_APP_ID);
+                if (appId == null || !intentCopy.hasExtra(EXTRA_COMPANION_APP_CONNECTED)) {
+                    LOG.warn("Companion app status without app id or connected");
+                    break;
+                }
+                deviceSupport.onSetCompanionAppStatus(appId, intentCopy.getBooleanExtra(EXTRA_COMPANION_APP_CONNECTED, false));
+                break;
+            }
             case ACTION_SET_FM_FREQUENCY:
                 final float frequency = intentCopy.getFloatExtra(EXTRA_FM_FREQUENCY, -1);
                 if (frequency != -1) {

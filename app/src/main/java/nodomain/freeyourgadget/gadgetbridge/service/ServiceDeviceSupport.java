@@ -573,6 +573,14 @@ public class ServiceDeviceSupport implements DeviceSupport {
     }
 
     @Override
+    public void onSetCompanionAppStatus(@NonNull final String appId, final boolean connected) {
+        if (checkBusy("set companion app status")) {
+            return;
+        }
+        delegate.onSetCompanionAppStatus(appId, connected);
+    }
+
+    @Override
     public void onPowerOff() {
         if (checkBusy("power off event")) {
             return;
