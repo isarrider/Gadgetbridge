@@ -135,6 +135,19 @@ public class NotificationListener extends NotificationListenerService {
         add("org.fossify.phone");
     }};
 
+    public static final Set<String> SMS_APPS = new HashSet<>() {{
+        add("com.android.messaging");
+        add("com.android.mms");
+        add("com.goodwy.smsmessenger");
+        add("com.google.android.apps.messaging");
+        add("com.moez.QKSMS");
+        add("com.simplemobiletools.smsmessenger");
+        add("com.sonyericsson.conversations");
+        add("dev.octoshrimpy.quik");
+        add("org.fossify.messages");
+        add("org.smssecure.smssecure");
+    }};
+
     private static final Set<String> NOTI_USE_TITLE_APPS = new HashSet<>() {{
         add("com.whatsapp");
         add("org.thoughtcrime.securesms");
@@ -418,9 +431,7 @@ public class NotificationListener extends NotificationListenerService {
             return;
         }
 
-        if (NotificationCompat.CATEGORY_CALL.equals(sbn.getNotification().category)
-                && prefs.getBoolean("notification_support_voip_calls", false)
-                && (sbn.isOngoing() || shouldDisplayNonOngoingCallNotification(sbn))) {
+        if (isVoipCallNotification(sbn, prefs)) {
             handleCallNotification(sbn);
             return;
         }
@@ -1168,16 +1179,7 @@ public class NotificationListener extends NotificationListenerService {
             return true;
         }
 
-        if (source.equals("com.moez.QKSMS") ||
-                source.equals("com.android.mms") ||
-                source.equals("com.sonyericsson.conversations") ||
-                source.equals("com.android.messaging") ||
-                source.equals("com.google.android.apps.messaging") ||
-                source.equals("org.smssecure.smssecure") ||
-                source.equals("org.fossify.messages") ||
-                source.equals("com.goodwy.smsmessenger") ||
-                source.equals("com.simplemobiletools.smsmessenger") ||
-                source.equals("dev.octoshrimpy.quik")) {
+        if (prefs.getBoolean(GBPrefs.DEPRECATED_SMS_RECEIVER, false) && SMS_APPS.contains(source)) {
             if (!"never".equals(prefs.getString("notification_mode_sms", "when_screen_off"))) {
                 LOG.info("Ignoring notification, it's a sms notification");
                 return true;
@@ -1185,6 +1187,10 @@ public class NotificationListener extends NotificationListenerService {
         }
 
         if (!NotificationAppRules.INSTANCE.shouldSend(appConfig, NotificationAppRepository.INSTANCE.getDefaultAction())) {
+            if (prefs.getBoolean("notification_calls_ignore_application_list", true) && isVoipCallNotification(sbn, prefs)) {
+                LOG.debug("Allowing VoIP call notification from {}, calls ignore the application list", source);
+                return false;
+            }
             LOG.info("Ignoring notification, application is not allowed to send notifications");
             return true;
         }
@@ -1222,6 +1228,12 @@ public class NotificationListener extends NotificationListenerService {
     private boolean isWorkProfile(StatusBarNotification sbn) {
         final UserHandle currentUser = Process.myUserHandle();
         return !sbn.getUser().equals(currentUser);
+    }
+
+    private boolean isVoipCallNotification(final StatusBarNotification sbn, final Prefs prefs) {
+        return NotificationCompat.CATEGORY_CALL.equals(sbn.getNotification().category)
+                && prefs.getBoolean("notification_support_voip_calls", false)
+                && (sbn.isOngoing() || shouldDisplayNonOngoingCallNotification(sbn));
     }
 
     private boolean shouldDisplayNonOngoingCallNotification(StatusBarNotification sbn) {

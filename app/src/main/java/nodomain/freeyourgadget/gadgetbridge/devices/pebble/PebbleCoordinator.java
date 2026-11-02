@@ -198,6 +198,11 @@ public class PebbleCoordinator extends AbstractBLClassicDeviceCoordinator {
     }
 
     @Override
+    public boolean supportsSmsReply(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
     public boolean supportsFindDevice(@NonNull GBDevice device) {
         return true;
     }
@@ -251,8 +256,8 @@ public class PebbleCoordinator extends AbstractBLClassicDeviceCoordinator {
 
     @NonNull
     @Override
-    public Class<? extends DeviceSupport> getDeviceSupportClass(final GBDevice device) {
-        return PebbleSupport.class;
+    public DeviceSupport createDeviceSupport(final GBDevice device) {
+        return new PebbleSupport();
     }
 
     @Override

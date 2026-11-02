@@ -48,8 +48,8 @@ public class Ak102Coordinator extends AbstractBLEDeviceCoordinator {
 
     @Override
     @NonNull
-    public Class<? extends DeviceSupport> getDeviceSupportClass(final GBDevice device) {
-        return Ak102DeviceSupport.class;
+    public DeviceSupport createDeviceSupport(final GBDevice device) {
+        return new Ak102DeviceSupport();
     }
 
     @Override
@@ -183,6 +183,11 @@ public class Ak102Coordinator extends AbstractBLEDeviceCoordinator {
 
     @Override
     public boolean supportsCallControl(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsSmsReply(@NonNull final GBDevice device) {
         return true;
     }
 

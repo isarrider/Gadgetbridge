@@ -229,8 +229,8 @@ class QHybridCoordinator : AbstractBLEDeviceCoordinator() {
         return QHybridSettingsCustomizer()
     }
 
-    override fun getDeviceSupportClass(device: GBDevice): Class<out DeviceSupport> {
-        return QHybridSupport::class.java
+    override fun createDeviceSupport(device: GBDevice): DeviceSupport {
+        return QHybridSupport()
     }
 
     @Suppress("DEPRECATION")
@@ -297,6 +297,8 @@ class QHybridCoordinator : AbstractBLEDeviceCoordinator() {
     override fun supportsPhoneCalls(device: GBDevice): Boolean = true
 
     override fun supportsCallControl(device: GBDevice): Boolean = true
+
+    override fun supportsSmsReply(device: GBDevice): Boolean = isHybridHR(device)
 
     override fun supportsMusicInfo(device: GBDevice): Boolean {
         return isHybridHR(device)

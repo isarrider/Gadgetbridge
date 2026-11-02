@@ -49,8 +49,8 @@ abstract class GloryFitCoordinator : AbstractBLEDeviceCoordinator() {
         return DeviceCoordinator.DeviceKind.WATCH
     }
 
-    override fun getDeviceSupportClass(device: GBDevice): Class<out DeviceSupport> {
-        return GloryFitSupport::class.java
+    override fun createDeviceSupport(device: GBDevice): DeviceSupport {
+        return GloryFitSupport()
     }
 
     override fun getSampleProvider(
@@ -142,6 +142,8 @@ abstract class GloryFitCoordinator : AbstractBLEDeviceCoordinator() {
     override fun supportsPhoneCalls(device: GBDevice): Boolean = true
 
     override fun supportsCallControl(device: GBDevice): Boolean = true
+
+    override fun supportsSmsReply(device: GBDevice): Boolean = getCannedRepliesSlotCount(device) > 0
 
     override fun supportsFindDevice(device: GBDevice): Boolean {
         return true

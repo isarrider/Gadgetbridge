@@ -151,8 +151,8 @@ public abstract class GarminCoordinator extends AbstractBLEDeviceCoordinator {
 
     @NonNull
     @Override
-    public Class<? extends DeviceSupport> getDeviceSupportClass(@NonNull final GBDevice device) {
-        return GarminSupport.class;
+    public DeviceSupport createDeviceSupport(@NonNull final GBDevice device) {
+        return new GarminSupport();
     }
 
     @Override
@@ -368,6 +368,16 @@ public abstract class GarminCoordinator extends AbstractBLEDeviceCoordinator {
     }
 
     @Override
+    public boolean supportsSmsReply(@NonNull final GBDevice device) {
+        return getCannedRepliesSlotCount(device) > 0;
+    }
+
+    @Override
+    public boolean supportsGpsSharing(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
     public boolean supportsNavigation(@NonNull final GBDevice device) {
         return supportsAppNotifications(device);
     }
@@ -383,6 +393,11 @@ public abstract class GarminCoordinator extends AbstractBLEDeviceCoordinator {
     @Override
     public boolean supportsLoyaltyCardsSyncRequest(@NonNull final GBDevice device) {
         return isAppInstalled(device, GarminLoyaltyCardsApp.APP_UUID);
+    }
+
+    @Override
+    public boolean supportsWatchAppMessages(@NonNull final GBDevice device) {
+        return supports(device, GarminCapability.CONNECTIQ_WATCH_APP_DOWNLOAD);
     }
 
     @Override
