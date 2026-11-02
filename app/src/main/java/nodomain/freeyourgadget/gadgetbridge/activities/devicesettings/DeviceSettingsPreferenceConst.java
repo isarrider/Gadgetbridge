@@ -256,6 +256,7 @@ public class DeviceSettingsPreferenceConst {
     public static final String PREF_HEARTRATE_SLEEP_BREATHING_QUALITY_MONITORING = "heartrate_sleep_breathing_quality_monitoring";
     public static final String PREF_HEARTRATE_SLEEP_RESPIRATORY_RATE_MONITORING = "heartrate_sleep_respiratory_rate_monitoring";
     public static final String PREF_SPO2_ALL_DAY_MONITORING = "spo2_all_day_monitoring_enabled";
+    public static final String PREF_SPO2_MONITORING_MODE = "spo2_monitoring_mode";
     public static final String PREF_SPO2_MEASUREMENT_INTERVAL = "spo2_measurement_interval";
     public static final String PREF_SPO2_MEASUREMENT_TIME = "spo2_measurement_time";
     public static final String PREF_SPO2_MEASUREMENT_START = "spo2_measurement_start";
@@ -302,6 +303,7 @@ public class DeviceSettingsPreferenceConst {
 
     public static final String PREF_WORKOUT_START_ON_PHONE = "workout_start_on_phone";
     public static final String PREF_WORKOUT_SEND_GPS_TO_BAND = "workout_send_gps_to_band";
+    public static final String PREF_ELEVATION_CORRECTION = "elevation_correction";
     public static final String PREF_WORKOUT_SEND_GPS_TO_BAND_TIMEOUT = "workout_send_gps_to_band_timeout";
     public static final String PREF_WORKOUT_DETECTION_CATEGORIES = "workout_detection_categories";
     public static final String PREF_WORKOUT_DETECTION_ALERT = "workout_detection_alert";
@@ -324,14 +326,20 @@ public class DeviceSettingsPreferenceConst {
     public static final String PREF_PREVIEW_MESSAGE_IN_TITLE = "preview_message_in_title";
 
     public static final String PREF_CASIO_ALERT_CALENDAR = "casio_alert_calendar";
-
     public static final String PREF_CASIO_ALERT_CALL = "casio_alert_call";
-
     public static final String PREF_CASIO_ALERT_EMAIL = "casio_alert_email";
-
     public static final String PREF_CASIO_ALERT_OTHER = "casio_alert_other";
-
     public static final String PREF_CASIO_ALERT_SMS = "casio_alert_sms";
+    public static final String PREF_CASIO_COUNTDOWN_TIMER = "casio_countdown_timer";
+    public static final String PREF_CASIO_PRESSURE_ENERGY_CALC = "casio_pressure_energy_calc";
+    public static final String PREF_CASIO_COMPASS_AUTO_CORRECTION = "casio_compass_auto_correction";
+    public static final String PREF_CASIO_USER_PROFILE = "casio_user_profile";
+    public static final String PREF_CASIO_ALTITUDE_MEASUREMENT_INTERVAL = "casio_altitude_measurement_interval";
+    public static final String PREF_CASIO_ALTIMETER_DISPLAY = "casio_altimeter_display";
+    public static final String PREF_CASIO_PRESSURE_GRAPH = "casio_pressure_graph";
+    public static final String PREF_CASIO_MODE_CAROUSEL = "casio_mode_carousel";
+    public static final String PREF_CASIO_DISPLAY_SCREENS = "casio_display_screens";
+
     public static final String PREF_LIGHT_DURATION_LONGER = "light_duration_longer";
     public static final String PREF_AUTOREMOVE_MESSAGE = "autoremove_message";
     public static final String PREF_SEND_APP_NOTIFICATIONS = "send_app_notifications";
@@ -713,6 +721,17 @@ public class DeviceSettingsPreferenceConst {
     public static final String PREF_BOSE_MEDIA_PREVIOUS = "bose_media_previous";
     public static final String PREF_BOSE_MEDIA_SUPPORTED = "bose_media_supported";
 
+    public static final String PREF_TEUFEL_MYND_MUTE = "teufel_mynd_mute";
+    public static final String PREF_TEUFEL_MYND_EQ_BASS = "teufel_mynd_eq_bass";
+    public static final String PREF_TEUFEL_MYND_EQ_TREBLE = "teufel_mynd_eq_treble";
+    public static final String PREF_TEUFEL_MYND_ECO_MODE = "teufel_mynd_eco_mode";
+    public static final String PREF_TEUFEL_MYND_SOUND_ICONS = "teufel_mynd_sound_icons";
+    public static final String PREF_TEUFEL_MYND_BATTERY_FRIENDLY_CHARGING = "teufel_mynd_battery_friendly_charging";
+    public static final String PREF_TEUFEL_MYND_MULTIPOINT = "teufel_mynd_multipoint";
+    public static final String PREF_TEUFEL_MYND_LED_BRIGHTNESS = "teufel_mynd_led_brightness";
+    public static final String PREF_TEUFEL_MYND_AUTO_OFF = "teufel_mynd_auto_off";
+    public static final String PREF_TEUFEL_MYND_PARTY_LINK = "teufel_mynd_party_link";
+
     public static final String PREF_DUAL_DEVICE_SUPPORT = "dual_device_support";
 
     public static final String PREFS_ACTIVITY_IN_DEVICE_CARD = "prefs_activity_in_device_card";
@@ -845,6 +864,19 @@ public class DeviceSettingsPreferenceConst {
     public static final String PREF_ATC_BLE_OEPL_MODEL = "pref_atc_ble_oepl_model";
     public static final String PREF_ATC_BLE_OEPL_BLE_ADV_INTERVAL = "pref_atc_ble_oepl_ble_adv_interval";
     public static final String PREF_ATC_BLE_OEPL_OEPL_PROTOCOL_ENABLE = "pref_atc_ble_oepl_oepl_protocol_enable";
+
+    public static final String PREF_NINEBOT_UNLOCK = "ninebot_unlock";
+    public static final String PREF_NINEBOT_AUTO_UNLOCK = "ninebot_auto_unlock";
+    public static final String PREF_NINEBOT_LOCK_STATE = "ninebot_lock_state";
+    public static final String PREF_NINEBOT_KERS = "ninebot_kers";
+    public static final String PREF_NINEBOT_CHARGE_LIMIT = "ninebot_charge_limit";
+    public static final String PREF_NINEBOT_POWER_ON = "ninebot_power_on";
+    public static final String PREF_NINEBOT_POWER_OFF = "ninebot_power_off";
+    public static final String PREF_NINEBOT_RANGE = "ninebot_range";
+    public static final String PREF_NINEBOT_ODOMETER = "ninebot_odometer";
+    public static final String PREF_NINEBOT_TEMPERATURE = "ninebot_temperature";
+    public static final String PREF_NINEBOT_MODE = "ninebot_mode";
+    public static final String PREF_NINEBOT_SEARCH = "ninebot_search";
 
     public static final String PREF_XIAOMI_SCOOTER_MOTOR_LOCKED = "xiaomi_scooter_motor_locked";
     public static final String PREF_XIAOMI_SCOOTER_RIDE_MODE = "xiaomi_scooter_ride_mode";
