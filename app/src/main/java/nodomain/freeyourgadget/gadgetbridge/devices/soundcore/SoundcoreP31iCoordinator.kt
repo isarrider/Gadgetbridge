@@ -18,6 +18,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.soundcore
 
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.devices.SoundcoreP31iProtocol
 import java.util.regex.Pattern
 
 class SoundcoreP31iCoordinator : SoundcoreEarbudsCoordinator() {
@@ -32,6 +33,8 @@ class SoundcoreP31iCoordinator : SoundcoreEarbudsCoordinator() {
 
     override fun getBatteryProperties(): BatteryProperties = BatteryProperties(multiplier = 10, offset = 1)
 
+    override fun createProtocol(device: GBDevice): SoundcoreP31iProtocol = SoundcoreP31iProtocol(device)
+
     override fun getDefaultCapabilities(): Set<Capability> = setOf(
         Capability.FindDevice,
         Capability.NoiseControl,
@@ -42,5 +45,23 @@ class SoundcoreP31iCoordinator : SoundcoreEarbudsCoordinator() {
         Capability.FitTest,
         Capability.GamingMode,
         Capability.AudioEqualizer,
+    )
+
+    override val supportedButtonActions: List<ButtonAction> = listOf(
+        ButtonAction.SINGLE_TAP,
+        ButtonAction.DOUBLE_TAP,
+        ButtonAction.TRIPLE_TAP,
+        ButtonAction.LONG_PRESS,
+    )
+
+    override val supportedTapFunctions: List<TapFunction> = listOf(
+        TapFunction.VOLUME_DOWN,
+        TapFunction.VOLUME_UP,
+        TapFunction.MEDIA_NEXT,
+        TapFunction.MEDIA_PREV,
+        TapFunction.PLAYPAUSE,
+        TapFunction.VOICE_ASSISTANT,
+        TapFunction.AMBIENT_SOUND_CONTROL,
+        TapFunction.NONE,
     )
 }
