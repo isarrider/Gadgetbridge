@@ -71,8 +71,6 @@ public class XiaomiRpkServiceTest {
         service.sendWearAppMessage(APP_ID, bytes("first"));
         service.sendWearAppMessage(APP_ID, bytes("second"));
         service.handleCommand(XiaomiProto.Command.parseFrom(GB.hexStringToByteArray(CAPTURED_LAUNCHED)));
-        // a launch answered after the queue was sent has nothing left to send
-        service.handleCommand(XiaomiProto.Command.parseFrom(GB.hexStringToByteArray(CAPTURED_LAUNCHED)));
 
         final List<XiaomiProto.Command> afterLaunches = sentCommands(support).stream()
                 .filter(cmd -> cmd.getSubtype() != XiaomiRpkService.CMD_RPK_LAUNCH)
@@ -81,19 +79,6 @@ public class XiaomiRpkServiceTest {
         Assert.assertEquals("first", afterLaunches.get(0).getRpk().getRpkMessage().getPayload().toStringUtf8());
         Assert.assertEquals("second", afterLaunches.get(1).getRpk().getRpkMessage().getPayload().toStringUtf8());
         Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, afterLaunches.get(2).getSubtype());
-    }
-
-    @Test
-    public void disconnectDropsQueuedMessages() throws Exception {
-        final XiaomiSupport support = mockSupport();
-        final XiaomiRpkService service = serviceWithInstalledApp(support);
-
-        service.sendWearAppMessage(APP_ID, bytes("stale"));
-        service.onDisconnect();
-        service.handleCommand(XiaomiProto.Command.parseFrom(GB.hexStringToByteArray(CAPTURED_LAUNCHED)));
-
-        Assert.assertTrue(sentCommands(support).stream()
-                .noneMatch(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE));
     }
 
     private static XiaomiSupport mockSupport() {

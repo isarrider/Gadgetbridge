@@ -9,11 +9,15 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.externalevents.IntentApiReceiver;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.Rpk;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkInfoList;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkList;
@@ -22,8 +26,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSupport
 import nodomain.freeyourgadget.gadgetbridge.test.GBTestApplication;
 
 /**
- * Order of commands when messaging a watch app: rpk list (only while the app's sha is unknown), launch,
- * then message and app status once the band reports the app launched.
+ * Order of commands when messaging a watch app: rpk list (only while the app's sha is unknown),
+ * launch, then message and app status (CONNECTED) once the band reports the app launched. Without a
+ * pending message, the status is DISCONNECTED while app messages are disabled, UNINSTALLED without
+ * an Android app of the same package name, and CONNECTED otherwise.
  */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 23, application = GBTestApplication.class)
@@ -31,6 +37,7 @@ public class XiaomiRpkMessageFlowTest {
     private static final String APP_ID = "org.example.watchapp";
     private static final ByteString SHA = ByteString.copyFrom(new byte[20]);
     private static final byte[] PAYLOAD = "{\"value\":1}".getBytes(StandardCharsets.UTF_8);
+    private static final String ADDRESS = "AA:BB:CC:DD:EE:FF";
 
     private XiaomiSupport support;
     private XiaomiRpkService service;
@@ -39,6 +46,9 @@ public class XiaomiRpkMessageFlowTest {
     public void setUp() {
         support = Mockito.mock(XiaomiSupport.class);
         Mockito.when(support.getWatchfaceService()).thenReturn(Mockito.mock(XiaomiWatchfaceService.class));
+        final GBDevice device = Mockito.mock(GBDevice.class);
+        Mockito.when(device.getAddress()).thenReturn(ADDRESS);
+        Mockito.when(support.getDevice()).thenReturn(device);
         service = new XiaomiRpkService(support);
     }
 
@@ -80,14 +90,65 @@ public class XiaomiRpkMessageFlowTest {
 
         // a later launch notification for it carries no message
         service.handleCommand(launched(APP_ID));
-        Assert.assertTrue(sentCommands().isEmpty());
+        Assert.assertTrue(sentCommands().stream().noneMatch(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE));
     }
 
     @Test
-    public void launchWithoutPendingMessageSendsNothing() {
+    public void launchWithoutPendingMessageOnlySendsStatus() {
         service.handleCommand(rpkList(APP_ID));
         service.handleCommand(launched(APP_ID));
-        Assert.assertTrue(sentCommands().isEmpty());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, single(sentCommands()).getSubtype());
+    }
+
+    @Test
+    public void launchAfterTheQueueWasSentDoesNotResendIt() {
+        service.handleCommand(rpkList(APP_ID));
+        service.sendWearAppMessage(APP_ID, PAYLOAD);
+        service.handleCommand(launched(APP_ID));
+        service.handleCommand(launched(APP_ID));
+        Assert.assertEquals(1, sentCommands().stream().filter(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE).count());
+    }
+
+    @Test
+    public void disconnectDropsQueuedMessages() {
+        service.handleCommand(rpkList(APP_ID));
+        service.sendWearAppMessage(APP_ID, PAYLOAD);
+        service.onDisconnect();
+        service.handleCommand(launched(APP_ID));
+        Assert.assertTrue(sentCommands().stream().noneMatch(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE));
+    }
+
+    @Test
+    public void launchWhileNotAllowedSendsDisconnected() {
+        service.handleCommand(launched(APP_ID));
+        Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_DISCONNECTED, sentStatus());
+    }
+
+    @Test
+    public void launchWithoutCompanionAppSendsUninstalled() {
+        allowWatchAppMessages();
+        service.handleCommand(launched(APP_ID));
+        Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_UNINSTALLED, sentStatus());
+    }
+
+    @Test
+    public void launchWithCompanionAppSendsConnected() {
+        allowWatchAppMessages();
+        // the test app itself stands in for an installed companion app
+        service.handleCommand(launched(RuntimeEnvironment.getApplication().getPackageName()));
+        Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_CONNECTED, sentStatus());
+    }
+
+    private static void allowWatchAppMessages() {
+        GBApplication.getDeviceSpecificSharedPrefs(ADDRESS).edit()
+                .putBoolean(IntentApiReceiver.THIRD_PARTY_APPS_WATCH_APP_MESSAGES, true)
+                .commit();
+    }
+
+    private int sentStatus() {
+        final XiaomiProto.Command cmd = single(sentCommands());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, cmd.getSubtype());
+        return cmd.getRpk().getRpkAppStatus().getStatus();
     }
 
     private List<XiaomiProto.Command> sentCommands() {

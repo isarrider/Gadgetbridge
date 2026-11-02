@@ -33,9 +33,11 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventAppInfo;
 import nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiFWHelper;
+import nodomain.freeyourgadget.gadgetbridge.externalevents.IntentApiReceiver;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceApp;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.Rpk;
@@ -47,6 +49,7 @@ import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkList;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkMessage;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.XiaomiProto;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSupport;
+import nodomain.freeyourgadget.gadgetbridge.util.AndroidUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDataUploadService.Callback {
@@ -157,16 +160,43 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
     }
 
     private void onWearAppLaunched(final RpkInfoList app) {
+        final RpkInfoList ref = rpkRef(app.getId(), app.getSha());
         final Queue<byte[]> payloads = pendingMessages.remove(app.getId());
         if (payloads == null) {
             LOG.debug("Wear app {} launched, no pending message", app.getId());
+            sendAppStatus(ref, companionAppStatus(app.getId()));
             return;
         }
-        final RpkInfoList ref = rpkRef(app.getId(), app.getSha());
         for (final byte[] payload : payloads) {
             getSupport().sendCommand("wear app message " + app.getId(), buildMessageCommand(ref, payload));
         }
-        getSupport().sendCommand("wear app status " + app.getId(), buildAppStatusCommand(ref, RPK_APP_STATUS_CONNECTED));
+        sendAppStatus(ref, RPK_APP_STATUS_CONNECTED);
+    }
+
+    /**
+     * The wear app waits for the status of its companion phone app (a phone app with the same
+     * package name as the wear app) after it launches. If not received, getApkStatus() times out
+     * on the watch.
+     * Here, uninstalled means the companion app is not installed, connected means that there's an
+     * active connection to the companion app, and disconnected means that connection was severed
+     * (when third party app messages are disabled).
+     */
+    private int companionAppStatus(final String appId) {
+        final GBDevice device = getSupport().getDevice();
+        if (!GBApplication.getDeviceSpecificSharedPrefs(device.getAddress())
+                .getBoolean(IntentApiReceiver.THIRD_PARTY_APPS_WATCH_APP_MESSAGES, false)) {
+            LOG.debug("Watch app messages not allowed for {}, phone app of {} disconnected", device.getAliasOrName(), appId);
+            return RPK_APP_STATUS_DISCONNECTED;
+        }
+        if (!AndroidUtils.isPackageInstalled(appId)) {
+            LOG.debug("Companion app {} not installed", appId);
+            return RPK_APP_STATUS_UNINSTALLED;
+        }
+        return RPK_APP_STATUS_CONNECTED;
+    }
+
+    private void sendAppStatus(final RpkInfoList app, final int status) {
+        getSupport().sendCommand("wear app status " + app.getId(), buildAppStatusCommand(app, status));
     }
 
     @Override
