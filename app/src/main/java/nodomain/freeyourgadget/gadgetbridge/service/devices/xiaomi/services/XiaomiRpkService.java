@@ -65,7 +65,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
     public static final int CMD_RPK_LAUNCH = 4;
     public static final int CMD_RPK_LAUNCHED = 6;
     public static final int CMD_RPK_APP_STATUS = 7;
-    public static final int CMD_RPK_MESSAGE = 8;
+    public static final int CMD_RPK_MESSAGE_TO_WATCH = 8;
 
     public static final int RPK_APP_STATUS_CONNECTED = 1;
     public static final int RPK_APP_STATUS_DISCONNECTED = 2;
@@ -124,7 +124,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
 
     /**
      * Send a message to an app installed on the band, as observed between the official app and the band:
-     * launch the app (CMD_RPK_LAUNCH), wait for CMD_RPK_LAUNCHED, send CMD_RPK_MESSAGE, end with CMD_RPK_APP_STATUS (connected).
+     * launch the app (CMD_RPK_LAUNCH), wait for CMD_RPK_LAUNCHED, send CMD_RPK_MESSAGE_TO_WATCH, end with CMD_RPK_APP_STATUS (connected).
      * Messages sent before the app reports it launched are queued and all sent in that session, in order.
      *
      * @param appId rpk id as reported in the rpk list
@@ -221,7 +221,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
     static XiaomiProto.Command buildMessageCommand(final RpkInfoList app, final byte[] payload) {
         return XiaomiProto.Command.newBuilder()
                 .setType(COMMAND_TYPE)
-                .setSubtype(CMD_RPK_MESSAGE)
+                .setSubtype(CMD_RPK_MESSAGE_TO_WATCH)
                 .setRpk(Rpk.newBuilder().setRpkMessage(RpkMessage.newBuilder().setApp(app).setPayload(ByteString.copyFrom(payload))))
                 .build();
     }

@@ -58,7 +58,7 @@ public class XiaomiRpkServiceTest {
         final XiaomiProto.Command cmd = XiaomiProto.Command.parseFrom(
                 XiaomiRpkService.buildMessageCommand(app, payload).toByteArray());
         Assert.assertEquals(XiaomiRpkService.COMMAND_TYPE, cmd.getType());
-        Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE, cmd.getSubtype());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH, cmd.getSubtype());
         Assert.assertEquals(app, cmd.getRpk().getRpkMessage().getApp());
         Assert.assertArrayEquals(payload, cmd.getRpk().getRpkMessage().getPayload().toByteArray());
     }

@@ -69,7 +69,7 @@ public class XiaomiRpkMessageFlowTest {
         service.handleCommand(launched(APP_ID));
         final List<XiaomiProto.Command> sent = sentCommands();
         Assert.assertEquals(3, sent.size());
-        Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE, sent.get(1).getSubtype());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH, sent.get(1).getSubtype());
         Assert.assertArrayEquals(PAYLOAD, sent.get(1).getRpk().getRpkMessage().getPayload().toByteArray());
         Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, sent.get(2).getSubtype());
     }
@@ -90,7 +90,7 @@ public class XiaomiRpkMessageFlowTest {
 
         // a later launch notification for it carries no message
         service.handleCommand(launched(APP_ID));
-        Assert.assertTrue(sentCommands().stream().noneMatch(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE));
+        Assert.assertTrue(sentCommands().stream().noneMatch(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH));
     }
 
     @Test
@@ -106,7 +106,7 @@ public class XiaomiRpkMessageFlowTest {
         service.sendWearAppMessage(APP_ID, PAYLOAD);
         service.handleCommand(launched(APP_ID));
         service.handleCommand(launched(APP_ID));
-        Assert.assertEquals(1, sentCommands().stream().filter(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE).count());
+        Assert.assertEquals(1, sentCommands().stream().filter(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH).count());
     }
 
     @Test
@@ -115,7 +115,7 @@ public class XiaomiRpkMessageFlowTest {
         service.sendWearAppMessage(APP_ID, PAYLOAD);
         service.onDisconnect();
         service.handleCommand(launched(APP_ID));
-        Assert.assertTrue(sentCommands().stream().noneMatch(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE));
+        Assert.assertTrue(sentCommands().stream().noneMatch(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH));
     }
 
     @Test
