@@ -76,6 +76,7 @@ public class IntentApiReceiver extends BroadcastReceiver {
     public static final String COMMAND_TRIGGER_DATABASE_EXPORT = "nodomain.freeyourgadget.gadgetbridge.command.TRIGGER_DATABASE_EXPORT";
     public static final String COMMAND_TRIGGER_ZIP_EXPORT = "nodomain.freeyourgadget.gadgetbridge.command.TRIGGER_ZIP_EXPORT";
     public static final String COMMAND_SEND_WATCH_APP_MESSAGE = "nodomain.freeyourgadget.gadgetbridge.command.SEND_WATCH_APP_MESSAGE";
+    public static final String COMMAND_LAUNCH_WATCH_APP = "nodomain.freeyourgadget.gadgetbridge.command.LAUNCH_WATCH_APP";
     public static final String COMMAND_SET_COMPANION_APP_STATUS = "nodomain.freeyourgadget.gadgetbridge.command.SET_COMPANION_APP_STATUS";
     public static final String COMMAND_DEBUG_SEND_NOTIFICATION = "nodomain.freeyourgadget.gadgetbridge.command.DEBUG_SEND_NOTIFICATION";
     public static final String COMMAND_DEBUG_INCOMING_CALL = "nodomain.freeyourgadget.gadgetbridge.command.DEBUG_INCOMING_CALL";
@@ -175,6 +176,21 @@ public class IntentApiReceiver extends BroadcastReceiver {
                 }
                 LOG.info("Sending a message to watch app {} on {}", appId, deviceService.getDevice().getAliasOrName());
                 deviceService.onSendWatchAppMessage(appId, payload.getBytes(StandardCharsets.UTF_8));
+                break;
+            }
+
+            case COMMAND_LAUNCH_WATCH_APP: {
+                final DeviceService deviceService = getWatchAppMessagesDeviceService(intent);
+                if (deviceService == null) {
+                    return;
+                }
+                final String appId = intent.getStringExtra("appId");
+                if (appId == null) {
+                    LOG.warn("Watch app launch needs the appId extra");
+                    return;
+                }
+                LOG.info("Launching watch app {} on {}", appId, deviceService.getDevice().getAliasOrName());
+                deviceService.onLaunchWatchApp(appId);
                 break;
             }
 
@@ -382,6 +398,7 @@ public class IntentApiReceiver extends BroadcastReceiver {
         intentFilter.addAction(COMMAND_TRIGGER_DATABASE_EXPORT);
         intentFilter.addAction(COMMAND_TRIGGER_ZIP_EXPORT);
         intentFilter.addAction(COMMAND_SEND_WATCH_APP_MESSAGE);
+        intentFilter.addAction(COMMAND_LAUNCH_WATCH_APP);
         intentFilter.addAction(COMMAND_SET_COMPANION_APP_STATUS);
         intentFilter.addAction(COMMAND_DEBUG_SEND_NOTIFICATION);
         intentFilter.addAction(COMMAND_DEBUG_INCOMING_CALL);

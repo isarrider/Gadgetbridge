@@ -88,6 +88,34 @@ public class IntentApiReceiverTest extends TestBase {
     }
 
     @Test
+    public void launchWatchApp_sentToDeviceThatAllowsIt() {
+        allowWatchAppMessages(ADDRESS);
+
+        receiver.onReceive(getContext(), launchWatchApp(ADDRESS));
+
+        final Intent forwarded = nextStartedService();
+        assertNotNull(forwarded);
+        assertEquals(DeviceService.ACTION_LAUNCH_WATCH_APP, forwarded.getAction());
+        assertEquals(APP_ID, forwarded.getStringExtra(DeviceService.EXTRA_WATCH_APP_ID));
+    }
+
+    @Test
+    public void launchWatchApp_rejectedWhenDeviceDoesNotAllowIt() {
+        receiver.onReceive(getContext(), launchWatchApp(ADDRESS));
+
+        assertNull(nextStartedService());
+    }
+
+    @Test
+    public void launchWatchApp_rejectedWithoutDevice() {
+        allowWatchAppMessages(ADDRESS);
+
+        receiver.onReceive(getContext(), launchWatchApp(null));
+
+        assertNull(nextStartedService());
+    }
+
+    @Test
     public void companionAppStatus_sentToDeviceThatAllowsIt() {
         allowWatchAppMessages(ADDRESS);
 
@@ -135,6 +163,15 @@ public class IntentApiReceiverTest extends TestBase {
         final Intent intent = new Intent(IntentApiReceiver.COMMAND_SEND_WATCH_APP_MESSAGE)
                 .putExtra("appId", APP_ID)
                 .putExtra("payload", PAYLOAD);
+        if (address != null) {
+            intent.putExtra(IntentApiReceiver.EXTRA_DEVICE, address);
+        }
+        return intent;
+    }
+
+    private Intent launchWatchApp(final String address) {
+        final Intent intent = new Intent(IntentApiReceiver.COMMAND_LAUNCH_WATCH_APP)
+                .putExtra("appId", APP_ID);
         if (address != null) {
             intent.putExtra(IntentApiReceiver.EXTRA_DEVICE, address);
         }

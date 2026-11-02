@@ -156,6 +156,22 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         launchWearApp(appId);
     }
 
+    /**
+     * Launch an app installed on the band.
+     *
+     * @param appId rpk id as reported in the rpk list
+     */
+    public void startWearApp(final String appId) {
+        if (!shaMap.containsKey(appId)) {
+            // sha is only known from the rpk list, which is fetched on demand
+            LOG.debug("Rpk {} not in the cached list, requesting it", appId);
+            awaitingList.add(appId);
+            requestRpkList();
+            return;
+        }
+        launchWearApp(appId);
+    }
+
     private void launchWearApp(final String appId) {
         LOG.debug("Launching {}", appId);
         // The official app sends the package of the app on the band as launch target; the band also accepts the rpk id

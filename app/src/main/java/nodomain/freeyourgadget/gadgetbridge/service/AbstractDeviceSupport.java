@@ -255,6 +255,11 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
     }
 
     @Override
+    public void onLaunchWatchApp(@NonNull final String appId) {
+
+    }
+
+    @Override
     public void onSetCompanionAppStatus(@NonNull final String appId, final boolean connected) {
 
     }

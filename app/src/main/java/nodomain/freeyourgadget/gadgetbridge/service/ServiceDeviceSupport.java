@@ -573,6 +573,14 @@ public class ServiceDeviceSupport implements DeviceSupport {
     }
 
     @Override
+    public void onLaunchWatchApp(@NonNull final String appId) {
+        if (checkBusy("launch watch app")) {
+            return;
+        }
+        delegate.onLaunchWatchApp(appId);
+    }
+
+    @Override
     public void onSetCompanionAppStatus(@NonNull final String appId, final boolean connected) {
         if (checkBusy("set companion app status")) {
             return;

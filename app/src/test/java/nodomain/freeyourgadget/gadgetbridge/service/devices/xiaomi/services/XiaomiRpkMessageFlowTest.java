@@ -90,6 +90,36 @@ public class XiaomiRpkMessageFlowTest {
     }
 
     @Test
+    public void unknownAppLaunchFetchesListThenLaunches() {
+        service.startWearApp(APP_ID);
+        Mockito.verify(support).sendCommand(Mockito.anyString(), Mockito.eq(XiaomiRpkService.COMMAND_TYPE),
+                Mockito.eq(XiaomiRpkService.CMD_RPK_LIST));
+        Assert.assertTrue(sentCommands().isEmpty());
+
+        service.handleCommand(rpkList(APP_ID));
+        final XiaomiProto.Command launch = single(sentCommands());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_LAUNCH, launch.getSubtype());
+        Assert.assertEquals(APP_ID, launch.getRpk().getRpkLaunch().getApp().getId());
+        Assert.assertEquals(SHA, launch.getRpk().getRpkLaunch().getApp().getSha());
+        Assert.assertEquals(APP_ID, launch.getRpk().getRpkLaunch().getWearPackage());
+    }
+
+    @Test
+    public void knownAppIsStartedWithoutFetchingTheList() {
+        service.handleCommand(rpkList(APP_ID));
+        service.startWearApp(APP_ID);
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_LAUNCH, single(sentCommands()).getSubtype());
+        Mockito.verify(support, Mockito.never()).sendCommand(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
+    }
+
+    @Test
+    public void appMissingOnTheBandIsNotStarted() {
+        service.startWearApp(APP_ID);
+        service.handleCommand(rpkList("org.example.other"));
+        Assert.assertTrue(sentCommands().isEmpty());
+    }
+
+    @Test
     public void appMissingOnTheBandIsDropped() {
         service.sendWearAppMessage(APP_ID, PAYLOAD);
         service.handleCommand(rpkList("org.example.other"));

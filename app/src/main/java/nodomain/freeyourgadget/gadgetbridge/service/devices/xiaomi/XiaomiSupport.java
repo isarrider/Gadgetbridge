@@ -401,6 +401,11 @@ public class XiaomiSupport extends AbstractBluetoothDeviceSupport {
     }
 
     @Override
+    public void onLaunchWatchApp(@NonNull final String appId) {
+        rpkService.startWearApp(appId);
+    }
+
+    @Override
     public void onSetCompanionAppStatus(@NonNull final String appId, final boolean connected) {
         rpkService.setCompanionAppStatus(appId, connected);
     }

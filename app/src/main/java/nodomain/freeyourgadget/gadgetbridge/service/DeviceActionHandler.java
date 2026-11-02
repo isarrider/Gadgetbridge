@@ -352,6 +352,15 @@ public class DeviceActionHandler {
                 deviceSupport.onSendWatchAppMessage(appId, payload);
                 break;
             }
+            case ACTION_LAUNCH_WATCH_APP: {
+                final String appId = intentCopy.getStringExtra(EXTRA_WATCH_APP_ID);
+                if (appId == null) {
+                    LOG.warn("Watch app launch without app id");
+                    break;
+                }
+                deviceSupport.onLaunchWatchApp(appId);
+                break;
+            }
             case ACTION_SET_COMPANION_APP_STATUS: {
                 final String appId = intentCopy.getStringExtra(EXTRA_WATCH_APP_ID);
                 if (appId == null || !intentCopy.hasExtra(EXTRA_COMPANION_APP_CONNECTED)) {

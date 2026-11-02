@@ -186,6 +186,12 @@ public interface EventHandler {
     void onSendWatchAppMessage(@NonNull String appId, @NonNull byte[] payload);
 
     /**
+     * Launch an app installed on the device.
+     * @param appId the app's id as listed by the device
+     */
+    void onLaunchWatchApp(@NonNull String appId);
+
+    /**
      * Tell an app installed on the device whether its companion app on the phone is listening for its messages.
      * @param appId the app's id as listed by the device
      * @param connected whether the companion app is listening

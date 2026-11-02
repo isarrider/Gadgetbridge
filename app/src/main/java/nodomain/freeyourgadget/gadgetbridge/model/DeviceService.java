@@ -88,6 +88,7 @@ public interface DeviceService extends EventHandler {
     String ACTION_SET_LED_COLOR = PREFIX + ".action.set_led_color";
     String ACTION_POWER_OFF = PREFIX + ".action.power_off";
     String ACTION_SEND_WATCH_APP_MESSAGE = PREFIX + ".action.send_watch_app_message";
+    String ACTION_LAUNCH_WATCH_APP = PREFIX + ".action.launch_watch_app";
     String ACTION_SET_COMPANION_APP_STATUS = PREFIX + ".action.set_companion_app_status";
     String ACTION_CAMERA_STATUS_CHANGE = PREFIX + ".action.camera_status_change";
     String ACTION_REQUEST_MUSIC_LIST = PREFIX + ".action.request_music_list";
