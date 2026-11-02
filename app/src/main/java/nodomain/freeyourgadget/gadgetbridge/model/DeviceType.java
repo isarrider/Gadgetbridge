@@ -1121,7 +1121,7 @@ public enum DeviceType {
     SOUNDCORE_LIFE_TUNE_XR(SoundcoreLifeTuneXRCoordinator.class),
     SOUNDCORE_AEROFIT2(SoundcoreAeroFit2Coordinator.class),
     SOUNDCORE_SPORT_X20(SoundcoreSportX20Coordinator.class),
-    SOUNDCORE_SLEEP_A30(SoundcoreSleepA30Coordinator.class),
+    SOUNDCORE_SLEEP_A30(SoundcoreSleepA30Coordinator::new),
     SOUNDCORE_A1(SoundcoreA1Coordinator.class),
     SOUNDCORE_A2_NC(SoundcoreA2NCCoordinator.class),
     SOUNDCORE_A3I(SoundcoreA3iCoordinator.class),

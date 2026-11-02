@@ -96,8 +96,7 @@ class SoundcoreSleepA30Coordinator : SoundcoreEarbudsCoordinator() {
     override fun supportsSleepScore(device: GBDevice): Boolean = true
     override fun supportsAwakeSleep(device: GBDevice): Boolean = true
 
-    override fun getDeviceSupportClass(device: GBDevice): Class<out DeviceSupport> =
-        SoundcoreSleepA30DeviceSupport::class.java
+    override fun createDeviceSupport(device: GBDevice): DeviceSupport = SoundcoreSleepA30DeviceSupport()
 
     override fun createProtocol(device: GBDevice) = SoundcoreSleepA30Protocol(device)
 
