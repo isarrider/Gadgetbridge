@@ -47,11 +47,11 @@ public final class SoundcoreEqualizerPresets {
     public static final SoundcoreEqualizer SPOKEN_WORD = new SoundcoreEqualizer(0x13, R.string.soundcore_equalizer_preset_spoken_word, new int[]{-3, -2, 1, 2, 2, 1, 0, -3}, new int[]{-2, -2, 2, 1, 2, 0, 1, -4});
     public static final SoundcoreEqualizer TREBLE_BOOST = new SoundcoreEqualizer(0x14, R.string.sony_equalizer_preset_treble_boost, new int[]{-2, -2, -2, -1, 1, 2, 2, 4}, new int[]{-2, -1, -1, -1, 1, 2, 0, 5});
     public static final SoundcoreEqualizer TREBLE_REDUCER = new SoundcoreEqualizer(0x15, R.string.soundcore_equalizer_preset_treble_reducer, new int[]{0, 0, 0, -2, -3, -4, -4, -6}, new int[]{0, 0, 1, -2, -1, -3, -1, -7});
-    public static final SoundcoreEqualizer CUSTOM = new SoundcoreEqualizer(0xfe, R.string.custom, null, null);
+    public static final SoundcoreEqualizer CUSTOM = new SoundcoreEqualizer(0xfe, R.string.custom);
 
-    public static final SoundcoreEqualizer EXTRA_BASS = new SoundcoreEqualizer(0x01, R.string.soundcore_equalizer_preset_xtra_bass, null, null);
-    public static final SoundcoreEqualizer VOICE = new SoundcoreEqualizer(0x02, R.string.soundcore_equalizer_preset_voice, null, null);
-    public static final SoundcoreEqualizer BALANCED = new SoundcoreEqualizer(0x03, R.string.soundcore_equalizer_preset_balanced, null, null);
+    public static final SoundcoreEqualizer EXTRA_BASS = new SoundcoreEqualizer(0x01, R.string.soundcore_equalizer_preset_xtra_bass);
+    public static final SoundcoreEqualizer VOICE = new SoundcoreEqualizer(0x02, R.string.soundcore_equalizer_preset_voice);
+    public static final SoundcoreEqualizer BALANCED = new SoundcoreEqualizer(0x03, R.string.soundcore_equalizer_preset_balanced);
 
     public static final List<SoundcoreEqualizer> PRESETS = Collections.unmodifiableList(Arrays.asList(
             SIGNATURE, ACOUSTIC, BASS_BOOST, BASS_REDUCER, CLASSICAL, PODCAST,

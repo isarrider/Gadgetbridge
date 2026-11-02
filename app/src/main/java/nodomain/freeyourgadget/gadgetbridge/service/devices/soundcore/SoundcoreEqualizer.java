@@ -64,6 +64,10 @@ public final class SoundcoreEqualizer {
     @Nullable
     private final int[] tails;
 
+    public SoundcoreEqualizer(final int index, @StringRes final int label) {
+        this(index, label, null, null);
+    }
+
     public SoundcoreEqualizer(final int index, @StringRes final int label,
                               @Nullable final int[] bands, @Nullable final int[] tails) {
         this.index = index;
@@ -81,7 +85,7 @@ public final class SoundcoreEqualizer {
         return label;
     }
 
-    /** Returns the actual signed dB gains, or null for the dynamic custom preset definition. */
+    /** Returns the actual signed dB gains, or null when this preset has no band definition. */
     @Nullable
     public int[] getBands() {
         return bands != null ? bands.clone() : null;

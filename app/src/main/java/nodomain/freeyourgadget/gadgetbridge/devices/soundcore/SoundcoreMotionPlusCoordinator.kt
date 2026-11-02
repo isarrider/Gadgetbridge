@@ -55,12 +55,12 @@ class SoundcoreMotionPlusCoordinator : SoundcoreEarbudsCoordinator() {
     )
 
     override fun getCustomEqualizerPresetNames(): List<SoundcoreEqualizer> = listOf(
-        SoundcoreEqualizer(0, R.string.soundcore_equalizer_preset_bass_off, null, null),
-        SoundcoreEqualizer(1, R.string.soundcore_equalizer_preset_voice, null, null),
-        SoundcoreEqualizer(2, R.string.soundcore_equalizer_preset_heavy, null, null),
-        SoundcoreEqualizer(3, R.string.soundcore_equalizer_preset_classic, null, null),
-        SoundcoreEqualizer(4, R.string.soundcore_equalizer_preset_original, null, null),
-        SoundcoreEqualizer(254, R.string.custom, null, null),
+        SoundcoreEqualizer(0, R.string.soundcore_equalizer_preset_bass_off),
+        SoundcoreEqualizer(1, R.string.soundcore_equalizer_preset_voice),
+        SoundcoreEqualizer(2, R.string.soundcore_equalizer_preset_heavy),
+        SoundcoreEqualizer(3, R.string.soundcore_equalizer_preset_classic),
+        SoundcoreEqualizer(4, R.string.soundcore_equalizer_preset_original),
+        SoundcoreEqualizer(254, R.string.custom),
     )
 
     override fun createProtocol(device: GBDevice): SoundcoreMotionPlusProtocol =
