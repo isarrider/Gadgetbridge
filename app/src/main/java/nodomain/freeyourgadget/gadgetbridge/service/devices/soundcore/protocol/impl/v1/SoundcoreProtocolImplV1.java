@@ -11,9 +11,12 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
+import kotlin.ranges.IntRange;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -34,6 +37,8 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.FindDeviceTarget;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.AbstractSoundcoreProtocol;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.SoundcoreEqualizer;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.SoundcoreEqualizerPresets;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.SoundcorePacket;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
@@ -77,6 +82,7 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
     public static final short CMD_SET_BATTERY_LOW_TONE = (short) 0x8210;
 
     public static final short CMD_SET_GAMING_MODE = (short) 0x8701;
+    public static final short CMD_SET_EQUALIZER_COMPACT = (short) 0x8302;
     public static final short CMD_SET_EQUALIZER = (short) 0x8703;
     public static final short CMD_SET_FIT_TEST = (short) 0x0109;
 
@@ -91,6 +97,9 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
     public static final int battery_earphone_left = 1;
     public static final int battery_earphone_right = 2;
 
+    private final List<MultipointDevice> pairedDevices = new ArrayList<>();
+    private String activeSourceAddress;
+
     public SoundcoreProtocolImplV1(final GBDevice device) {
         super(device);
     }
@@ -104,7 +113,7 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
             case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_TRANSPARENCY_VOCAL_MODE:
             case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_ADAPTIVE_NOISE_CANCELLING:
             case DeviceSettingsPreferenceConst.PREF_SONY_AMBIENT_SOUND_LEVEL:
-                return encodeAdvancedAudioMode(appendAdvancedAudioModeStateByte());
+                return encodeAdvancedAudioMode();
             case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_CONTROL_SINGLE_TAP_ACTION_LEFT:
             case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_CONTROL_SINGLE_TAP_ACTION_RIGHT:
             case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_CONTROL_DOUBLE_TAP_ACTION_LEFT:
@@ -152,7 +161,20 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
             case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_BUTTON_BRIGHTNESS:
                 return encodeByteCommand(CMD_SET_BUTTON_BRIGHTNESS, Integer.parseInt(prefs.getString(config, "0")));
             case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_PRESET:
-                return encodeByteCommand(CMD_SET_EQUALIZER_PRESET, Integer.parseInt(prefs.getString(config, "0")));
+                // NOTE: This SET_EQUALIZER_PRESET is only sent in older models.
+                // Override in each device implementation to use it.
+                // Otherwise use the new `encodeEqualizer` to send the full payload.
+                // return encodeByteCommand(CMD_SET_EQUALIZER_PRESET, Integer.parseInt(prefs.getString(config, "0")));
+            case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_BAND1_VALUE:
+            case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_BAND2_VALUE:
+            case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_BAND3_VALUE:
+            case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_BAND4_VALUE:
+            case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_BAND5_VALUE:
+            case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_BAND6_VALUE:
+            case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_BAND7_VALUE:
+            case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_BAND8_VALUE:
+            case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_BAND9_VALUE:
+                return encodeEqualizer();
             case DeviceSettingsPreferenceConst.PREF_SOUNDCORE_FIT_TEST:
                 return encodeCommand(CMD_SET_FIT_TEST, new byte[]{0x0a});
             default:
@@ -160,7 +182,12 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
         }
     }
 
-    protected boolean appendAdvancedAudioModeStateByte() { return false; }
+    /**
+     * Bytes appended to the advanced audio mode payload.
+     */
+    protected byte[] getAdvancedAudioModeTrailer() {
+        return new byte[0];
+    }
 
     private byte[] encodeConfiguredTapFunction(final String config, final Prefs prefs) {
         // Action: single tap, double tap, hold.
@@ -396,13 +423,58 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
         return events.toArray(new GBDeviceEvent[0]);
     }
 
-    /** Hook for the device-specific CMD_NOTIFY_PAIRED_DEVICES payload layout. */
+    /**
+     * Decodes the paired-device list sent by the device (CMD_NOTIFY_PAIRED_DEVICES) and broadcasts
+     * it to {@link MultipointPairingActivity}.
+     *
+     * Payload layout:
+     * <pre>
+     * [0..1]   = unknown header (01 01 even with two connected devices)
+     * then, per paired device:
+     *   [0]      = entry length (including this byte), e.g. 0x28 = 40
+     *   [1]      = connection flag (0x01 = connected, 0x00 = not connected)
+     *   [2..7]   = 6-byte Bluetooth address, little-endian
+     *   [8..]    = device name, UTF-8, zero-padded, (entry length - 8) bytes
+     * </pre>
+     */
     protected GBDeviceEvent[] decodePairedDevices(final byte[] payload) {
+        if (payload.length < 2) {
+            return new GBDeviceEvent[0];
+        }
+        final List<MultipointDevice> devices = new ArrayList<>();
+        int offset = 2; // skip the 2-byte header
+        while (offset + 8 <= payload.length) {
+            final int entrySize = Byte.toUnsignedInt(payload[offset]);
+            if (entrySize < 8 || offset + entrySize > payload.length) {
+                break;
+            }
+            final boolean connected = payload[offset + 1] != 0;
+            final String address = formatMacAddress(payload, offset + 2);
+            final int nameLen = entrySize - 8;
+            int nameEnd = 0;
+            while (nameEnd < nameLen && payload[offset + 8 + nameEnd] != 0) {
+                nameEnd++;
+            }
+            final String name = new String(payload, offset + 8, nameEnd, StandardCharsets.UTF_8);
+            LOG.debug("Paired device: addr={} name='{}' connected={}", address, name, connected);
+            devices.add(new MultipointDevice(address, name, connected, false, ((SoundcoreEarbudsCoordinator) getDevice().getDeviceCoordinator())
+                    .getSupportedMultipointActions().contains(MultipointPairingActivity.ACTION_MULTIPOINT_FORGET_DEVICE)));
+            offset += entrySize;
+        }
+        pairedDevices.clear();
+        pairedDevices.addAll(devices);
+        broadcastPairedDevices(pairedDevices, activeSourceAddress);
         return new GBDeviceEvent[0];
     }
 
-    /** Hook for the device-specific CMD_NOTIFY_CONNECTION_STATUS payload layout. */
+    /** Decodes the active source address from CMD_NOTIFY_CONNECTION_STATUS payload. */
     protected GBDeviceEvent[] decodeConnectionStatus(final byte[] payload) {
+        if (payload.length != 7 || (payload[0] != 0x00 && payload[0] != 0x01)) {
+            LOG.warn("Invalid connection status payload");
+            return new GBDeviceEvent[0];
+        }
+        activeSourceAddress = payload[0] == 0x01 ? formatMacAddress(payload, 1) : null;
+        broadcastPairedDevices(pairedDevices, activeSourceAddress);
         return new GBDeviceEvent[0];
     }
 
@@ -421,6 +493,16 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
      * Unknown commands are logged here and consumed without emitting device events.
      */
     protected GBDeviceEvent[] decodeCommand(final short command, final byte[] payload) {
+        if (command == CMD_SET_EQUALIZER) {
+            decodeEqualizer(payload);
+            return new GBDeviceEvent[0];
+        }
+
+        if (command == CMD_SET_EQUALIZER_COMPACT) {
+            decodeEqualizerCompact(payload);
+            return new GBDeviceEvent[0];
+        }
+
         if (command == CMD_SET_FIT_TEST) {
             if (payload.length >= 2) {
                 decodeFitTestResult(payload);
@@ -431,6 +513,73 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
         LOG.debug("Unknown incoming message - command: {} ({} bytes): {}",
                 command, payload.length, GB.lazyHexdump(payload));
         return new GBDeviceEvent[0];
+    }
+
+    private byte[] encodeEqualizer() {
+        final Prefs prefs = getDevicePrefs();
+        final SoundcoreEarbudsCoordinator coordinator = (SoundcoreEarbudsCoordinator) getDevice().getDeviceCoordinator();
+        final int preset = Integer.parseInt(prefs.getString(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_PRESET, "0"));
+
+        final boolean compact = "compact".equals(prefs.getString(
+                DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_COMMAND,
+                coordinator.getDefaultEqualizerCommand()));
+        final SoundcoreEqualizer equalizerPreset = SoundcoreEqualizerPresets.fromIndex(preset);
+        if (equalizerPreset != null && equalizerPreset != SoundcoreEqualizerPresets.CUSTOM) {
+            if (compact) {
+                return encodeCommand(CMD_SET_EQUALIZER_COMPACT, equalizerPreset.getPayloadCompact());
+            } else {
+                return encodeCommand(CMD_SET_EQUALIZER, equalizerPreset.getPayload());
+            }
+        }
+
+        final int[] bands = new int[coordinator.getSupportedEqualizerBands().length];
+        final IntRange volumeRange = coordinator.getEqualizerVolumeRange();
+
+        for (int i = 0; i < bands.length; i++) {
+            bands[i] = clamp(
+                prefs.getInt(SoundcoreEqualizer.EQUALIZER_PREFS_VALUE[i], 0),
+                volumeRange.getFirst(), volumeRange.getLast()
+            );
+        }
+
+        final short command = compact ? CMD_SET_EQUALIZER_COMPACT : CMD_SET_EQUALIZER;
+        return encodeCommand(command, SoundcoreEqualizer.buildCustomPayload(bands, compact));
+    }
+
+    private void decodeEqualizer(final byte[] payload) {
+        decodeEqualizer(payload, 90, 4);
+    }
+
+    private void decodeEqualizerCompact(final byte[] payload) {
+        decodeEqualizer(payload, 22, 2);
+    }
+
+    private void decodeEqualizer(final byte[] payload, final int minimumLength, final int bandsOffset) {
+        if (payload.length < minimumLength) {
+            return;
+        }
+
+        final SoundcoreEqualizer equalizer = SoundcoreEqualizer.fromPayload(payload, 0, bandsOffset);
+        if (equalizer != null) {
+            storeEqualizer(equalizer);
+        }
+    }
+
+    protected void storeEqualizer(final SoundcoreEqualizer equalizer) {
+        final SharedPreferences.Editor editor = getDevicePrefs().getPreferences().edit();
+        editor.putString(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_EQUALIZER_PRESET,
+                String.valueOf(equalizer.getIndex()));
+
+        final SoundcoreEarbudsCoordinator coordinator = (SoundcoreEarbudsCoordinator) getDevice().getDeviceCoordinator();
+        final int[] bands = equalizer.getBands();
+        for (int i = 0; i < coordinator.getSupportedEqualizerBands().length; i++) {
+            editor.putInt(SoundcoreEqualizer.EQUALIZER_PREFS_VALUE[i], bands[i]);
+        }
+        editor.apply();
+    }
+
+    private static int clamp(final int value, final int min, final int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     /**
@@ -630,7 +779,7 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
      * PREF_SOUNDCORE_WIND_NOISE_REDUCTION If Transparency or ANC should reduce Wind Noise
      * @return The payload
     */
-    protected byte[] encodeAdvancedAudioMode(final boolean appendStateByte) {
+    protected byte[] encodeAdvancedAudioMode() {
         final Prefs prefs = getDevicePrefs();
         final AmbientSoundMode ambientSoundMode = AmbientSoundMode.fromPreference(prefs.getString(
                 DeviceSettingsPreferenceConst.PREF_SOUNDCORE_AMBIENT_SOUND_CONTROL,
@@ -671,13 +820,11 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
                 windNoiseReduction
         };
 
-        if (appendStateByte) {
-            final byte[] statePayload = Arrays.copyOf(payload, payload.length + 1);
-            statePayload[statePayload.length - 1] = 0x01;
-            return encodeCommand(CMD_SET_AUDIO_MODE, statePayload);
-        }
+        final byte[] trailer = getAdvancedAudioModeTrailer();
+        final byte[] fullPayload = Arrays.copyOf(payload, payload.length + trailer.length);
+        System.arraycopy(trailer, 0, fullPayload, payload.length, trailer.length);
 
-        return encodeCommand(CMD_SET_AUDIO_MODE, payload);
+        return encodeCommand(CMD_SET_AUDIO_MODE, fullPayload);
     }
 
     /** Decodes the shared five-field Liberty/Sport X20 audio layout; ignores trailing state bytes. */

@@ -309,6 +309,7 @@ dependencies {
     testImplementation libs.mockito
     testImplementation libs.robolectric
     testImplementation libs.hamcrest
+    testImplementation libs.kotlinx.coroutines.test
 
     implementation libs.androidx.core.ktx
     implementation libs.androidx.core.splashscreen
@@ -341,6 +342,9 @@ dependencies {
     implementation libs.mpandroidchart
     implementation libs.durationformatter
     implementation libs.ckchangelog
+    implementation libs.coil
+    implementation libs.androidx.media3.exoplayer
+    implementation libs.androidx.media3.ui
     implementation libs.solarpositioning
     implementation libs.cbor
     // use pristine greendao instead of our custom version, since our custom jitpack-packaged
