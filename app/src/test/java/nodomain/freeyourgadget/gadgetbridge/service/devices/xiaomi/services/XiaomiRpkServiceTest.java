@@ -32,6 +32,9 @@ public class XiaomiRpkServiceTest {
     private static final String CAPTURED_LAUNCHED = "08141006b201392a370a1f636f6d2e7468617467757973736572766963652e6875616d695f78647269701214515e6fbbaae846a3945ffb938f3694ee0b8d2639";
     private static final String CAPTURED_APP_STATUS_CONNECTED = "08141007b2013d423b0a370a1f636f6d2e7468617467757973736572766963652e6875616d695f78647269701214515e6fbbaae846a3945ffb938f3694ee0b8d26391001";
 
+    // Sent by a test wear app (eu.pabl.interconnect) on a Xiaomi Smart Band 9 calling interconnect send()
+    private static final String CAPTURED_MESSAGE_FROM_WATCH = "08141009b201574a550a2c0a1465752e7061626c2e696e746572636f6e6e6563741214383e40c4a180876d76b830b9e358bda92322c48712257b2274223a2270696e67222c226e223a342c227473223a313739333230353935363731357d";
+
     private final RpkInfoList app = XiaomiRpkService.rpkRef(APP_ID, SHA);
 
     @Test
@@ -50,6 +53,14 @@ public class XiaomiRpkServiceTest {
         Assert.assertEquals(XiaomiRpkService.CMD_RPK_LAUNCHED, cmd.getSubtype());
         Assert.assertEquals(APP_ID, cmd.getRpk().getRpkDel().getId());
         Assert.assertEquals(SHA, cmd.getRpk().getRpkDel().getSha());
+    }
+
+    @Test
+    public void messageFromWatchParses() throws Exception {
+        final XiaomiProto.Command cmd = XiaomiProto.Command.parseFrom(GB.hexStringToByteArray(CAPTURED_MESSAGE_FROM_WATCH));
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE_FROM_WATCH, cmd.getSubtype());
+        Assert.assertEquals("eu.pabl.interconnect", cmd.getRpk().getRpkMessage().getApp().getId());
+        Assert.assertEquals("{\"t\":\"ping\",\"n\":4,\"ts\":1793205956715}", cmd.getRpk().getRpkMessage().getPayload().toStringUtf8());
     }
 
     @Test

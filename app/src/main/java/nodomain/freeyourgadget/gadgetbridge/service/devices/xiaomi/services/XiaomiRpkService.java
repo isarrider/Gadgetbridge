@@ -16,6 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services;
 
+import android.content.Intent;
+
 import com.google.protobuf.ByteString;
 
 import org.slf4j.Logger;
@@ -66,10 +68,16 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
     public static final int CMD_RPK_LAUNCHED = 6;
     public static final int CMD_RPK_APP_STATUS = 7;
     public static final int CMD_RPK_MESSAGE_TO_WATCH = 8;
+    public static final int CMD_RPK_MESSAGE_FROM_WATCH = 9;
 
     public static final int RPK_APP_STATUS_CONNECTED = 1;
     public static final int RPK_APP_STATUS_DISCONNECTED = 2;
     public static final int RPK_APP_STATUS_UNINSTALLED = 3;
+
+    // Broadcast to the companion app with the same package as the wear app that sent the message
+    public static final String ACTION_WATCH_APP_MESSAGE = "nodomain.freeyourgadget.gadgetbridge.action.WATCH_APP_MESSAGE";
+    public static final String EXTRA_APP_ID = "appId";
+    public static final String EXTRA_PAYLOAD = "payload";
 
     // Messages waiting for CMD_RPK_LAUNCHED, by rpk id, oldest first
     private final Map<String, Queue<byte[]>> pendingMessages = new HashMap<>();
@@ -92,6 +100,9 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         switch (cmd.getSubtype()) {
             case CMD_RPK_LAUNCHED:
                 onWearAppLaunched(cmd.getRpk().getRpkDel());
+                return;
+            case CMD_RPK_MESSAGE_FROM_WATCH:
+                onWearAppMessage(cmd.getRpk().getRpkMessage());
                 return;
             case CMD_RPK_LIST:
                 handleRpkList(cmd.getRpk().getRpkList());
@@ -182,10 +193,8 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
      * (when third party app messages are disabled).
      */
     private int companionAppStatus(final String appId) {
-        final GBDevice device = getSupport().getDevice();
-        if (!GBApplication.getDeviceSpecificSharedPrefs(device.getAddress())
-                .getBoolean(IntentApiReceiver.THIRD_PARTY_APPS_WATCH_APP_MESSAGES, false)) {
-            LOG.debug("Watch app messages not allowed for {}, phone app of {} disconnected", device.getAliasOrName(), appId);
+        if (!watchAppMessagesAllowed()) {
+            LOG.debug("Watch app messages not allowed for {}, companion app of {} disconnected", getSupport().getDevice().getAliasOrName(), appId);
             return RPK_APP_STATUS_DISCONNECTED;
         }
         if (!AndroidUtils.isPackageInstalled(appId)) {
@@ -197,6 +206,31 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
 
     private void sendAppStatus(final RpkInfoList app, final int status) {
         getSupport().sendCommand("wear app status " + app.getId(), buildAppStatusCommand(app, status));
+    }
+
+    /**
+     * Send a message from a wear app to its companion phone app (same package name). The band only
+     * lets wear apps send JSON.
+     */
+    private void onWearAppMessage(final RpkMessage message) {
+        final String appId = message.getApp().getId();
+        final GBDevice device = getSupport().getDevice();
+        if (!watchAppMessagesAllowed()) {
+            LOG.debug("Watch app messages not allowed for {}, dropping message from {}", device.getAliasOrName(), appId);
+            return;
+        }
+        LOG.debug("Message from wear app {}, {} bytes", appId, message.getPayload().size());
+        final Intent intent = new Intent(ACTION_WATCH_APP_MESSAGE)
+                .setPackage(appId)
+                .putExtra(IntentApiReceiver.EXTRA_DEVICE, device.getAddress())
+                .putExtra(EXTRA_APP_ID, appId)
+                .putExtra(EXTRA_PAYLOAD, message.getPayload().toStringUtf8());
+        getSupport().getContext().sendBroadcast(intent);
+    }
+
+    private boolean watchAppMessagesAllowed() {
+        return GBApplication.getDeviceSpecificSharedPrefs(getSupport().getDevice().getAddress())
+                .getBoolean(IntentApiReceiver.THIRD_PARTY_APPS_WATCH_APP_MESSAGES, false);
     }
 
     @Override

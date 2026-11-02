@@ -1,5 +1,9 @@
 package nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services;
 
+import static org.robolectric.Shadows.shadowOf;
+
+import android.content.Intent;
+
 import com.google.protobuf.ByteString;
 
 import org.junit.Assert;
@@ -14,6 +18,7 @@ import org.robolectric.annotation.Config;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.IntentApiReceiver;
@@ -21,6 +26,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.Rpk;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkInfoList;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkList;
+import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkMessage;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.XiaomiProto;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSupport;
 import nodomain.freeyourgadget.gadgetbridge.test.GBTestApplication;
@@ -49,6 +55,7 @@ public class XiaomiRpkMessageFlowTest {
         final GBDevice device = Mockito.mock(GBDevice.class);
         Mockito.when(device.getAddress()).thenReturn(ADDRESS);
         Mockito.when(support.getDevice()).thenReturn(device);
+        Mockito.when(support.getContext()).thenReturn(RuntimeEnvironment.getApplication());
         service = new XiaomiRpkService(support);
     }
 
@@ -139,6 +146,31 @@ public class XiaomiRpkMessageFlowTest {
         Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_CONNECTED, sentStatus());
     }
 
+    @Test
+    public void messageFromWatchWhileNotAllowedIsDropped() {
+        service.handleCommand(messageFromWatch(APP_ID, "{\"t\":\"ping\"}"));
+        Assert.assertTrue(watchAppMessageBroadcasts().isEmpty());
+    }
+
+    @Test
+    public void messageFromWatchGoesToCompanionApp() {
+        allowWatchAppMessages();
+        service.handleCommand(messageFromWatch(APP_ID, "{\"t\":\"ping\"}"));
+        final List<Intent> broadcasts = watchAppMessageBroadcasts();
+        Assert.assertEquals(1, broadcasts.size());
+        final Intent intent = broadcasts.get(0);
+        Assert.assertEquals(APP_ID, intent.getPackage());
+        Assert.assertEquals(ADDRESS, intent.getStringExtra(IntentApiReceiver.EXTRA_DEVICE));
+        Assert.assertEquals(APP_ID, intent.getStringExtra(XiaomiRpkService.EXTRA_APP_ID));
+        Assert.assertEquals("{\"t\":\"ping\"}", intent.getStringExtra(XiaomiRpkService.EXTRA_PAYLOAD));
+    }
+
+    private static List<Intent> watchAppMessageBroadcasts() {
+        return shadowOf(RuntimeEnvironment.getApplication()).getBroadcastIntents().stream()
+                .filter(intent -> XiaomiRpkService.ACTION_WATCH_APP_MESSAGE.equals(intent.getAction()))
+                .collect(Collectors.toList());
+    }
+
     private static void allowWatchAppMessages() {
         GBApplication.getDeviceSpecificSharedPrefs(ADDRESS).edit()
                 .putBoolean(IntentApiReceiver.THIRD_PARTY_APPS_WATCH_APP_MESSAGES, true)
@@ -168,6 +200,16 @@ public class XiaomiRpkMessageFlowTest {
                 .setSubtype(XiaomiRpkService.CMD_RPK_LIST)
                 .setRpk(Rpk.newBuilder().setRpkList(RpkList.newBuilder().addRpkInfo(
                         RpkInfoList.newBuilder().setId(id).setSha(SHA).setName("Watch app"))))
+                .build();
+    }
+
+    private static XiaomiProto.Command messageFromWatch(final String id, final String payload) {
+        return XiaomiProto.Command.newBuilder()
+                .setType(XiaomiRpkService.COMMAND_TYPE)
+                .setSubtype(XiaomiRpkService.CMD_RPK_MESSAGE_FROM_WATCH)
+                .setRpk(Rpk.newBuilder().setRpkMessage(RpkMessage.newBuilder()
+                        .setApp(XiaomiRpkService.rpkRef(id, SHA))
+                        .setPayload(ByteString.copyFromUtf8(payload))))
                 .build();
     }
 
