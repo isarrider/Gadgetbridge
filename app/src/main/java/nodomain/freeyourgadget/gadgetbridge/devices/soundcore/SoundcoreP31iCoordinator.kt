@@ -30,12 +30,17 @@ class SoundcoreP31iCoordinator : SoundcoreEarbudsCoordinator() {
 
     override fun getDefaultIconResource(): Int = R.drawable.ic_device_galaxy_buds_3_pro
 
-    override fun isExperimental(): Boolean = true
+    override fun getBatteryProperties(): BatteryProperties = BatteryProperties(multiplier = 10, offset = 1)
 
     override fun getDefaultCapabilities(): Set<Capability> = setOf(
         Capability.FindDevice,
         Capability.NoiseControl,
+        Capability.Transparency,
+        Capability.AdaptiveNoiseCancellation,
+        Capability.AdaptiveNoiseCancellationMode,
+        Capability.WindNoiseReduction,
         Capability.FitTest,
         Capability.GamingMode,
+        Capability.AudioEqualizer,
     )
 }
