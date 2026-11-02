@@ -26,7 +26,7 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.pinecil.PinecilDeviceSupport
 
 class PinecilCoordinator : AbstractBLEDeviceCoordinator() {
-    override fun isExperimental(): Boolean = true 
+    override fun isExperimental(): Boolean = true
 
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^Pinecil.*")
 
