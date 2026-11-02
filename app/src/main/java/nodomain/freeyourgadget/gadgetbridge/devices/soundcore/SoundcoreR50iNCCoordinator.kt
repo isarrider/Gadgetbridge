@@ -58,12 +58,6 @@ class SoundcoreR50iNCCoordinator : SoundcoreEarbudsCoordinator() {
         Capability.GamingMode,
     )
 
-    override fun getSupportedEqualizerBands(): IntArray = intArrayOf(
-        100, 200, 400, 800, 1600, 3200, 6400, 12800,
-    )
-
-    override fun getCustomEqualizerPresetArray(): Int = R.array.soundcore_sport_x20_equalizer_preset_names
-
     override val supportedButtonActions: List<ButtonAction> = listOf(
         ButtonAction.SINGLE_TAP,
         ButtonAction.DOUBLE_TAP,
@@ -81,8 +75,4 @@ class SoundcoreR50iNCCoordinator : SoundcoreEarbudsCoordinator() {
         TapFunction.AMBIENT_SOUND_CONTROL,
         TapFunction.NONE,
     )
-
-    override fun createProtocol(device: GBDevice): SoundcoreSportX20Protocol =
-        SoundcoreSportX20Protocol(device)
-
 }
