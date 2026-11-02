@@ -609,6 +609,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.SoundcoreMotionPlu
 import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.SoundcoreQ30Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.SoundcoreSpaceOneCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.SoundcoreSportX20Coordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.sleep_a30.SoundcoreSleepA30Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.SoundcoreV20iCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.supercars.SuperCarsCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.test.TestDeviceCoordinator;
@@ -1128,6 +1129,7 @@ public enum DeviceType {
     SOUNDCORE_LIFE_TUNE_XR(SoundcoreLifeTuneXRCoordinator::new),
     SOUNDCORE_AEROFIT2(SoundcoreAeroFit2Coordinator::new),
     SOUNDCORE_SPORT_X20(SoundcoreSportX20Coordinator::new),
+    SOUNDCORE_SLEEP_A30(SoundcoreSleepA30Coordinator::new),
     SOUNDCORE_A1(SoundcoreA1Coordinator::new),
     SOUNDCORE_A2_NC(SoundcoreA2NCCoordinator::new),
     SOUNDCORE_A3I(SoundcoreA3iCoordinator::new),
