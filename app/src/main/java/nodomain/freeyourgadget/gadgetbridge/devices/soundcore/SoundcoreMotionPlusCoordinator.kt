@@ -20,6 +20,7 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.SoundcoreEqualizer
+import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.SoundcoreEqualizerPresets
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.devices.SoundcoreMotionPlusProtocol
 import java.util.regex.Pattern
 
@@ -60,7 +61,7 @@ class SoundcoreMotionPlusCoordinator : SoundcoreEarbudsCoordinator() {
         SoundcoreEqualizer(2, R.string.soundcore_equalizer_preset_heavy),
         SoundcoreEqualizer(3, R.string.soundcore_equalizer_preset_classic),
         SoundcoreEqualizer(4, R.string.soundcore_equalizer_preset_original),
-        SoundcoreEqualizer(254, R.string.custom),
+        SoundcoreEqualizerPresets.CUSTOM,
     )
 
     override fun createProtocol(device: GBDevice): SoundcoreMotionPlusProtocol =
