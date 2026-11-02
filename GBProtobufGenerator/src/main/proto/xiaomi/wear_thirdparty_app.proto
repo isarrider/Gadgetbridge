@@ -13,8 +13,8 @@ message Rpk{
 
   // 20, 4 - launch the wear app before messaging it; band answers 20, 6 with rpkDel set to the app
   optional RpkLaunch rpkLaunch = 6;
-  // 20, 7 - end of a message session
-  optional RpkSessionEnd rpkSessionEnd = 8;
+  // 20, 7 - status of the phone app, sent to the wear app
+  optional RpkAppStatus rpkAppStatus = 8;
   // 20, 8 - message for the wear app
   optional RpkMessage rpkMessage = 9;
 }
@@ -24,9 +24,9 @@ message RpkLaunch {
   optional string wearPackage = 2; // package of the app on the band; the band also accepts the rpk id
 }
 
-message RpkSessionEnd {
+message RpkAppStatus {
   optional RpkInfoList app = 1;
-  optional uint32 unknown2 = 2; // 1
+  optional uint32 status = 2; // 1 connected, 2 disconnected, 3 uninstalled
 }
 
 message RpkMessage {

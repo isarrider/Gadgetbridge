@@ -39,12 +39,12 @@ import nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiFWHelper;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceApp;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.Rpk;
+import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkAppStatus;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkInfo;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkInfoList;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkLaunch;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkList;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkMessage;
-import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkSessionEnd;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.XiaomiProto;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSupport;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
@@ -61,8 +61,12 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
     public static final int CMD_RPK_INSTALLED = 2;
     public static final int CMD_RPK_LAUNCH = 4;
     public static final int CMD_RPK_LAUNCHED = 6;
-    public static final int CMD_RPK_SESSION_END = 7;
+    public static final int CMD_RPK_APP_STATUS = 7;
     public static final int CMD_RPK_MESSAGE = 8;
+
+    public static final int RPK_APP_STATUS_CONNECTED = 1;
+    public static final int RPK_APP_STATUS_DISCONNECTED = 2;
+    public static final int RPK_APP_STATUS_UNINSTALLED = 3;
 
     // Messages waiting for CMD_RPK_LAUNCHED, by rpk id, oldest first
     private final Map<String, Queue<byte[]>> pendingMessages = new HashMap<>();
@@ -117,7 +121,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
 
     /**
      * Send a message to an app installed on the band, as observed between the official app and the band:
-     * launch the app (CMD_RPK_LAUNCH), wait for CMD_RPK_LAUNCHED, send CMD_RPK_MESSAGE, end with CMD_RPK_SESSION_END.
+     * launch the app (CMD_RPK_LAUNCH), wait for CMD_RPK_LAUNCHED, send CMD_RPK_MESSAGE, end with CMD_RPK_APP_STATUS (connected).
      * Messages sent before the app reports it launched are queued and all sent in that session, in order.
      *
      * @param appId rpk id as reported in the rpk list
@@ -162,7 +166,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         for (final byte[] payload : payloads) {
             getSupport().sendCommand("wear app message " + app.getId(), buildMessageCommand(ref, payload));
         }
-        getSupport().sendCommand("wear app session end " + app.getId(), buildSessionEndCommand(ref));
+        getSupport().sendCommand("wear app status " + app.getId(), buildAppStatusCommand(ref, RPK_APP_STATUS_CONNECTED));
     }
 
     @Override
@@ -192,11 +196,11 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
                 .build();
     }
 
-    static XiaomiProto.Command buildSessionEndCommand(final RpkInfoList app) {
+    static XiaomiProto.Command buildAppStatusCommand(final RpkInfoList app, final int status) {
         return XiaomiProto.Command.newBuilder()
                 .setType(COMMAND_TYPE)
-                .setSubtype(CMD_RPK_SESSION_END)
-                .setRpk(Rpk.newBuilder().setRpkSessionEnd(RpkSessionEnd.newBuilder().setApp(app).setUnknown2(1)))
+                .setSubtype(CMD_RPK_APP_STATUS)
+                .setRpk(Rpk.newBuilder().setRpkAppStatus(RpkAppStatus.newBuilder().setApp(app).setStatus(status)))
                 .build();
     }
 

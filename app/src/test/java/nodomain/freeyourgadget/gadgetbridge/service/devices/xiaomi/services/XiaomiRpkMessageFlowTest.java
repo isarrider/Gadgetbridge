@@ -23,7 +23,7 @@ import nodomain.freeyourgadget.gadgetbridge.test.GBTestApplication;
 
 /**
  * Order of commands when messaging a watch app: rpk list (only while the app's sha is unknown), launch,
- * then message and session end once the band reports the app launched.
+ * then message and app status once the band reports the app launched.
  */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 23, application = GBTestApplication.class)
@@ -61,7 +61,7 @@ public class XiaomiRpkMessageFlowTest {
         Assert.assertEquals(3, sent.size());
         Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE, sent.get(1).getSubtype());
         Assert.assertArrayEquals(PAYLOAD, sent.get(1).getRpk().getRpkMessage().getPayload().toByteArray());
-        Assert.assertEquals(XiaomiRpkService.CMD_RPK_SESSION_END, sent.get(2).getSubtype());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, sent.get(2).getSubtype());
     }
 
     @Test

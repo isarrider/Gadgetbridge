@@ -30,7 +30,7 @@ public class XiaomiRpkServiceTest {
 
     private static final String CAPTURED_LAUNCH = "08141004b2015c325a0a370a1f636f6d2e7468617467757973736572766963652e6875616d695f78647269701214515e6fbbaae846a3945ffb938f3694ee0b8d2639121f636f6d2e6170706c69636174696f6e2e77617463682e776174636864726970";
     private static final String CAPTURED_LAUNCHED = "08141006b201392a370a1f636f6d2e7468617467757973736572766963652e6875616d695f78647269701214515e6fbbaae846a3945ffb938f3694ee0b8d2639";
-    private static final String CAPTURED_SESSION_END = "08141007b2013d423b0a370a1f636f6d2e7468617467757973736572766963652e6875616d695f78647269701214515e6fbbaae846a3945ffb938f3694ee0b8d26391001";
+    private static final String CAPTURED_APP_STATUS_CONNECTED = "08141007b2013d423b0a370a1f636f6d2e7468617467757973736572766963652e6875616d695f78647269701214515e6fbbaae846a3945ffb938f3694ee0b8d26391001";
 
     private final RpkInfoList app = XiaomiRpkService.rpkRef(APP_ID, SHA);
 
@@ -40,8 +40,8 @@ public class XiaomiRpkServiceTest {
     }
 
     @Test
-    public void sessionEndMatchesCapture() {
-        assertBytes(CAPTURED_SESSION_END, XiaomiRpkService.buildSessionEndCommand(app));
+    public void appStatusMatchesCapture() {
+        assertBytes(CAPTURED_APP_STATUS_CONNECTED, XiaomiRpkService.buildAppStatusCommand(app, XiaomiRpkService.RPK_APP_STATUS_CONNECTED));
     }
 
     @Test
@@ -80,7 +80,7 @@ public class XiaomiRpkServiceTest {
         Assert.assertEquals(3, afterLaunches.size());
         Assert.assertEquals("first", afterLaunches.get(0).getRpk().getRpkMessage().getPayload().toStringUtf8());
         Assert.assertEquals("second", afterLaunches.get(1).getRpk().getRpkMessage().getPayload().toStringUtf8());
-        Assert.assertEquals(XiaomiRpkService.CMD_RPK_SESSION_END, afterLaunches.get(2).getSubtype());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, afterLaunches.get(2).getSubtype());
     }
 
     @Test
