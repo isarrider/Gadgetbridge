@@ -33,18 +33,28 @@ class SoundcoreP31iCoordinator : SoundcoreEarbudsCoordinator() {
 
     override fun getBatteryProperties(): BatteryProperties = BatteryProperties(multiplier = 10, offset = 1)
 
+    // CHECK: There are 5 levels in manual mode. Testing with A30i values.
+    override fun getNoiseCancellationLevelRange(): ByteArray = byteArrayOf(0x00, 0x15, 0x25, 0x35, 0x45, 0x51)
+
     override fun createProtocol(device: GBDevice): SoundcoreP31iProtocol = SoundcoreP31iProtocol(device)
 
+    // TODO: Movie Mode? Music Mode? (default?)
+    // Appears in Spatial Audio settings.
     override fun getDefaultCapabilities(): Set<Capability> = setOf(
         Capability.FindDevice,
         Capability.NoiseControl,
+        Capability.NoiseCancellationModes,
         Capability.Transparency,
         Capability.AdaptiveNoiseCancellation,
         Capability.AdaptiveNoiseCancellationMode,
         Capability.WindNoiseReduction,
+        Capability.VocalMode,
+        Capability.TouchControls,
         Capability.FitTest,
         Capability.GamingMode,
         Capability.AudioEqualizer,
+        Capability.Multipoint,
+        Capability.LDAC,
     )
 
     override val supportedButtonActions: List<ButtonAction> = listOf(
