@@ -105,6 +105,10 @@ internal object BodyCompositionSyncer : HealthConnectSyncer {
      * Builds the Health Connect records derivable from a single impedance measurement.
      * Only the record types guarded by a permission in [grantedPermissions] are built,
      * and a record type is skipped for the sample when its value is not usable.
+     *
+     * Each record is stamped with a stable [clientRecordId] (per record type and sample
+     * timestamp) so re-emitting the same sample upserts instead of duplicating; [version]
+     * is the run's wall-clock so a later sync outranks the value it previously wrote.
      */
     internal fun buildRecords(
         timestamp: Instant,
@@ -112,10 +116,14 @@ internal object BodyCompositionSyncer : HealthConnectSyncer {
         metadata: Metadata,
         composition: BodyCompositionCalculator.BodyComposition,
         weightKg: Float,
-        grantedPermissions: Set<String>
+        grantedPermissions: Set<String>,
+        version: Long
     ): List<Record> = recordTypes
         .filter { it.permission in grantedPermissions }
-        .mapNotNull { it.build(timestamp, offset, metadata, composition, weightKg) }
+        .mapNotNull { type ->
+            val stampedMetadata = clientRecordMetadata(metadata, type.name, timestamp.toEpochMilli(), version)
+            type.build(timestamp, offset, stampedMetadata, composition, weightKg)
+        }
 
     override suspend fun sync(
         healthConnectClient: HealthConnectClient,
@@ -159,6 +167,11 @@ internal object BodyCompositionSyncer : HealthConnectSyncer {
 
         logger.info("Processing ${samples.size} weight samples for $RECORD_TYPE for device '$deviceName'.")
 
+        // clientRecordVersion: every record in this slice shares the run's wall-clock so a
+        // later sync always outranks the value it previously wrote for a sample. HC keeps the
+        // highest version on a clientRecordId collision, so the freshest re-read wins.
+        val recordVersion = System.currentTimeMillis()
+
         var skippedCount = 0
         var latestSyncedTimestamp: Instant? = null
         val recordsToInsert = mutableListOf<Record>()
@@ -182,7 +195,7 @@ internal object BodyCompositionSyncer : HealthConnectSyncer {
                 }
 
                 val sampleOffset = offset.rules.getOffset(timestamp)
-                val records = buildRecords(timestamp, sampleOffset, metadata, composition, sample.getWeightKg(), grantedPermissions)
+                val records = buildRecords(timestamp, sampleOffset, metadata, composition, sample.getWeightKg(), grantedPermissions, recordVersion)
                 if (records.isEmpty()) {
                     skippedCount++
                 } else {

@@ -39,6 +39,7 @@ class BodyCompositionSyncerTest {
     private val timestamp = Instant.ofEpochMilli(1_700_000_000_000L)
     private val offset = ZoneOffset.UTC
     private val weightKg = 80f
+    private val version = 1_700_000_000_000L
 
     private fun metadata(): Metadata =
         Metadata.autoRecorded(
@@ -79,7 +80,7 @@ class BodyCompositionSyncerTest {
 
     @Test
     fun buildRecords_allPermissions_returnsAllFiveRecords() {
-        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), composition(), weightKg, allPermissions)
+        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), composition(), weightKg, allPermissions, version)
 
         assertEquals(5, records.size)
         val types = records.map { it::class.java }.toSet()
@@ -97,14 +98,14 @@ class BodyCompositionSyncerTest {
 
     @Test
     fun buildRecords_noPermissions_returnsEmpty() {
-        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), composition(), weightKg, emptySet())
+        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), composition(), weightKg, emptySet(), version)
         assertTrue(records.isEmpty())
     }
 
     @Test
     fun buildRecords_singlePermission_returnsOnlyThatRecord() {
         val permissions = setOf(HealthPermission.getWritePermission(BodyFatRecord::class))
-        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), composition(), weightKg, permissions)
+        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), composition(), weightKg, permissions, version)
 
         assertEquals(1, records.size)
         assertTrue(records[0] is BodyFatRecord)
@@ -113,7 +114,7 @@ class BodyCompositionSyncerTest {
     @Test
     fun buildRecords_valuesMatchComposition() {
         val c = composition()
-        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), c, weightKg, allPermissions)
+        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), c, weightKg, allPermissions, version)
 
         val bodyFat = records.filterIsInstance<BodyFatRecord>().single()
         assertEquals(timestamp, bodyFat.time)
@@ -146,9 +147,21 @@ class BodyCompositionSyncerTest {
         constructor.isAccessible = true
         val c = constructor.newInstance(20f, 55f, 60f, 2.8f, 0)
 
-        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), c, weightKg, allPermissions)
+        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), c, weightKg, allPermissions, version)
 
         assertEquals(4, records.size)
         assertTrue(records.none { it is BasalMetabolicRateRecord })
+    }
+
+    @Test
+    fun buildRecords_setsStableClientRecordId() {
+        val records = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), composition(), weightKg, allPermissions, version)
+
+        // Every record carries a clientRecordId, and each of the five record types gets a distinct one.
+        assertTrue(records.all { it.metadata.clientRecordId != null })
+        assertEquals(5, records.map { it.metadata.clientRecordId }.toSet().size)
+        // The id is deterministic: rebuilding the same sample yields the identical ids.
+        val rebuilt = BodyCompositionSyncer.buildRecords(timestamp, offset, metadata(), composition(), weightKg, allPermissions, version)
+        assertEquals(records.map { it.metadata.clientRecordId }, rebuilt.map { it.metadata.clientRecordId })
     }
 }
