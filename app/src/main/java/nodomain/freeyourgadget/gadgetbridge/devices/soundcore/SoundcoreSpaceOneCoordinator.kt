@@ -7,8 +7,6 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.devices.So
 import java.util.regex.Pattern
 
 class SoundcoreSpaceOneCoordinator : SoundcoreEarbudsCoordinator() {
-    override fun isExperimental(): Boolean = true
-
     override fun getModelName(): String = "A3035"
 
     override fun getSupportedDeviceName(): Pattern =
@@ -22,18 +20,21 @@ class SoundcoreSpaceOneCoordinator : SoundcoreEarbudsCoordinator() {
 
     override fun getBatteryCount(device: GBDevice): Int = 1
 
+    override fun supportsOSBatteryLevel(device: GBDevice): Boolean = true
+
     override fun createProtocol(device: GBDevice): SoundcoreSpaceOneProtocol = SoundcoreSpaceOneProtocol(device)
 
     override fun supportsExtendedInfoRequest(): Boolean = false
 
     override fun supportsSessionInitRequest(): Boolean = false
 
+    override fun getNoiseCancellationLevelRange(): ByteArray = byteArrayOf(0x00, 0x15, 0x25, 0x35, 0x45, 0x51)
+
     override fun getDefaultCapabilities(): Set<Capability> = setOf(
         Capability.NoiseControl,
         Capability.AmbientSound,
         Capability.Transparency,
         Capability.AdaptiveNoiseCancellation,
-        Capability.NoiseCancellationModes,
         Capability.WindNoiseReduction,
         Capability.VocalMode,
         Capability.WearingDetection,
@@ -41,5 +42,6 @@ class SoundcoreSpaceOneCoordinator : SoundcoreEarbudsCoordinator() {
         Capability.Multipoint,
         Capability.AutoPowerOff,
         Capability.VoicePrompts,
+        Capability.BatteryLowTone,
     )
 }
