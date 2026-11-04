@@ -26,19 +26,15 @@ import android.os.ParcelUuid;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.apache.commons.lang3.ArrayUtils;
-
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
-import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsCustomizer;
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.DeviceSettingsSpec;
 import nodomain.freeyourgadget.gadgetbridge.capabilities.loyaltycards.BarcodeFormat;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider;
@@ -216,42 +212,8 @@ public class BangleJSCoordinator extends AbstractBLEDeviceCoordinator {
     }
 
     @Override
-    public int[] getSupportedDeviceSpecificSettings(final GBDevice device) {
-        final List<Integer> settings = new ArrayList<>();
-
-        settings.add(R.xml.devicesettings_banglejs_location);
-
-        settings.add(R.xml.devicesettings_header_notifications);
-        settings.add(R.xml.devicesettings_send_app_notifications);
-        settings.add(R.xml.devicesettings_notification_wake_on_open);
-        settings.add(R.xml.devicesettings_text_bitmaps);
-        settings.add(R.xml.devicesettings_transliteration);
-        settings.add(R.xml.devicesettings_canned_reply_16);
-        settings.add(R.xml.devicesettings_banglejs_notifications);
-
-        settings.add(R.xml.devicesettings_header_calendar);
-        settings.add(R.xml.devicesettings_sync_calendar);
-
-        settings.add(R.xml.devicesettings_header_connection);
-        settings.add(R.xml.devicesettings_high_mtu);
-        if (GBApplication.hasInternetAccess())
-            settings.add(R.xml.devicesettings_device_internet_access);
-
-        settings.add(R.xml.devicesettings_banglejs_activity);
-
-        settings.add(R.xml.devicesettings_header_apps);
-        settings.add(R.xml.devicesettings_loyalty_cards);
-
-        settings.add(R.xml.devicesettings_header_developer);
-        settings.add(R.xml.devicesettings_banglejs_apploader);
-        settings.add(R.xml.devicesettings_device_intents);
-
-        return ArrayUtils.toPrimitive(settings.toArray(new Integer[0]));
-    }
-
-    @Override
-    public DeviceSpecificSettingsCustomizer getDeviceSpecificSettingsCustomizer(final GBDevice device) {
-        return new BangleJSSettingsCustomizer(device);
+    public DeviceSettingsSpec getDeviceSettings(@NonNull final GBDevice device) {
+        return BangleJSDeviceSettingsKt.bangleJSDeviceSettings(device);
     }
 
     @Override

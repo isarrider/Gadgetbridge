@@ -46,6 +46,7 @@ public enum DeviceSpecificSettingsScreen {
     HEALTH("pref_screen_health", R.xml.devicesettings_root_health, R.string.pref_header_health, R.drawable.ic_health),
     TOUCH_OPTIONS("pref_screen_touch_options", R.xml.devicesettings_root_touch_options, R.string.prefs_galaxy_touch_options, R.drawable.ic_touch),
     SOUND("pref_screen_sound", R.xml.devicesettings_root_sound, R.string.pref_header_sound, R.drawable.ic_volume_up),
+    WATCH_APPS("pref_screen_watch_apps", R.xml.devicesettings_root_watch_apps, R.string.pref_header_watch_apps, R.drawable.ic_settings_applications),
     EXPERIMENTAL("pref_screen_experimental", R.xml.devicesettings_root_experimental, R.string.pref_experimental_settings_title, R.drawable.ic_warning_gray),
     ;
 

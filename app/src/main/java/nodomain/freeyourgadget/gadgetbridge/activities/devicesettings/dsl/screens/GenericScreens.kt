@@ -33,6 +33,7 @@ fun DeviceSettingsScope.syncCalendar() {
         summary = R.string.pref_summary_sync_calendar,
         icon = R.drawable.ic_calendar_sync,
         defaultValue = false,
+        connectedOnly = false,
     )
     externalSettings(
         key = "calendar_blacklist",
@@ -41,6 +42,7 @@ fun DeviceSettingsScope.syncCalendar() {
         icon = R.drawable.ic_calendar_month,
         dependency = "sync_calendar",
         activityClass = CalendarSelectionActivity::class.java,
+        connectedOnly = false,
     )
     text(
         key = "calendar_lookahead_days",
@@ -50,6 +52,7 @@ fun DeviceSettingsScope.syncCalendar() {
         inputType = InputType.TYPE_CLASS_NUMBER,
         maxLength = 3,
         dependency = "sync_calendar",
+        connectedOnly = false,
     )
     switchSetting(
         key = "sync_birthdays",
@@ -58,6 +61,7 @@ fun DeviceSettingsScope.syncCalendar() {
         icon = R.drawable.ic_person,
         defaultValue = false,
         dependency = "sync_calendar",
+        connectedOnly = false,
     )
     switchSetting(
         key = "calendar_sync_canceled",
@@ -66,6 +70,7 @@ fun DeviceSettingsScope.syncCalendar() {
         icon = R.drawable.ic_calendar_cancel,
         defaultValue = true,
         dependency = "sync_calendar",
+        connectedOnly = false,
     )
     switchSetting(
         key = "calendar_sync_declined",
@@ -74,6 +79,7 @@ fun DeviceSettingsScope.syncCalendar() {
         icon = R.drawable.ic_calendar_cancel,
         defaultValue = true,
         dependency = "sync_calendar",
+        connectedOnly = false,
     )
     switchSetting(
         key = "calendar_sync_all_day",
@@ -82,6 +88,7 @@ fun DeviceSettingsScope.syncCalendar() {
         icon = R.drawable.ic_calendar_from,
         defaultValue = true,
         dependency = "sync_calendar",
+        connectedOnly = false,
     )
     switchSetting(
         key = "calendar_sync_focus_time",
@@ -90,6 +97,7 @@ fun DeviceSettingsScope.syncCalendar() {
         icon = R.drawable.ic_focus,
         defaultValue = true,
         dependency = "sync_calendar",
+        connectedOnly = false,
     )
     switchSetting(
         key = "calendar_sync_working_location",
@@ -98,5 +106,6 @@ fun DeviceSettingsScope.syncCalendar() {
         icon = R.drawable.ic_gps_location,
         defaultValue = true,
         dependency = "sync_calendar",
+        connectedOnly = false,
     )
 }
