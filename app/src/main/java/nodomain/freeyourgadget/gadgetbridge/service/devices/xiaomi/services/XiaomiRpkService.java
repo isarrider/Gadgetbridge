@@ -23,17 +23,14 @@ import com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -79,14 +76,10 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
     public static final String EXTRA_APP_ID = "appId";
     public static final String EXTRA_PAYLOAD = "payload";
 
-    // Messages waiting for CMD_RPK_LAUNCHED, by rpk id, oldest first
-    private final Map<String, Queue<byte[]>> pendingMessages = new HashMap<>();
-    // Rpk ids to launch once the rpk list arrives
-    private final Set<String> awaitingList = new HashSet<>();
-    // Whether the companion app of each rpk id said it is listening, kept across band reconnects
+    // Actions waiting for rpk list, by rpk id, oldest first.
+    private final Map<String, List<Consumer<RpkInfoList>>> awaitingSha = new HashMap<>();
+    // Whether the companion app of each rpk id said it is listening, kept across band reconnects.
     private final Map<String, Boolean> companionAppConnected = new HashMap<>();
-    // Rpk ids to send the companion app status to once the rpk list arrives
-    private final Set<String> awaitingStatus = new HashSet<>();
 
 
     // Not null if we're installing a firmware
@@ -138,22 +131,13 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
     }
 
     /**
-     * Send a message to an app installed on the band, as observed between the official app and the band:
-     * launch the app (CMD_RPK_LAUNCH), wait for CMD_RPK_LAUNCHED, send CMD_RPK_MESSAGE_TO_WATCH, end with CMD_RPK_APP_STATUS (connected).
-     * Messages sent before the app reports it launched are queued and all sent in that session, in order.
+     * Send a message to an app installed on the band. Like the official app, this offers no
+     * guarantees about delivery. The wear app must be active for a message to reach it.
      *
      * @param appId rpk id as reported in the rpk list
      */
     public void sendWearAppMessage(final String appId, final byte[] payload) {
-        pendingMessages.computeIfAbsent(appId, k -> new ArrayDeque<>()).add(payload);
-        if (!shaMap.containsKey(appId)) {
-            // sha is only known from the rpk list, which is fetched on demand
-            LOG.debug("Rpk {} not in the cached list, requesting it", appId);
-            awaitingList.add(appId);
-            requestRpkList();
-            return;
-        }
-        launchWearApp(appId);
+        withRpkRef(appId, ref -> getSupport().sendCommand("wear app message " + appId, buildMessageCommand(ref, payload)));
     }
 
     /**
@@ -162,57 +146,34 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
      * @param appId rpk id as reported in the rpk list
      */
     public void startWearApp(final String appId) {
-        if (!shaMap.containsKey(appId)) {
-            // sha is only known from the rpk list, which is fetched on demand
-            LOG.debug("Rpk {} not in the cached list, requesting it", appId);
-            awaitingList.add(appId);
-            requestRpkList();
-            return;
-        }
-        launchWearApp(appId);
+        withRpkRef(appId, ref -> launchWearApp(appId, ref));
     }
 
-    private void launchWearApp(final String appId) {
+    private void launchWearApp(final String appId, final RpkInfoList rpkRef) {
         LOG.debug("Launching {}", appId);
         // The official app sends the package of the app on the band as launch target; the band also accepts the rpk id
-        getSupport().sendCommand("launch wear app " + appId, buildLaunchCommand(rpkRef(appId, shaMap.get(appId)), appId));
+        getSupport().sendCommand("launch wear app " + appId, buildLaunchCommand(rpkRef, appId));
     }
 
-    private void launchAwaitingApps() {
-        for (final String appId : awaitingList) {
-            if (shaMap.containsKey(appId)) {
-                launchWearApp(appId);
-            } else {
-                LOG.warn("Rpk {} not installed, known: {}", appId, shaMap.keySet());
-                pendingMessages.remove(appId);
+    private void runAwaitingActions() {
+        for (final Map.Entry<String, List<Consumer<RpkInfoList>>> entry : awaitingSha.entrySet()) {
+            final ByteString sha = shaMap.get(entry.getKey());
+            if (sha == null) {
+                LOG.warn("Rpk {} not installed but action was waiting for it.", entry.getKey());
+                continue;
             }
-        }
-        awaitingList.clear();
-    }
 
-    private void sendAwaitingStatuses() {
-        for (final String appId : awaitingStatus) {
-            if (shaMap.containsKey(appId)) {
-                sendAppStatus(rpkRef(appId, shaMap.get(appId)), companionAppStatus(appId));
-            } else {
-                LOG.warn("Rpk {} not installed, known: {}", appId, shaMap.keySet());
+            final RpkInfoList ref = rpkRef(entry.getKey(), sha);
+            for (final Consumer<RpkInfoList> action : entry.getValue()) {
+                action.accept(ref);
             }
         }
-        awaitingStatus.clear();
+        awaitingSha.clear();
     }
 
     private void onWearAppLaunched(final RpkInfoList app) {
         final RpkInfoList ref = rpkRef(app.getId(), app.getSha());
-        final Queue<byte[]> payloads = pendingMessages.remove(app.getId());
-        if (payloads == null) {
-            LOG.debug("Wear app {} launched, no pending message", app.getId());
-            sendAppStatus(ref, companionAppStatus(app.getId()));
-            return;
-        }
-        for (final byte[] payload : payloads) {
-            getSupport().sendCommand("wear app message " + app.getId(), buildMessageCommand(ref, payload));
-        }
-        sendAppStatus(ref, RPK_APP_STATUS_CONNECTED);
+        sendAppStatus(ref, companionAppStatus(app.getId()));
     }
 
     /**
@@ -249,14 +210,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
      */
     public void setCompanionAppStatus(final String appId, final boolean connected) {
         companionAppConnected.put(appId, connected);
-        if (!shaMap.containsKey(appId)) {
-            // sha is only known from the rpk list, which is fetched on demand
-            LOG.debug("Rpk {} not in the cached list, requesting it", appId);
-            awaitingStatus.add(appId);
-            requestRpkList();
-            return;
-        }
-        sendAppStatus(rpkRef(appId, shaMap.get(appId)), companionAppStatus(appId));
+        withRpkRef(appId, ref -> sendAppStatus(ref, companionAppStatus(appId)));
     }
 
     private void sendAppStatus(final RpkInfoList app, final int status) {
@@ -290,14 +244,33 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
 
     @Override
     public void onDisconnect() {
-        // Otherwise messages from before the disconnect would go out with the next one, possibly much later
-        pendingMessages.clear();
-        awaitingList.clear();
-        awaitingStatus.clear();
+        // Clear all pending actions, otherwise commands (and thus messages) from before the
+        // disconnect would run on the next rpk list, possibly much later.
+        awaitingSha.clear();
     }
 
     static RpkInfoList rpkRef(final String id, final ByteString sha) {
         return RpkInfoList.newBuilder().setId(id).setSha(sha).build();
+    }
+
+    /**
+     * Runs an action whenever the sha of the rpk is known. If it's available immediately, the
+     * action runs immediately. Otherwise, it's queued to be run when the rpk list is next received,
+     * and the rpk list is requested.
+     *
+     * @param appId rpk id as reported in the rpk list.
+     * @param action the action to be executed once the sha is obtained.
+     */
+    private void withRpkRef(final String appId, final Consumer<RpkInfoList> action) {
+        final ByteString sha = shaMap.get(appId);
+        if (sha != null) {
+            action.accept(rpkRef(appId, sha));
+        } else {
+            // sha is only known from the rpk list, which is fetched on demand
+            LOG.debug("Rpk {} not in the cached list, requesting it", appId);
+            awaitingSha.computeIfAbsent(appId, k -> new ArrayList<>()).add(action);
+            requestRpkList();
+        }
     }
 
     static XiaomiProto.Command buildLaunchCommand(final RpkInfoList app, final String wearPackage) {
@@ -393,8 +366,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         appInfoCmd.apps = appsAndFaces.toArray(new GBDeviceApp[0]);
         getSupport().evaluateGBDeviceEvent(appInfoCmd);
 
-        launchAwaitingApps();
-        sendAwaitingStatuses();
+        runAwaitingActions();
     }
 
 

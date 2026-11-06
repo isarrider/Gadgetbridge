@@ -4,19 +4,11 @@ import com.google.protobuf.ByteString;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
-import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.Rpk;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkInfoList;
-import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.RpkList;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.XiaomiProto;
-import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSupport;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 /**
@@ -72,53 +64,6 @@ public class XiaomiRpkServiceTest {
         Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH, cmd.getSubtype());
         Assert.assertEquals(app, cmd.getRpk().getRpkMessage().getApp());
         Assert.assertArrayEquals(payload, cmd.getRpk().getRpkMessage().getPayload().toByteArray());
-    }
-
-    @Test
-    public void messagesBeforeLaunchAreSentInOneSession() throws Exception {
-        final XiaomiSupport support = mockSupport();
-        final XiaomiRpkService service = serviceWithInstalledApp(support);
-
-        service.sendWearAppMessage(APP_ID, bytes("first"));
-        service.sendWearAppMessage(APP_ID, bytes("second"));
-        service.handleCommand(XiaomiProto.Command.parseFrom(GB.hexStringToByteArray(CAPTURED_LAUNCHED)));
-
-        final List<XiaomiProto.Command> afterLaunches = sentCommands(support).stream()
-                .filter(cmd -> cmd.getSubtype() != XiaomiRpkService.CMD_RPK_LAUNCH)
-                .collect(Collectors.toList());
-        Assert.assertEquals(3, afterLaunches.size());
-        Assert.assertEquals("first", afterLaunches.get(0).getRpk().getRpkMessage().getPayload().toStringUtf8());
-        Assert.assertEquals("second", afterLaunches.get(1).getRpk().getRpkMessage().getPayload().toStringUtf8());
-        Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, afterLaunches.get(2).getSubtype());
-    }
-
-    private static XiaomiSupport mockSupport() {
-        final XiaomiSupport support = Mockito.mock(XiaomiSupport.class);
-        final XiaomiWatchfaceService watchfaces = Mockito.mock(XiaomiWatchfaceService.class);
-        Mockito.doReturn(Collections.emptyList()).when(watchfaces).getInstalledFacesCache();
-        Mockito.when(support.getWatchfaceService()).thenReturn(watchfaces);
-        return support;
-    }
-
-    private static XiaomiRpkService serviceWithInstalledApp(final XiaomiSupport support) {
-        final XiaomiRpkService service = new XiaomiRpkService(support);
-        service.handleCommand(XiaomiProto.Command.newBuilder()
-                .setType(XiaomiRpkService.COMMAND_TYPE)
-                .setSubtype(XiaomiRpkService.CMD_RPK_LIST)
-                .setRpk(Rpk.newBuilder().setRpkList(RpkList.newBuilder()
-                        .addRpkInfo(RpkInfoList.newBuilder().setId(APP_ID).setSha(SHA).setName("CGM"))))
-                .build());
-        return service;
-    }
-
-    private static List<XiaomiProto.Command> sentCommands(final XiaomiSupport support) {
-        final ArgumentCaptor<XiaomiProto.Command> sent = ArgumentCaptor.forClass(XiaomiProto.Command.class);
-        Mockito.verify(support, Mockito.atLeastOnce()).sendCommand(Mockito.anyString(), sent.capture());
-        return sent.getAllValues();
-    }
-
-    private static byte[] bytes(final String text) {
-        return text.getBytes(StandardCharsets.UTF_8);
     }
 
     private static void assertBytes(final String expectedHex, final XiaomiProto.Command cmd) {

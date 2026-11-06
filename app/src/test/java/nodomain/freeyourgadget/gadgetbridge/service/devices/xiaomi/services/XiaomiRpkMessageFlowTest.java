@@ -33,9 +33,9 @@ import nodomain.freeyourgadget.gadgetbridge.test.GBTestApplication;
 
 /**
  * Order of commands when messaging a watch app: rpk list (only while the app's sha is unknown),
- * launch, then message and app status (CONNECTED) once the band reports the app launched. Without a
- * pending message, the status is DISCONNECTED while app messages are disabled, UNINSTALLED without
- * an Android app of the same package name, and CONNECTED otherwise.
+ * then message. When a band reports an app launched, the status is DISCONNECTED while app messages
+ * are disabled, UNINSTALLED without an Android app of the same package name, and CONNECTED
+ * otherwise.
  */
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 23, application = GBTestApplication.class)
@@ -60,32 +60,25 @@ public class XiaomiRpkMessageFlowTest {
     }
 
     @Test
-    public void unknownAppFetchesListThenLaunchesThenSends() {
+    public void unknownAppFetchesListThenSends() {
         service.sendWearAppMessage(APP_ID, PAYLOAD);
         Mockito.verify(support).sendCommand(Mockito.anyString(), Mockito.eq(XiaomiRpkService.COMMAND_TYPE),
                 Mockito.eq(XiaomiRpkService.CMD_RPK_LIST));
         Assert.assertTrue(sentCommands().isEmpty());
 
         service.handleCommand(rpkList(APP_ID));
-        final XiaomiProto.Command launch = single(sentCommands());
-        Assert.assertEquals(XiaomiRpkService.CMD_RPK_LAUNCH, launch.getSubtype());
-        Assert.assertEquals(APP_ID, launch.getRpk().getRpkLaunch().getApp().getId());
-        Assert.assertEquals(SHA, launch.getRpk().getRpkLaunch().getApp().getSha());
-        Assert.assertEquals(APP_ID, launch.getRpk().getRpkLaunch().getWearPackage());
-
-        service.handleCommand(launched(APP_ID));
         final List<XiaomiProto.Command> sent = sentCommands();
-        Assert.assertEquals(3, sent.size());
-        Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH, sent.get(1).getSubtype());
-        Assert.assertArrayEquals(PAYLOAD, sent.get(1).getRpk().getRpkMessage().getPayload().toByteArray());
-        Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, sent.get(2).getSubtype());
+        Assert.assertEquals(1, sent.size());
+        final XiaomiProto.Command cmd = sent.get(0);
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH, cmd.getSubtype());
+        Assert.assertArrayEquals(PAYLOAD, cmd.getRpk().getRpkMessage().getPayload().toByteArray());
     }
 
     @Test
-    public void knownAppIsLaunchedWithoutFetchingTheList() {
+    public void knownAppMessageIsSentWithoutLaunchingOrFetchingTheList() {
         service.handleCommand(rpkList(APP_ID));
         service.sendWearAppMessage(APP_ID, PAYLOAD);
-        Assert.assertEquals(XiaomiRpkService.CMD_RPK_LAUNCH, single(sentCommands()).getSubtype());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH, single(sentCommands()).getSubtype());
         Mockito.verify(support, Mockito.never()).sendCommand(Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt());
     }
 
@@ -102,6 +95,33 @@ public class XiaomiRpkMessageFlowTest {
         Assert.assertEquals(APP_ID, launch.getRpk().getRpkLaunch().getApp().getId());
         Assert.assertEquals(SHA, launch.getRpk().getRpkLaunch().getApp().getSha());
         Assert.assertEquals(APP_ID, launch.getRpk().getRpkLaunch().getWearPackage());
+    }
+
+    @Test
+    public void messagesAreSentInOrder() {
+        service.handleCommand(rpkList(APP_ID)); // known app
+
+        service.sendWearAppMessage(APP_ID, bytes("first"));
+        service.sendWearAppMessage(APP_ID, bytes("second"));
+
+        final List<XiaomiProto.Command> sent = sentCommands();
+        Assert.assertEquals(2, sent.size());
+        Assert.assertEquals("first", sent.get(0).getRpk().getRpkMessage().getPayload().toStringUtf8());
+        Assert.assertEquals("second", sent.get(1).getRpk().getRpkMessage().getPayload().toStringUtf8());
+    }
+
+    @Test
+    public void actionsWaitingForTheListRunInOrder() {
+        service.sendWearAppMessage(APP_ID, bytes("first"));
+        service.startWearApp(APP_ID);
+        service.sendWearAppMessage(APP_ID, bytes("second"));
+        service.handleCommand(rpkList(APP_ID));
+
+        final List<XiaomiProto.Command> sent = sentCommands();
+        Assert.assertEquals(3, sent.size());
+        Assert.assertEquals("first", sent.get(0).getRpk().getRpkMessage().getPayload().toStringUtf8());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_LAUNCH, sent.get(1).getSubtype());
+        Assert.assertEquals("second", sent.get(2).getRpk().getRpkMessage().getPayload().toStringUtf8());
     }
 
     @Test
@@ -131,28 +151,27 @@ public class XiaomiRpkMessageFlowTest {
     }
 
     @Test
-    public void launchWithoutPendingMessageOnlySendsStatus() {
+    public void launchOnlySendsStatus() {
         service.handleCommand(rpkList(APP_ID));
         service.handleCommand(launched(APP_ID));
         Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, single(sentCommands()).getSubtype());
     }
 
     @Test
-    public void launchAfterTheQueueWasSentDoesNotResendIt() {
-        service.handleCommand(rpkList(APP_ID));
+    public void doubleListDoesNotResendMessages() {
         service.sendWearAppMessage(APP_ID, PAYLOAD);
-        service.handleCommand(launched(APP_ID));
-        service.handleCommand(launched(APP_ID));
+        service.handleCommand(rpkList(APP_ID));
+        service.handleCommand(rpkList(APP_ID));
         Assert.assertEquals(1, sentCommands().stream().filter(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH).count());
     }
 
     @Test
     public void disconnectDropsQueuedMessages() {
-        service.handleCommand(rpkList(APP_ID));
         service.sendWearAppMessage(APP_ID, PAYLOAD);
-        service.onDisconnect();
-        service.handleCommand(launched(APP_ID));
-        Assert.assertTrue(sentCommands().stream().noneMatch(cmd -> cmd.getSubtype() == XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH));
+        service.onDisconnect(); // drops queued messages
+        // even after an rpk list, no commands are sent (dropped)
+        service.handleCommand(rpkList(APP_ID));
+        Assert.assertTrue(sentCommands().isEmpty());
     }
 
     @Test
@@ -309,5 +328,9 @@ public class XiaomiRpkMessageFlowTest {
                 .setSubtype(XiaomiRpkService.CMD_RPK_LAUNCHED)
                 .setRpk(Rpk.newBuilder().setRpkDel(XiaomiRpkService.rpkRef(id, SHA)))
                 .build();
+    }
+
+    private static byte[] bytes(final String text) {
+        return text.getBytes(StandardCharsets.UTF_8);
     }
 }
