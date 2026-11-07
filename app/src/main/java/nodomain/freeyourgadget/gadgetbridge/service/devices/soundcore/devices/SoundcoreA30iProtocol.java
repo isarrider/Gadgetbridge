@@ -35,6 +35,7 @@ public class SoundcoreA30iProtocol extends SoundcoreProtocolImplV1 {
             return new GBDeviceEvent[0];
         }
 
+        //Tap function and controlButtonMode byte: 55 to 63
         int DEVICE_INFO_CONTROL_OFFSET = 55;
         final SoundcoreEarbudsCoordinator.TapFunction lSingle = decodeConfiguredTapFunction(payload[DEVICE_INFO_CONTROL_OFFSET]     & 0x0f);
         final SoundcoreEarbudsCoordinator.TapFunction rSingle = decodeConfiguredTapFunction(payload[DEVICE_INFO_CONTROL_OFFSET + 1] & 0x0f);
@@ -54,11 +55,16 @@ public class SoundcoreA30iProtocol extends SoundcoreProtocolImplV1 {
         decodeAmbientSoundControl(payload, 64);
         //-------------------------------------------------------------------------
         boolean touchTone = payload[72] == 0x01;
+
+        boolean dualConnection = payload[73] == 0x01;
+        broadcastMultipointStatus(dualConnection);
+
         boolean surround3d = payload[74] == 0x01;
-        boolean low_battery = payload[77] == 0x01;
         // AutoPowerOff duration=0 means never (disabled); 1=10min, 2=20min, 3=30min, 4=60min.
         final boolean autoPowerEnabled = payload[75] == 0x01;
         final int autoPowerDuration = autoPowerEnabled ? (payload[76] & 0xFF) + 1 : 0;
+
+        boolean low_battery = payload[77] == 0x01;
 
         getDevicePrefs().getPreferences().edit()
             .putString(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_CONTROL_SINGLE_TAP_ACTION_LEFT,  lSingle.name())
@@ -71,10 +77,11 @@ public class SoundcoreA30iProtocol extends SoundcoreProtocolImplV1 {
             .putString(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_CONTROL_LONG_PRESS_ACTION_RIGHT, rLong.name())
             .putString(DeviceSettingsPreferenceConst.PREF_SONY_AMBIENT_SOUND_CONTROL_BUTTON_MODE, controlButtonModeString)
 
-            .putBoolean(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_3D_SURROUND, surround3d)
-            .putBoolean(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_BATTERY_LOW_TONE, low_battery)
             .putBoolean(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_TOUCH_TONE, touchTone)
+            .putBoolean(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_DUAL_CONNECTION, dualConnection)
+            .putBoolean(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_3D_SURROUND, surround3d)
             .putString(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_AUTO_POWER_OFF, String.valueOf(autoPowerDuration))
+            .putBoolean(DeviceSettingsPreferenceConst.PREF_SOUNDCORE_BATTERY_LOW_TONE, low_battery)
             .apply();
 
         return decodeStandardEarbudDeviceInfo(payload);
