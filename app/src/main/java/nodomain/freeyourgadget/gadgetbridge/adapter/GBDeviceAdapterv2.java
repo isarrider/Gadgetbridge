@@ -497,6 +497,27 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
         }
     }
 
+    /**
+     * Expands the folder of the device and returns the position of the device in the list,
+     * or -1 if the list does not contain it.
+     */
+    @SuppressLint("NotifyDataSetChanged")
+    public int revealDevice(final GBDevice device) {
+        final String folder = device.getParentFolder();
+        if (!StringUtils.isNullOrEmpty(folder) && !folder.equals(expandedFolderName)) {
+            expandedFolderName = folder;
+            rebuildFolders();
+            notifyDataSetChanged();
+        }
+        for (int i = 0; i < devicesListWithFolders.size(); i++) {
+            final GBDevice listed = devicesListWithFolders.get(i);
+            if (!(listed instanceof GBDeviceFolder) && device.getAddress().equals(listed.getAddress())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private boolean showInstallerItem(GBDevice device) {
         final DeviceCoordinator coordinator = device.getDeviceCoordinator();
         return coordinator.supportsAppsManagement(device) || coordinator.supportsFlashing(device);

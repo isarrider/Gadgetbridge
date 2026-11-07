@@ -142,6 +142,8 @@ public class ControlCenterv2 extends AppCompatActivity
     }
     private final List<NavTab> visibleTabs = new ArrayList<>();
     private boolean rebuildingNav = false;
+    @Nullable
+    private GBDevice pendingScrollDevice;
 
     private final SharedPreferences.OnSharedPreferenceChangeListener prefListener = (p, key) -> {
         if ("main_screens".equals(key)) {
@@ -459,6 +461,7 @@ public class ControlCenterv2 extends AppCompatActivity
             public void onPageScrollStateChanged(final int state) {
                 if (state == ViewPager2.SCROLL_STATE_IDLE) {
                     requestLostLayouts(viewPager.getChildAt(0));
+                    scrollToPendingDevice();
                 }
             }
         });
@@ -578,7 +581,9 @@ public class ControlCenterv2 extends AppCompatActivity
         DeviceStatusMenu.show(deviceStatusView, new DeviceStatusMenu.Callbacks() {
             @Override
             public void onDeviceSelected(@NonNull final GBDevice device) {
+                pendingScrollDevice = device;
                 showDevicesTab();
+                scrollToPendingDevice();
             }
 
             @Override
@@ -628,6 +633,17 @@ public class ControlCenterv2 extends AppCompatActivity
         if (index >= 0) {
             viewPager.setCurrentItem(index, true);
         }
+    }
+
+    private void scrollToPendingDevice() {
+        if (pendingScrollDevice == null || viewPager.getScrollState() != ViewPager2.SCROLL_STATE_IDLE) {
+            return;
+        }
+        final Fragment fragment = getSupportFragmentManager().findFragmentByTag("f" + pagerAdapter.getItemId(viewPager.getCurrentItem()));
+        if (fragment instanceof DevicesFragment) {
+            ((DevicesFragment) fragment).scrollToDevice(pendingScrollDevice);
+        }
+        pendingScrollDevice = null;
     }
 
     /**
@@ -694,7 +710,6 @@ public class ControlCenterv2 extends AppCompatActivity
             // onResume only runs for the current page, DashboardFragment consumes this
             selectTab(NavTab.DASHBOARD);
         }
-        updateConnectionSubtitle();
         updateDeviceStatus();
         if (isLanguageInvalid || isThemeInvalid) {
             isLanguageInvalid = false;

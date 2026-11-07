@@ -106,13 +106,11 @@ object DeviceStatusMenu {
         sync.visibility = if (device.isInitialized && !device.isBusy) View.VISIBLE else View.GONE
         sync.setOnClickListener { callbacks.onSync(device) }
         row.setOnClickListener {
-            when {
-                device.isInitialized -> if (!device.isBusy) callbacks.onSync(device)
-                device.isConnecting -> {
-                    popup.dismiss()
-                    callbacks.onDeviceSelected(device)
-                }
-                else -> callbacks.onConnect(device)
+            if (device.isInitialized || device.isConnecting) {
+                popup.dismiss()
+                callbacks.onDeviceSelected(device)
+            } else {
+                callbacks.onConnect(device)
             }
         }
         return row

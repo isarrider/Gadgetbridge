@@ -293,6 +293,16 @@ public class DevicesFragment extends Fragment implements HeaderShadePage {
         }
     }
 
+    public void scrollToDevice(final GBDevice device) {
+        if (mGBDeviceAdapter == null) {
+            return;
+        }
+        final int position = mGBDeviceAdapter.revealDevice(device);
+        if (position >= 0) {
+            deviceListView.smoothScrollToPosition(position);
+        }
+    }
+
     public void refreshSingleDevice(final GBDevice device) {
         if (mGBDeviceAdapter != null) {
             mGBDeviceAdapter.refreshSingleDevice(device);
