@@ -47,8 +47,8 @@ import static nodomain.freeyourgadget.gadgetbridge.service.btle.BluetoothCompany
 /**
  * Resolves the rotating BLE session address of a paired JBL TWS headset.
  *
- * <p>A JBL Tune Buds 2 advertises under a rotating LE address. Its advertisement
- * includes CRCs derived from the phone's Bluetooth name.</p>
+ * <p>A JBL TWS headset advertises under a rotating LE address. Its advertisement
+ * includes the product ID and CRCs derived from the phone's Bluetooth name.</p>
  */
 final class JblLeAddressScanner {
 
@@ -68,6 +68,7 @@ final class JblLeAddressScanner {
     private static final long SCAN_RESTART_DELAY_MS = 1_000L;
 
     private final Context appContext;
+    private final int productId;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final AtomicBoolean inFlight = new AtomicBoolean(false);
     private final AtomicBoolean delivered = new AtomicBoolean(false);
@@ -75,8 +76,9 @@ final class JblLeAddressScanner {
     private ScanCallback activeCallback;
     private Runnable cycle;
 
-    JblLeAddressScanner(@NonNull final Context context) {
+    JblLeAddressScanner(@NonNull final Context context, final int productId) {
         this.appContext = context.getApplicationContext();
+        this.productId = productId;
     }
 
     /**
@@ -147,8 +149,9 @@ final class JblLeAddressScanner {
                 if (device == null) {
                     return;
                 }
-                if (matchesHeadset(result, localBluetoothName)) {
-                    LOG.info("JblLeAddressScanner: Tune Buds 2 phone-name CRC match at {}", device.getAddress());
+                if (matchesHeadset(result, localBluetoothName, productId)) {
+                    LOG.info("JblLeAddressScanner: product {} phone-name CRC match at {}",
+                            Integer.toHexString(productId), device.getAddress());
                     resolve(device.getAddress(), listener);
                 }
             }
@@ -211,23 +214,25 @@ final class JblLeAddressScanner {
     }
 
     private static boolean matchesHeadset(@NonNull final ScanResult result,
-                                          @Nullable final String localBluetoothName) {
+                                          @Nullable final String localBluetoothName,
+                                          final int productId) {
         final android.bluetooth.le.ScanRecord record = result.getScanRecord();
         if (record == null) {
             return false;
         }
         byte[] data = record.getManufacturerSpecificData(ZHONGSHAN_CITY_RICHSOUND_ELECTRONIC_INDUSTRIAL_LTD);
         if (data == null || data.length < 2
-                || BLETypeConversions.toUint16(data) != JblProtocol.TUNE_BUDS_2_PRODUCT_ID) {
+                || BLETypeConversions.toUint16(data) != productId) {
             data = record.getServiceData(JblProtocol.HARMAN_SERVICE_DATA_UUID);
         }
-        return matchesAdvertisementPayload(data, localBluetoothName);
+        return matchesAdvertisementPayload(data, localBluetoothName, productId);
     }
 
     static boolean matchesAdvertisementPayload(@Nullable final byte[] data,
-                                               @Nullable final String localBluetoothName) {
+                                               @Nullable final String localBluetoothName,
+                                               final int productId) {
         if (data == null || data.length < 5 || localBluetoothName == null
-                || BLETypeConversions.toUint16(data) != JblProtocol.TUNE_BUDS_2_PRODUCT_ID) {
+                || BLETypeConversions.toUint16(data) != productId) {
             return false;
         }
 

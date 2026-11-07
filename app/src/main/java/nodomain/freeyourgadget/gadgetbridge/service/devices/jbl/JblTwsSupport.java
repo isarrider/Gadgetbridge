@@ -44,7 +44,7 @@ import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import static nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblProtocol.*;
 
 /**
- * Transport and protocol implementation for the JBL Tune Buds 2 using Harman Protocol 3.
+ * Transport and protocol implementation for JBL TWS headsets using Harman Protocol 3.
  *
  * <p>A paired JBL TWS headset exposes a rotating BLE address: the persistent identifier
  * is the device's Classic MAC, but the actual {@code BluetoothGatt} connection has to
@@ -57,8 +57,8 @@ import static nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblProtoc
  * <h3>Connection strategy</h3>
  * <ol>
  *   <li>If a cached volatile LE address exists, try connecting directly.</li>
- *   <li>If that fails (or no cache exists), scan for Tune Buds 2 advertisements
- *       whose CRC matches the phone's local Bluetooth name.</li>
+ *   <li>If that fails (or no cache exists), scan for headset advertisements
+ *       whose product ID and CRC match this phone.</li>
  *   <li>On disconnect, the volatile address is <em>not</em> cleared; the BLE
  *       session address usually remains valid while the Classic ACL link is up.
  *       Only when a reconnect attempt fails do we invalidate the cache and
@@ -66,8 +66,8 @@ import static nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblProtoc
  * </ol>
  */
 @SuppressLint("MissingPermission") // if we're using this, we have bluetooth permissions
-public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGattLink.Sink {
-    private static final Logger LOG = LoggerFactory.getLogger(JblTuneBuds2Support.class);
+public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.Sink {
+    private static final Logger LOG = LoggerFactory.getLogger(JblTwsSupport.class);
 
     // Preference keys
     public static final String PREF_SOUND_MODE            = "pref_jbl_tune_buds_2_sound_mode";
@@ -128,6 +128,7 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
 
     // Value last asked for, null once answered, so a refusal can be told apart from
     // the unsolicited report the device also sends on connect.
+    private final int productId;
     private Integer mRequestedAnc = null;
     private Integer mRequestedBalance = null;
     private Integer mRequestedLatencyMode = null;
@@ -147,8 +148,9 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
         }
     };
 
-    public JblTuneBuds2Support() {
+    public JblTwsSupport(final int productId) {
         super();
+        this.productId = productId;
         setAutoReconnect(true);
         setScanReconnect(true);
     }
@@ -186,13 +188,13 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
         // Try the cached volatile LE address first.
         final String cached = device.getVolatileAddress();
         if (cached != null) {
-            LOG.info("JblTuneBuds2Support.connect: trying cached session address {}", cached);
+            LOG.info("JblTwsSupport.connect: trying cached session address {}", cached);
             openLink(context, device, cached);
             return true;
         }
 
         // No cache: scan for the Harman broadcast with the local Bluetooth-name CRC.
-        LOG.info("JblTuneBuds2Support.connect: no cached session address, scanning");
+        LOG.info("JblTwsSupport.connect: no cached session address, scanning");
         scanAndConnect(context, device);
         return true;
     }
@@ -202,17 +204,17 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
         if (disposed || (addressScanner != null && addressScanner.isInFlight())) {
             return;
         }
-        final JblLeAddressScanner scanner = new JblLeAddressScanner(context);
+        final JblLeAddressScanner scanner = new JblLeAddressScanner(context, productId);
         addressScanner = scanner;
         scanner.start(new JblLeAddressScanner.Listener() {
             @Override
             public void onResolved(@NonNull final String address) {
-                synchronized (JblTuneBuds2Support.this) {
+                synchronized (JblTwsSupport.this) {
                     if (disposed || addressScanner != scanner) {
                         return;
                     }
                     addressScanner = null;
-                    LOG.info("JblTuneBuds2Support: scanner resolved {}", address);
+                    LOG.info("JblTwsSupport: scanner resolved {}", address);
                     device.setVolatileAddress(address);
                     openLink(context, device, address);
                 }
@@ -220,12 +222,12 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
 
             @Override
             public void onFailed() {
-                synchronized (JblTuneBuds2Support.this) {
+                synchronized (JblTwsSupport.this) {
                     if (disposed || addressScanner != scanner) {
                         return;
                     }
                     addressScanner = null;
-                    LOG.warn("JblTuneBuds2Support: scanner failed to find LE address");
+                    LOG.warn("JblTwsSupport: scanner failed to find LE address");
                     if (device.getState() == GBDevice.State.CONNECTING) {
                         device.setUpdateState(GBDevice.State.NOT_CONNECTED, context);
                         device.sendDeviceUpdateIntent(context);
@@ -271,7 +273,7 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
     @RequiresPermission("android.permission.BLUETOOTH_CONNECT")
     private void write(@NonNull final byte[] value) {
         if (gattLink == null) {
-            LOG.warn("JblTuneBuds2Support.write: no gatt link, dropping {} bytes", value.length);
+            LOG.warn("JblTwsSupport.write: no gatt link, dropping {} bytes", value.length);
             return;
         }
         gattLink.enqueueWrite(JblProtocol.SERVICE_UUID, JblProtocol.WRITE_CHARACTERISTIC_UUID, value);
@@ -626,7 +628,7 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
     }
 
     private byte[] buildAncLevelCommand(final int level) {
-        LOG.info("JBL Tune Buds 2: Setting Manual ANC Level: {}", level);
+        LOG.info("JBL TWS: Setting Manual ANC Level: {}", level);
         final byte clamped = (byte) Math.max(1, Math.min(7, level));
         return buildPacket(CMD_NOISE_CONTROL, SUB_NOISE_CONTROL_SET_ADVANCED,
                 FIELD_MANUAL_ANC_LEVEL, clamped);
@@ -639,14 +641,14 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
     }
 
     private byte[] buildAutoCompensationCommand(final boolean enabled) {
-        LOG.info("JBL Tune Buds 2: Setting Auto Leakage Compensation: {}", enabled);
+        LOG.info("JBL TWS: Setting Auto Leakage Compensation: {}", enabled);
         return buildPacket(CMD_NOISE_CONTROL, SUB_NOISE_CONTROL_SET_ADVANCED,
                 FIELD_AUTO_LEAKAGE_COMPENSATION, (byte) (enabled ? 1 : 0));
     }
 
     private byte[] buildCustomEqCommand() {
         final SharedPreferences prefs = GBApplication.getDeviceSpecificSharedPrefs(getDevice().getAddress());
-        LOG.info("JBL Tune Buds 2: Setting custom EQ");
+        LOG.info("JBL TWS: Setting custom EQ");
         return buildEqSettingsCommand(EQ_CATEGORY_CUSTOMIZED, prefs);
     }
 
@@ -674,17 +676,17 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
     }
 
     private byte[] buildCallSoundEffectCommand(final int effectType) {
-        LOG.info("JBL Tune Buds 2: Setting Call Sound Effect: {}", effectType);
+        LOG.info("JBL TWS: Setting Call Sound Effect: {}", effectType);
         return buildDeviceInfoSet(FEATURE_CALL_SOUND_EFFECT, (byte) 0x01, (byte) effectType);
     }
 
     private byte[] buildCallVolumeOptimizerCommand(final boolean enabled) {
-        LOG.info("JBL Tune Buds 2: Setting Call Volume Optimizer: {}", enabled);
+        LOG.info("JBL TWS: Setting Call Volume Optimizer: {}", enabled);
         return buildDeviceInfoSet(FEATURE_CALL_VOLUME_OPTIMIZER, (byte) (enabled ? 1 : 0));
     }
 
     private byte[] buildSpatialAudioCommand(final int spatial) {
-        LOG.info("JBL Tune Buds 2: Setting Spatial Audio: {}", spatial);
+        LOG.info("JBL TWS: Setting Spatial Audio: {}", spatial);
         final boolean isOn = (spatial > 0);
         final int type = spatial == SPATIAL_AUDIO_MUSIC ? 2
                 : spatial == SPATIAL_AUDIO_MOVIE ? 1
@@ -694,7 +696,7 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
     }
 
     private byte[] buildLatencyModeCommand(final int modeVal) {
-        LOG.info("JBL Tune Buds 2: Setting Latency mode: {}", modeVal);
+        LOG.info("JBL TWS: Setting Latency mode: {}", modeVal);
         mRequestedLatencyMode = modeVal;
         if (modeVal == LATENCY_MODE_AUDIO) {
             return buildPacket(CMD_SMART_AUDIO_VIDEO, SUB_CMD_SET,
@@ -707,25 +709,25 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
 
     private byte[] buildSidetoneCommand(final int level) {
         final int clampedLevel = Math.max(0, Math.min(3, level));
-        LOG.info("JBL Tune Buds 2: Setting Sidetone level: {}", clampedLevel);
+        LOG.info("JBL TWS: Setting Sidetone level: {}", clampedLevel);
         return buildDeviceInfoSet(FEATURE_VOICE_AWARE_SIDE_TONE,
                 (byte) (clampedLevel > 0 ? 1 : 0), (byte) clampedLevel);
     }
 
     private byte[] buildAutoPowerOffCommand(final int minutes) {
-        LOG.info("JBL Tune Buds 2: Setting Auto Power Off minutes: {}", minutes);
+        LOG.info("JBL TWS: Setting Auto Power Off minutes: {}", minutes);
         final boolean enabled = (minutes > 0);
         return buildDeviceInfoSet(FEATURE_AUTO_OFF,
                 (byte) (enabled ? 1 : 0), (byte) minutes, (byte) (minutes >>> 8));
     }
 
     private byte[] buildSafeSoundCommand(final boolean enabled) {
-        LOG.info("JBL Tune Buds 2: Setting Safe Sound: {}", enabled);
+        LOG.info("JBL TWS: Setting Safe Sound: {}", enabled);
         return buildDeviceInfoSet(FEATURE_SAFE_SOUND, (byte) (enabled ? 1 : 0));
     }
 
     private byte[] buildChannelBalanceCommand(final int balance) {
-        LOG.info("JBL Tune Buds 2: Setting Stereo Balance: {}", balance);
+        LOG.info("JBL TWS: Setting Stereo Balance: {}", balance);
         final int clamped = Math.max(-10, Math.min(10, balance));
         mRequestedBalance = clamped;
         final byte rawLevel = (byte) (BALANCE_CENTER_OFFSET + clamped);
@@ -733,13 +735,13 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
     }
 
     private byte[] buildVoicePromptsCommand(final int vpType) {
-        LOG.info("JBL Tune Buds 2: Setting Voice Prompts: {}", vpType);
+        LOG.info("JBL TWS: Setting Voice Prompts: {}", vpType);
         final boolean language = vpType == VOICE_PROMPT_LANGUAGE;
         return buildPacket(CMD_VOICE_PROMPTS, (byte) 0x03, (byte) (language ? 1 : 0));
     }
 
     private byte[] buildGestureCommand(final boolean isLeft, final int role) {
-        LOG.info("JBL Tune Buds 2: Setting Gesture role for {}: {}", isLeft ? "Left" : "Right", role);
+        LOG.info("JBL TWS: Setting Gesture role for {}: {}", isLeft ? "Left" : "Right", role);
         final byte tapSlot = isLeft ? GESTURE_SLOT_LEFT_SINGLE_TAP : GESTURE_SLOT_RIGHT_SINGLE_TAP;
         final byte doubleSlot = (byte) (tapSlot + 1);
         final byte tripleSlot = (byte) (tapSlot + 2);
@@ -790,7 +792,7 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
                 break;
         }
 
-        LOG.info("JBL Tune Buds 2: gesture packet role={} ascCycleAction={} aTap={} tapSlot={}", role, ascCycleAction, aTap, tapSlot);
+        LOG.info("JBL TWS: gesture packet role={} ascCycleAction={} aTap={} tapSlot={}", role, ascCycleAction, aTap, tapSlot);
         return buildPacket(CMD_GESTURE_CONFIG,
                 (byte) 0x00,
                 tapSlot, aTap,
@@ -803,11 +805,11 @@ public class JblTuneBuds2Support extends AbstractDeviceSupport implements JblGat
     public void onFindDevice(final boolean start) {
         final GBDevice device = getDevice();
         if (device == null || device.getState() != GBDevice.State.INITIALIZED) {
-            LOG.warn("JBL Tune Buds 2: ignoring find device request, the headset is not connected");
+            LOG.warn("JBL TWS: ignoring find device request, the headset is not connected");
             GB.toast(getContext(), "Device is not connected", Toast.LENGTH_SHORT, GB.ERROR);
             return;
         }
-        LOG.info("JBL Tune Buds 2: onFindDevice: {}", start);
+        LOG.info("JBL TWS: onFindDevice: {}", start);
         if (start) {
             write(buildPacket(CMD_EAR_BEEPING, BEEP_START_LEFT));
             write(buildPacket(CMD_EAR_BEEPING, BEEP_START_RIGHT));
