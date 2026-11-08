@@ -723,7 +723,8 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
     }
 
     public boolean newSyncProtocol() {
-        return getDevicePrefs().getBoolean(PREF_NEW_SYNC_PROTOCOL, false);
+        boolean capable = getCoordinator().supports(getDevice(), GarminCapability.SYNC_2);
+        return capable && getDevicePrefs().getBoolean(PREF_NEW_SYNC_PROTOCOL, capable);
     }
 
     public boolean mlrEnabled() {
