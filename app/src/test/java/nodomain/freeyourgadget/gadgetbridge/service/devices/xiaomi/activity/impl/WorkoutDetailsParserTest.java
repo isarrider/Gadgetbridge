@@ -139,7 +139,7 @@ public class WorkoutDetailsParserTest {
             final ByteBuffer hdrBuf = ByteBuffer.wrap(hdr).order(ByteOrder.LITTLE_ENDIAN);
             hdrBuf.putInt(nrPosition, seg.records.length);
             hdrBuf.putInt(tsPosition, seg.startTs);
-            if (version == 4 || version == 6) {
+            if (tsPosition + 9 <= segmentHeaderSize) {
                 // Phase byte follows the timestamp (offset tsPosition + 4); the trailing int32
                 // is strokes for rowing v4 and per-segment distance for treadmill/cycling v6.
                 hdrBuf.put(tsPosition + 4, (byte) seg.phase);
@@ -203,11 +203,11 @@ public class WorkoutDetailsParserTest {
     private static class Segment {
         final int startTs;
         final int[][] records;
-        final int phase;   // rowing v4 only: 0x81 active / 0x82 rest
+        final int phase;   // header byte after the start timestamp, 0x7f outside any interval
         final int strokes; // rowing v4 only: per-segment strokes
 
         Segment(final int startTs, final int[][] records) {
-            this(startTs, records, 0, 0);
+            this(startTs, records, 0x7f, 0);
         }
 
         Segment(final int startTs, final int[][] records, final int phase, final int strokes) {
@@ -468,6 +468,37 @@ public class WorkoutDetailsParserTest {
         assertEquals(ActivityTrack.SegmentIntensity.REST, infos.get(1).getIntensity());
         assertEquals(ActivityTrack.SegmentIntensity.ACTIVE, infos.get(2).getIntensity());
         assertEquals(Integer.valueOf(233), infos.get(2).getStrokes());
+    }
+
+    /** A planned session opens with a short 0x80 warm-up and can close with a 0x83 cool-down
+     *  (captured rowing 2025-02-05: 0x80 for 5 s, 0x81, 0x82, then 0x83 for 4 s). */
+    @Test
+    public void testV4WarmUpAndCoolDownPhases() {
+        final int ts1 = 1700005000;
+        final byte[] bytes = buildBytes(4,
+                new Segment(ts1, new int[][]{{100, 0, 20}, {102, 0, 21}}, 0x80, 1),
+                new Segment(ts1 + 2, new int[][]{{140, 0, 32}, {142, 0, 33}}, 0x81, 120),
+                new Segment(ts1 + 4, new int[][]{{110, 0, 0}, {108, 0, 0}}, 0x82, 5),
+                new Segment(ts1 + 6, new int[][]{{120, 0, 22}, {118, 0, 21}}, 0x83, 2));
+
+        final ActivityTrack track = new WorkoutDetailsParser().getActivityTrack(makeFileId(4), bytes);
+        assertNotNull(track);
+
+        final List<ActivityTrack.SegmentInfo> infos = track.getSegmentInfos();
+        assertEquals(4, infos.size());
+        assertEquals(ActivityTrack.SegmentIntensity.WARMUP, infos.get(0).getIntensity());
+        assertEquals(ActivityTrack.SegmentIntensity.ACTIVE, infos.get(1).getIntensity());
+        assertEquals(ActivityTrack.SegmentIntensity.REST, infos.get(2).getIntensity());
+        assertEquals(ActivityTrack.SegmentIntensity.COOLDOWN, infos.get(3).getIntensity());
+    }
+
+    @Test
+    public void testIntervalIntensityFromLowNibble() {
+        assertEquals(ActivityTrack.SegmentIntensity.WARMUP, WorkoutDetailsParser.intervalIntensity((byte) 0x80));
+        assertEquals(ActivityTrack.SegmentIntensity.ACTIVE, WorkoutDetailsParser.intervalIntensity((byte) 0x01));
+        assertEquals(ActivityTrack.SegmentIntensity.REST, WorkoutDetailsParser.intervalIntensity((byte) 0x82));
+        assertEquals(ActivityTrack.SegmentIntensity.COOLDOWN, WorkoutDetailsParser.intervalIntensity((byte) 0x03));
+        assertNull(WorkoutDetailsParser.intervalIntensity((byte) 0x7f));
     }
 
     /** Older rowing firmware writes running stroke totals (captured 2025-08-25: 140, 142, 276,

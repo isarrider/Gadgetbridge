@@ -98,6 +98,8 @@ public class FitExporter {
     // FIT lap intensity codes (from intensity_t in the FIT spec)
     private static final int FIT_INTENSITY_ACTIVE = 0;
     private static final int FIT_INTENSITY_REST = 1;
+    private static final int FIT_INTENSITY_WARMUP = 2;
+    private static final int FIT_INTENSITY_COOLDOWN = 3;
 
     // Tiny-segment threshold: ActivityTrack segments smaller than this are dropped
     // from the lap stream (their records still emit in the FIT record stream — only
@@ -161,6 +163,8 @@ public class FitExporter {
 
     private static int mapIntensity(final ActivityTrack.SegmentIntensity intensity) {
         if (intensity == ActivityTrack.SegmentIntensity.REST) return FIT_INTENSITY_REST;
+        if (intensity == ActivityTrack.SegmentIntensity.WARMUP) return FIT_INTENSITY_WARMUP;
+        if (intensity == ActivityTrack.SegmentIntensity.COOLDOWN) return FIT_INTENSITY_COOLDOWN;
         // ACTIVE and UNKNOWN both map to ACTIVE — UNKNOWN defaults to active so that
         // importers that filter by intensity still surface the lap.
         return FIT_INTENSITY_ACTIVE;

@@ -87,9 +87,9 @@ public class WorkoutDetailsParser extends XiaomiActivityParser {
          *  segment header always carries an interval phase byte and record count. Drives
          *  {@link ActivityTrack} segment boundaries, and so one FIT lap per interval. */
         public boolean segmentStart;
-        /** Intensity of the segment this record opens: ACTIVE (phase low nibble 1, e.g. 0x81
-         *  or 0x01) or REST (low nibble 2). Null for a single continuous segment (phase 0x7f /
-         *  other) and when {@link #segmentStart} is not set. */
+        /** Intensity of the segment this record opens, see {@link WorkoutDetailsParser#intervalIntensity}. Null for
+         *  a single continuous segment (phase 0x7f / other) and when {@link #segmentStart} is
+         *  not set. */
         public ActivityTrack.SegmentIntensity segmentIntensity;
         /** Per-segment strokes parsed directly from the segment header (rowing v4 only).
          *  Only set on a {@link #segmentStart} record; null when not encoded. */
@@ -286,16 +286,21 @@ public class WorkoutDetailsParser extends XiaomiActivityParser {
     }
 
     /** Intensity of the interval a segment header's phase byte opens. The low nibble is
-     *  1 = active, 2 = rest; bit 7 is a separate flag that the last segment of a session often
-     *  lacks (0x01 after a run of 0x81). Null for 0x7f and any other value, a single continuous
-     *  segment that is left unlabelled. */
+     *  0 = warm-up, 1 = active, 2 = rest, 3 = cool-down. Bit 7 is set when the segment ran into
+     *  the next phase and clear when the workout was paused or stopped during it: in the interval
+     *  captures a 0x01 segment either ends the file or is followed by a gap in time and a 0x81.
+     *  Null for 0x7f and any other value, a single continuous segment that is left unlabelled. */
     @Nullable
-    private static ActivityTrack.SegmentIntensity intervalIntensity(final byte phase) {
+    static ActivityTrack.SegmentIntensity intervalIntensity(final byte phase) {
         switch (phase & 0x0F) {
+            case 0:
+                return ActivityTrack.SegmentIntensity.WARMUP;
             case 1:
                 return ActivityTrack.SegmentIntensity.ACTIVE;
             case 2:
                 return ActivityTrack.SegmentIntensity.REST;
+            case 3:
+                return ActivityTrack.SegmentIntensity.COOLDOWN;
             default:
                 return null;
         }

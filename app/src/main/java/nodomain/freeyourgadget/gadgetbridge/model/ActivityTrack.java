@@ -31,7 +31,7 @@ public class ActivityTrack {
     /** Intensity tag for a workout segment / interval. ACTIVE = work phase,
      *  REST = recovery / pause. UNKNOWN if the source parser did not provide it. */
     public enum SegmentIntensity {
-        ACTIVE, REST, UNKNOWN
+        ACTIVE, REST, WARMUP, COOLDOWN, UNKNOWN
     }
 
     /** Per-segment metadata. Populated by parsers that expose interval structure
