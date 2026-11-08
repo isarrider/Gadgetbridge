@@ -1,3 +1,19 @@
+/*  Copyright (C) 2024-2026 Daniele Gobbetti, Thomas Kuehne
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages;
 
 
@@ -46,7 +62,15 @@ public class ProtobufMessage extends GFDIMessage {
         final int dataOffset = reader.readInt();
         final int totalProtobufLength = reader.readInt();
         final int protobufDataLength = reader.readInt();
-        final byte[] messageBytes = reader.readBytes(protobufDataLength);
+        final int readLength;
+        if (protobufDataLength != reader.remaining()){
+            LOG.warn("applying compatibility fix: protobufDataLength ({}) != remaining ({}) ",
+                protobufDataLength, reader.remaining());
+            readLength = reader.remaining();
+        } else {
+            readLength = protobufDataLength;
+        }
+        final byte[] messageBytes = reader.readBytes(readLength);
 
         return new ProtobufMessage(garminMessage, requestID, dataOffset, totalProtobufLength, protobufDataLength, messageBytes, false);
     }
