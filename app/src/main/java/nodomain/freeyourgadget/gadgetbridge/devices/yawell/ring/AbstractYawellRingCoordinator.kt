@@ -201,11 +201,12 @@ abstract class AbstractYawellRingCoordinator : AbstractBLEDeviceCoordinator() {
     }
 
     override fun getDeviceSettings(device: GBDevice): DeviceSettingsSpec = deviceSettings {
-        xmlScreen(
-            screen = DeviceSpecificSettingsScreen.GENERIC,
-            subScreens = intArrayOf(R.xml.devicesettings_buttonactions),
-            // visibleWhen = { hasButton(device) },
-        )
+        if (hasButton(device)) {
+            xmlScreen(
+                screen = DeviceSpecificSettingsScreen.GENERIC,
+                subScreens = intArrayOf(R.xml.devicesettings_buttonactions),
+            )
+        }
         screen(
             key = DeviceSpecificSettingsScreen.HEALTH.key,
             title = R.string.pref_header_health,
