@@ -168,14 +168,14 @@ class FileSyncServiceHandler(val deviceSupport: GarminSupport) {
         if (cursorId != null) {
             deviceSupport.sendProtobufRequest(
                 "continue file list",
-                Smart.newBuilder().setFileAccessService(requestFileList()).build()
+                requestFileList()
             )
         }
 
         return null
     }
 
-    fun requestFileList(): GdiFileAccess.Service {
+    fun requestFileList(): Smart {
         LOG.debug("Requesting file list starting at page {} (cursorId={})", nextPageId, cursorId)
 
         val fileListRequestBuilder = GdiFileAccess.ItemListRequest.newBuilder().apply {
@@ -191,9 +191,12 @@ class FileSyncServiceHandler(val deviceSupport: GarminSupport) {
             nextPageId?.let { fileListRequestBuilder.transactionId = it }
         }
 
-        return GdiFileAccess.Service.newBuilder().buildWith {
-            itemListRequest = fileListRequestBuilder.build()
+        val smart = Smart.newBuilder().buildWith {
+            fileAccessService = GdiFileAccess.Service.newBuilder().buildWith {
+                itemListRequest = fileListRequestBuilder.build()
+            }
         }
+        return smart
     }
 
     fun requestFile(fileToRequest: GdiFileAccess.ItemReference): GdiFileAccess.Service {

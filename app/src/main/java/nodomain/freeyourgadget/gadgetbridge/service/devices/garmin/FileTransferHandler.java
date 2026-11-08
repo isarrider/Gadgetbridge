@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.garmin;
 
+import static nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminPreferences.PREF_GARMIN_LEGACY_SYNC_FLUSH;
 import static nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.FilterMessage.FilterType.ONLY_NEW_3;
 
 import android.content.Intent;
@@ -38,6 +39,7 @@ import java.util.Deque;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.proto.garmin.GdiSmartProto.Smart;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.deviceevents.FileDownloadedDeviceEvent;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.CreateFileMessage;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.DownloadRequestMessage;
@@ -45,6 +47,8 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.File
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.FileTransferDataMessage;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.FilterMessage;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.GFDIMessage;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.ProtobufMessage;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.SupportedFileTypesMessage;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.SynchronizationMessage;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.SystemEventMessage;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.UploadRequestMessage;
@@ -52,6 +56,7 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.stat
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.status.DownloadRequestStatusMessage;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.status.FileTransferDataStatusMessage;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.status.FilterStatusMessage;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.status.SupportedFileTypesStatusMessage;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.status.UploadRequestStatusMessage;
 import nodomain.freeyourgadget.gadgetbridge.util.FileUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
@@ -117,24 +122,16 @@ public class FileTransferHandler implements MessageHandler {
             return upload.setUploadRequestStatusMessage((UploadRequestStatusMessage) message);
         else if (message instanceof FileTransferDataStatusMessage)
             return upload.processUploadProgress((FileTransferDataStatusMessage) message);
-        else if (message instanceof SynchronizationMessage)
-            return processSynchronizationMessage((SynchronizationMessage) message);
-        else if (message instanceof FilterStatusMessage)
-            return initiateDownload();
-        else if (message instanceof FileAvailableMessage available) {
+        else if (message instanceof SynchronizationMessage sync) {
+            return sync.shouldProceed() ? nextSyncStep(FileFetchState.GFDI_Synchronization) : null;
+        } else if (message instanceof FilterStatusMessage filterStatusMessage) {
+            return nextSyncStep(FileFetchState.GFDI_FilterStatus);
+        } else if (message instanceof SupportedFileTypesStatusMessage){
+            return nextSyncStep(FileFetchState.GFDI_SupportedFileTypesStatus);
+        } else if (message instanceof FileAvailableMessage available) {
             conditionallyDownload(available.getDirectoryEntry());
             return null;
         }
-        return null;
-    }
-
-    private FilterMessage processSynchronizationMessage(SynchronizationMessage message) {
-        if (!message.shouldProceed())
-            return null;
-        if (upload.isIdle())
-            return new FilterMessage(ONLY_NEW_3);
-        // defer reply until upload idle
-        runWhenUploadIdle(() -> deviceSupport.sendOutgoingMessage("send filter (deferred)", new FilterMessage(ONLY_NEW_3)));
         return null;
     }
 
@@ -143,9 +140,66 @@ public class FileTransferHandler implements MessageHandler {
         return new DownloadRequestMessage(directoryEntry.getFileIndex(), 0, DownloadRequestMessage.REQUEST_TYPE.NEW, 0, 0, 0);
     }
 
-    public DownloadRequestMessage initiateDownload() {
-        download.setCurrentlyDownloading(new FileFragment(new DirectoryEntry(0, FileType.FILETYPE.DIRECTORY, 0, 0, 0, 0, null)));
-        return new DownloadRequestMessage(0, 0, DownloadRequestMessage.REQUEST_TYPE.NEW, 0, 0, 0);
+    enum FileFetchState {
+        /// GB initiates download
+        GB_PULL,
+        /// the gadget sent a legacy sync request
+        GFDI_Synchronization,
+        GFDI_FilterStatus,
+        GFDI_SupportedFileTypesStatus;
+    }
+
+    private FileFetchState previousFetchState;
+
+    public GFDIMessage nextSyncStep(@NonNull FileFetchState currentFetchState) {
+        switch (currentFetchState) {
+            case GB_PULL: {
+                LOG.info("nextSyncStep {} -> {} (sync-A-1)", previousFetchState, currentFetchState);
+                previousFetchState = currentFetchState;
+                if (deviceSupport.newSyncProtocol()) {
+                    if (!deviceSupport.getDevicePrefs().getBoolean(PREF_GARMIN_LEGACY_SYNC_FLUSH, true)) {
+                        // #6700 - Some firmwares will freeze on the legacy sync request
+                        // For full set of V2 data, this should likely be done via:
+                        // FeatureCapabilitiesRequest / SyncRequest / CutWellnessFilesRequest / ItemListRequest
+                        // For now use the existing implementation that directly goes to ItemListRequest.
+                        LOG.warn("Legacy sync flush is disabled - requesting V2 file list directly (sync-A-2)");
+
+                        Smart protobuf = deviceSupport.protocolBufferHandler.getFileSyncServiceHandler().requestFileList();
+                        GFDIMessage gfdi = deviceSupport.protocolBufferHandler.prepareProtobufRequest(protobuf);
+                        return gfdi;
+                    }
+                }
+                // fall through to legacy GFDI pull
+            }
+            case GFDI_Synchronization: {
+                LOG.info("nextSyncStep {} -> {} (sync-B-1)", previousFetchState, currentFetchState);
+                previousFetchState = currentFetchState;
+                // most modern FWs require the presence of a filte type
+                // but completly ignore the actual value of the filter type
+                var filterRequest = new FilterMessage(ONLY_NEW_3);
+                runWhenUploadIdle(() -> deviceSupport.sendOutgoingMessage("sync filter (sync-B-2)", filterRequest));
+                return null;
+            }
+            case GFDI_FilterStatus: {
+                LOG.info("nextSyncStep {} -> {} (sync-C-1)", previousFetchState, currentFetchState);
+                previousFetchState = currentFetchState;
+                return new SupportedFileTypesMessage();
+            }
+            case GFDI_SupportedFileTypesStatus: {
+                if (previousFetchState != FileFetchState.GFDI_FilterStatus) {
+                    // the inital connection initialization also requests file types
+                    LOG.info("nextSyncStep {} -> {} - not relevant (sync-D-1)", previousFetchState, currentFetchState);
+                    return null;
+                }
+                LOG.info("nextSyncStep {} -> {} (sync-D-2)", previousFetchState, currentFetchState);
+                previousFetchState = currentFetchState;
+                download.setCurrentlyDownloading(new FileFragment(new DirectoryEntry(0, FileType.FILETYPE.DIRECTORY, 0, 0, 0, 0, null)));
+                return new DownloadRequestMessage(0, 0, DownloadRequestMessage.REQUEST_TYPE.NEW, 0, 0, 0);
+            }
+            default:
+                LOG.error("nextSyncStep {} -> {} (sync-E-1)", previousFetchState, currentFetchState);
+                return null;
+        }
     }
 
     public DirectoryEntry getDeviceXmlDirectoryEntry() {

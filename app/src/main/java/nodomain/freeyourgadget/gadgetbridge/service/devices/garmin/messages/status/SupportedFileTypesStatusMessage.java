@@ -1,5 +1,24 @@
+/*  Copyright (C) 2024-2026 Daniele Gobbetti, José Rebelo, Thomas Kuehne
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.messages.status;
 
+
+import static nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.FileType.FILETYPE.ACTIVITY;
+import static nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.FileType.FILETYPE.GOLF;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -22,9 +41,18 @@ public class SupportedFileTypesStatusMessage extends GFDIStatusMessage {
     public static SupportedFileTypesStatusMessage parseIncoming(MessageReader reader, GarminMessage garminMessage) {
         final Status status = Status.fromCode(reader.readByte());
 
-        if (!status.equals(Status.ACK)) {
-            return null;
+        if (Status.ACK != status) {
+            // see opengarmin analysis:
+            // The offical client assumes support for FIT_TYPE_4 and FIT_TYPE_36
+            // and continues to the next step in file synchronization.
+            LOG.warn("Applying compatibility fix: SupportedFileTypesStatus");
+            final List<FileType> types = new ArrayList<>(2);
+
+            types.add(new FileType(ACTIVITY.getType(), ACTIVITY.getSubType(), ACTIVITY.typeName));
+            types.add(new FileType(GOLF.getType(), GOLF.getSubType(), GOLF.typeName));
+            return new SupportedFileTypesStatusMessage(garminMessage, status, types);
         }
+
         final int typeCount = reader.readByte();
         final List<FileType> types = new ArrayList<>(typeCount);
         for (int i = 0; i < typeCount; ++i) {

@@ -197,7 +197,7 @@ import static nodomain.freeyourgadget.gadgetbridge.proto.garmin.GdiFileAccess.Tr
 
 public class GarminSupport extends AbstractBTLESingleDeviceSupport implements ICommunicator.Callback {
     private static final Logger LOG = LoggerFactory.getLogger(GarminSupport.class);
-    private final ProtocolBufferHandler protocolBufferHandler;
+    final ProtocolBufferHandler protocolBufferHandler;
     private final NotificationsHandler notificationsHandler;
     private final FileTransferHandler fileTransferHandler;
     private final Queue<FileToDownload> filesToDownload;
@@ -324,10 +324,8 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
         if (newSyncProtocol() && directoryEntry.getFiletype() != FileType.FILETYPE.DEVICE_XML) {
             if (directoryEntry.getFiletype() == FileType.FILETYPE.DIRECTORY) {
                 LOG.debug("Got directory entry, syncing with new protocol");
-                sendProtobufRequest("request file list",
-                        Smart.newBuilder().setFileAccessService(
-                                protocolBufferHandler.getFileSyncServiceHandler().requestFileList()
-                        ).build());
+                sendProtobufRequest("request V2 file list",
+                        protocolBufferHandler.getFileSyncServiceHandler().requestFileList());
                 return;
             }
             LOG.warn("Ignoring directory entry {} in new sync protocol", directoryEntry.getFileName());
@@ -686,36 +684,26 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
             requestBatteryUpdate();
         }
 
-        if (newSyncProtocol() && !getDevicePrefs().getBoolean(PREF_GARMIN_LEGACY_SYNC_FLUSH, true)) {
-            // #6700 - Some firmwares will freeze on the legacy sync request
-            LOG.warn("Legacy sync flush is disabled - requesting file list directly");
-            sendProtobufRequest("directly request file list",
-                Smart.newBuilder().setFileAccessService(
-                    protocolBufferHandler.getFileSyncServiceHandler().requestFileList()
-                ).build());
-            return;
-        }
-
         if (this.supportedFileTypeList.isEmpty() && !newSyncProtocol()) {
-            LOG.warn("No known supported file types");
+            LOG.warn("No known supported file types (sync-F-1)");
             return;
         }
 
         // FIXME respect dataTypes?
 
+        final GFDIMessage download = fileTransferHandler.nextSyncStep(FileTransferHandler.FileFetchState.GB_PULL);
+
         if (rfcommListener != null && rfcommListener.isConnected()) {
             // This device only lists files over RFCOMM. When the link is down, the BLE fetch
             // below returns no FIT files and onDirectoryWithoutFitFiles() requests the link.
-            final GFDIMessage download = fileTransferHandler.initiateDownload();
             if (download != null) {
+                LOG.info("init sync via RFCOMM (sync-F-2)");
                 rfcommListener.sendMessage(download.getOutgoingMessage());
             }
             return;
         }
 
-        // We initiate download here even in the new sync protocol so that the watch "flushes" the data
-        // otherwise we might get incomplete monitor files
-        sendOutgoingMessage("fetch recorded data", fileTransferHandler.initiateDownload());
+        sendOutgoingMessage("init sync (sync-F-3)", download);
 
         //TODO: ask the watch to initiate the sync? Something like:
         //        sendOutgoingMessage("set sync ready", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_READY, 0));
