@@ -429,7 +429,7 @@ public class FileTransferHandler implements MessageHandler {
                 }
                 advanceQueue(true);
 
-                return new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_COMPLETE, 0);
+                return new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_COMPLETE, null);
             } else {
                 if (fileTransferDataStatusMessage.canProceed()) {
                     LOG.info("SENDING NEXT CHUNK!!!");

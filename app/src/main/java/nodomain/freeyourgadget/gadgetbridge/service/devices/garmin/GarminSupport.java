@@ -237,10 +237,10 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
             }
             switch (action) {
                 case ACTION_APP_IS_IN_FOREGROUND:
-                    sendOutgoingMessage("set foreground", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.HOST_DID_ENTER_FOREGROUND, 0));
+                    sendOutgoingMessage("set foreground", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.HOST_DID_ENTER_FOREGROUND, null));
                     break;
                 case ACTION_APP_IS_IN_BACKGROUND:
-                    sendOutgoingMessage("set background", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.HOST_DID_ENTER_BACKGROUND, 0));
+                    sendOutgoingMessage("set background", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.HOST_DID_ENTER_BACKGROUND, null));
                     break;
             }
         }
@@ -1091,7 +1091,7 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
         LOG.info("RFCOMM link initialized");
         sendOutgoingMessage("rfcomm: request supported file types", new SupportedFileTypesMessage());
         sendDeviceSettings();
-        sendOutgoingMessage("rfcomm: set sync ready", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_READY, 0));
+        sendOutgoingMessage("rfcomm: set sync ready", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_READY, null));
     }
 
     private void completeInitialization() {
@@ -1107,7 +1107,7 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
             onSetTime();
         }
         //following is needed for vivomove style
-        sendOutgoingMessage("set sync ready", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_READY, 0));
+        sendOutgoingMessage("set sync ready", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_READY, null));
 
         requestBatteryUpdate();
         onAppInfoReq(GdiInstalledApps.AppType.WATCH_APP);
@@ -1118,10 +1118,10 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
 
         if (mFirstConnect) {
             // sendOutgoingMessage("set pair start", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.PAIR_START, 0));
-            sendOutgoingMessage("set pair complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.PAIR_COMPLETE, 0));
-            sendOutgoingMessage("set sync complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_COMPLETE, 0));
-            // sendOutgoingMessage("set tutorial complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.TUTORIAL_COMPLETE, 0));
-            sendOutgoingMessage("set setup wizard complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SETUP_WIZARD_COMPLETE, 0));
+            sendOutgoingMessage("set pair complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.PAIR_COMPLETE, null));
+            sendOutgoingMessage("set sync complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_COMPLETE, null));
+            // sendOutgoingMessage("set tutorial complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.TUTORIAL_COMPLETE, null));
+            sendOutgoingMessage("set setup wizard complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SETUP_WIZARD_COMPLETE, null));
             this.mFirstConnect = false;
         }
     }
@@ -1326,7 +1326,7 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
     @VisibleForTesting
     void finishFileSync() {
         // FIXME: This should probably only happen after exploresync also finishes
-        sendOutgoingMessage("set sync complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_COMPLETE, 0));
+        sendOutgoingMessage("set sync complete", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.SYNC_COMPLETE, null));
 
         getDevice().unsetBusyTask();
         GB.signalActivityDataFinish(getDevice());
@@ -1361,7 +1361,7 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
 
     @Override
     public void onSetTime() {
-        sendOutgoingMessage("set time", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.TIME_UPDATED, 0));
+        sendOutgoingMessage("set time", new SystemEventMessage(SystemEventMessage.GarminSystemEventType.TIME_UPDATED, null));
     }
 
     @Override
