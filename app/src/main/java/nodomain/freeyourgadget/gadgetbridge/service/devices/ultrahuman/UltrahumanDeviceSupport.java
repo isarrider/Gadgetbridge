@@ -355,7 +355,13 @@ public class UltrahumanDeviceSupport extends AbstractBTLESingleDeviceSupport {
     }
 
     private boolean decodeDATA(byte[] raw) {
-        if (raw.length == 27 && raw[0] == OPERATION_BREATHING_START) {
+        if (raw.length > 0 && Byte.toUnsignedInt(raw[0]) == UltrahumanBiosignalFrame.OPCODE) {
+            final UltrahumanBiosignalFrame frame = UltrahumanBiosignalFrame.parse(raw);
+            if (frame != null) {
+                LOG.debug("UH>>GB received {} PPG samples and {} motion samples", frame.ppg().size(), frame.motion().size());
+            }
+            return true;
+        } else if (raw.length == 27 && raw[0] == OPERATION_BREATHING_START) {
             decodeDATA_Breathing(raw);
             return true;
         } else if (raw.length == 11 && raw[0] == OPERATION_EXERCISE_START) {
