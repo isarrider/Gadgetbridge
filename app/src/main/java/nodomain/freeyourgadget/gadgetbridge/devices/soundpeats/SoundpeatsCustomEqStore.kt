@@ -94,6 +94,9 @@ object SoundpeatsCustomEqStore {
 
     fun find(prefs: SharedPreferences, id: String): CustomEq? = list(prefs).firstOrNull { it.id == id }
 
+    /** Preference key of one editable band's gain, shared by the editor and the device support. */
+    fun bandKey(index: Int): String = "soundpeats_eq_band_$index"
+
     /** Value stored in the equalizer preference for a custom profile. */
     fun customValue(id: String): String = "custom:$id"
 

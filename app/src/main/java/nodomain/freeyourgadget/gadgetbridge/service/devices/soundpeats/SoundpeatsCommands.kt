@@ -25,6 +25,12 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.soundpeats
  * vendor backend (`/api/app/v1/devices/firmware/{otaCode}/versions/{version}/features`). The
  * commands known to be advertised for the Q3 Pro (otaCode `S12`) are marked with (*).
  */
+/**
+ * Command ids exchanged with the earbuds.
+ *
+ * This is the full table as observed on the wire, so entries the current support does not use are
+ * kept on purpose: they document the protocol and make it easier to add features later.
+ */
 object SoundpeatsCommands {
     // Generic / housekeeping
     const val RESET = 0x0305

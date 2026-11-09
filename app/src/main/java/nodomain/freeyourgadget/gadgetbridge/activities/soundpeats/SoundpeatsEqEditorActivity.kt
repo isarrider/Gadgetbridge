@@ -55,7 +55,7 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
     private val bandValueLabels = mutableListOf<TextView>()
     private var syncingSliders = false
 
-    private val bandKeys = SoundpeatsCustomEqStore.EDIT_BANDS.indices.map { bandKey(it) }
+    private val bandKeys = SoundpeatsCustomEqStore.EDIT_BANDS.indices.map { SoundpeatsCustomEqStore.bandKey(it) }
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { importProfile(it) }
@@ -124,7 +124,7 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
 
             row.addView(
                 TextView(this).apply {
-                    text = bandFrequencyLabel(frequency)
+                    text = getString(bandLabel(frequency))
                     width = (56 * density).toInt()
                 }
             )
@@ -314,10 +314,18 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
         GB.toast(this, getString(R.string.soundpeats_custom_eq_import_done, filters.size), Toast.LENGTH_SHORT, GB.INFO)
     }
 
-    private fun bandFrequencyLabel(frequency: Int): String =
-        if (frequency >= 1000) "${frequency / 1000}k" else frequency.toString()
+    private fun bandLabel(frequency: Int): Int = when (frequency) {
+        62 -> R.string.soundpeats_eq_band_62
+        125 -> R.string.soundpeats_eq_band_125
+        250 -> R.string.soundpeats_eq_band_250
+        500 -> R.string.soundpeats_eq_band_500
+        1000 -> R.string.soundpeats_eq_band_1000
+        2000 -> R.string.soundpeats_eq_band_2000
+        4000 -> R.string.soundpeats_eq_band_4000
+        else -> R.string.soundpeats_eq_band_8000
+    }
 
     companion object {
-        fun bandKey(index: Int): String = "soundpeats_eq_band_$index"
+        private const val UNUSED = 0
     }
 }

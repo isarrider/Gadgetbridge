@@ -6495,7 +6495,6 @@
     <string name="soundpeats_custom_eq_delete">Delete current profile</string>
     <string name="soundpeats_custom_eq_name">Profile name</string>
     <string name="soundpeats_eq_master_gain">Master gain</string>
-    <string name="soundpeats_db_format">%1$.0f dB</string>
     <string name="soundpeats_db_value">%1$d dB</string>
     <string name="soundpeats_custom_eq_edit">Edit custom equalizer</string>
     <string name="soundpeats_custom_eq_reset">Reset to flat</string>

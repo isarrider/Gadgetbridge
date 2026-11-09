@@ -28,7 +28,6 @@ import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSett
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_PROMPT_VOLUME
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_TOUCH_LOCK
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_WATER_DRAINAGE
-import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsAncMode
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsCustomEqStore
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsEqPresets
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
@@ -139,7 +138,7 @@ class SoundpeatsQ3ProSupport : AbstractHeadphoneBTBRDeviceSupport(LOG, BUFFER_SI
 
             PREF_SOUNDPEATS_EQ_DRAFT -> {
                 val gains = SoundpeatsCustomEqStore.EDIT_BANDS.indices.map {
-                    prefs.getInt("soundpeats_eq_band_$it", 0).toDouble()
+                    prefs.getInt(SoundpeatsCustomEqStore.bandKey(it), 0).toDouble()
                 }
                 val master = prefs.getInt(PREF_SOUNDPEATS_EQ_MASTER, SoundpeatsEqPresets.MASTER_GAIN_DB.toInt()).toDouble()
                 sendEqFrames(master, SoundpeatsCustomEqStore.expandGains(gains))

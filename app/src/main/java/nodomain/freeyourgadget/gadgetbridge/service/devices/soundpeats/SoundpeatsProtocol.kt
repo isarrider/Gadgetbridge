@@ -185,18 +185,6 @@ class SoundpeatsProtocol {
             )
         }
 
-        /** Master gain carried by every band frame, in dB. */
-        fun decodeEqV2MasterGain(payload: ByteArray): Double? {
-            if (payload.size < 4) return null
-            val raw = ((payload[2].toInt() and 0xFF) shl 8) or (payload[3].toInt() and 0xFF)
-            val signed = if (raw >= 0x8000) raw - 0x10000 else raw
-            return signed / 60.0
-        }
-
-        /** Number of bands announced in the frame, 16 for the Q3 Pro. */
-        fun decodeEqV2BandCount(payload: ByteArray): Int? =
-            if (payload.isEmpty()) null else payload[0].toInt() and 0xFF
-
         private fun booleanPayload(enabled: Boolean): ByteArray =
             byteArrayOf(if (enabled) 1 else 0)
     }
