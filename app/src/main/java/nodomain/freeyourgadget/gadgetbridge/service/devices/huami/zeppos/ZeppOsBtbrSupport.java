@@ -622,6 +622,11 @@ public class ZeppOsBtbrSupport extends AbstractBTBRDeviceSupport implements Zepp
     }
 
     @Override
+    public void onSendWatchAppMessage(@NonNull final String appId, @NonNull final byte[] payload) {
+        zeppOsSupport.onSendWatchAppMessage(appId, payload);
+    }
+
+    @Override
     public void onSleepAsAndroidAction(final String action, final Bundle extras) {
         zeppOsSupport.onSleepAsAndroidAction(action, extras);
     }

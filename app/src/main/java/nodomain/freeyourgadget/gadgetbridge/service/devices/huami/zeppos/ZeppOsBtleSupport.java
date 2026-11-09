@@ -369,6 +369,11 @@ public class ZeppOsBtleSupport extends AbstractBTLESingleDeviceSupport implement
     }
 
     @Override
+    public void onSendWatchAppMessage(@NonNull final String appId, @NonNull final byte[] payload) {
+        zeppOsSupport.onSendWatchAppMessage(appId, payload);
+    }
+
+    @Override
     public void onSleepAsAndroidAction(final String action, final Bundle extras) {
         zeppOsSupport.onSleepAsAndroidAction(action, extras);
     }

@@ -18,6 +18,7 @@ package nodomain.freeyourgadget.gadgetbridge.externalevents;
 
 import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.EXTRA_OPTIONS;
 
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -175,9 +176,21 @@ public class IntentApiReceiver extends BroadcastReceiver {
                 }
                 final String appId = intent.getStringExtra("appId");
                 final String payload = intent.getStringExtra("payload");
-                if (appId == null || payload == null) {
+                final PendingIntent reply = replyTo(intent);
+                if (appId == null || (payload == null && reply == null)) {
                     LOG.warn("Watch app message needs the appId and payload extras");
                     return;
+                }
+                if (reply != null) {
+                    final String creator = reply.getCreatorPackage();
+                    if (creator == null || !WatchAppCompanionRegistry.getInstance().bind(device.getAddress(), appId, creator)) {
+                        LOG.warn("Watch app reply target ignored on {}", device.getAliasOrName());
+                    } else {
+                        LOG.info("Watch app {} on {} replies to {}", appId, device.getAliasOrName(), creator);
+                    }
+                }
+                if (payload == null) {
+                    break;
                 }
                 LOG.info("Sending a message to watch app {} on {}", appId, device.getAliasOrName());
                 deviceService.onSendWatchAppMessage(appId, payload.getBytes(StandardCharsets.UTF_8));
@@ -361,6 +374,19 @@ public class IntentApiReceiver extends BroadcastReceiver {
             }
         }
         return options;
+    }
+
+    @Nullable
+    private static PendingIntent replyTo(final Intent intent) {
+        final Bundle extras = intent.getExtras();
+        if (extras == null) {
+            return null;
+        }
+        final Object value = extras.get(WatchAppCompanionRegistry.EXTRA_REPLY_TO);
+        if (value instanceof PendingIntent) {
+            return (PendingIntent) value;
+        }
+        return null;
     }
 
     @NonNull

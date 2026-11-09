@@ -310,6 +310,7 @@ public class ZeppOsSupport extends AbstractBluetoothDeviceSupport
                 Objects.requireNonNull(mServiceMap.get(endpoint)).dispose();
             }
         }
+        appsService.dispose();
     }
 
     @Override
@@ -744,6 +745,11 @@ public class ZeppOsSupport extends AbstractBluetoothDeviceSupport
     @Override
     public void onSendWeather() {
         weatherService.onSendWeather();
+    }
+
+    @Override
+    public void onSendWatchAppMessage(@NonNull final String appId, @NonNull final byte[] payload) {
+        appsService.sendWatchAppMessage(appId, payload);
     }
 
     @Override

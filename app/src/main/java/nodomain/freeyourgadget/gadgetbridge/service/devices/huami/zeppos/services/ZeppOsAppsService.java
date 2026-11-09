@@ -16,6 +16,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.services;
 
+import android.content.Intent;
+import android.content.pm.PackageManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,10 +27,16 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.externalevents.IntentApiReceiver;
+import nodomain.freeyourgadget.gadgetbridge.externalevents.WatchAppCompanionRegistry;
+import nodomain.freeyourgadget.gadgetbridge.externalevents.WatchAppMessageIntents;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceApp;
-import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.AbstractZeppOsService;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.ZeppOsTransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.util.StringUtils;
 
@@ -50,6 +59,7 @@ public class ZeppOsAppsService extends AbstractZeppOsService {
     private static final byte CMD_SCREENSHOT_REQUEST = 0x01;
 
     private final List<GBDeviceApp> apps = new ArrayList<>();
+    private final ConcurrentHashMap<Integer, Integer> watchPorts = new ConcurrentHashMap<>();
 
     public ZeppOsAppsService(final ZeppOsSupport support) {
         super(support, false);
@@ -62,6 +72,10 @@ public class ZeppOsAppsService extends AbstractZeppOsService {
 
     @Override
     public void handlePayload(final byte[] payload) {
+        if (payload == null || payload.length == 0) {
+            LOG.warn("Empty apps payload");
+            return;
+        }
         switch (payload[0]) {
             case CMD_JS:
                 handleJsPayload(payload);
@@ -82,12 +96,118 @@ public class ZeppOsAppsService extends AbstractZeppOsService {
         requestApps(builder);
     }
 
+    @Override
+    public void dispose() {
+        watchPorts.clear();
+    }
+
     public List<GBDeviceApp> getApps() {
         return apps;
     }
 
+    public void sendWatchAppMessage(final String appId, final byte[] payload) {
+        if (!messagesAllowed()) {
+            LOG.warn("Watch app messages not allowed");
+            return;
+        }
+        final GBDevice device = getSupport().getDevice();
+        if (device == null || device.getState() != GBDevice.State.INITIALIZED) {
+            LOG.warn("Watch app message dropped because the watch is not initialized");
+            return;
+        }
+        final String canonical = ZeppOsJsMessage.canonicalAppId(appId);
+        if (canonical == null) {
+            LOG.warn("Watch app id is not a decimal Zepp app id");
+            return;
+        }
+        final byte[] body = ZeppOsJsMessage.decodePayload(payload);
+        if (body == null) {
+            LOG.warn("Watch app payload was rejected");
+            return;
+        }
+        final int watchPort = watchPorts.getOrDefault(ZeppOsJsMessage.appIdBits(canonical), 0);
+        final byte[] frame = ZeppOsJsMessage.encodeMessage(ZeppOsJsMessage.appIdBits(canonical), watchPort, body);
+        if (frame == null) {
+            LOG.warn("Watch app message was rejected");
+            return;
+        }
+        write("js app message", frame);
+    }
+
     private void handleJsPayload(final byte[] payload) {
-        LOG.warn("Handling js payloads not implemented");
+        final ZeppOsJsMessage.Frame frame = ZeppOsJsMessage.parse(payload);
+        if (frame == null) {
+            LOG.warn("Malformed js payload, {} bytes", payload == null ? 0 : payload.length);
+            return;
+        }
+        if (!messagesAllowed()) {
+            LOG.info("Watch app messages not allowed, ignoring js type {}", frame.type);
+            return;
+        }
+        switch (frame.type) {
+            case ZeppOsJsMessage.TYPE_OPEN:
+                watchPorts.put(frame.appId, frame.port1);
+                final byte[] ack = ZeppOsJsMessage.encodeOpenAck(frame);
+                if (ack != null) {
+                    write("js app open", ack);
+                }
+                return;
+            case ZeppOsJsMessage.TYPE_CLOSE:
+                watchPorts.remove(frame.appId);
+                return;
+            case ZeppOsJsMessage.TYPE_MESSAGE:
+                deliver(frame);
+                return;
+            default:
+                LOG.info("Ignoring js type {}", frame.type);
+        }
+    }
+
+    private void deliver(final ZeppOsJsMessage.Frame frame) {
+        final GBDevice device = getSupport().getDevice();
+        if (device == null) {
+            return;
+        }
+        final String appId = ZeppOsJsMessage.appIdToString(frame.appId);
+        final String packageName = WatchAppCompanionRegistry.getInstance().packageFor(device.getAddress(), appId);
+        if (packageName == null) {
+            LOG.info("No companion for watch app {}, {} bytes not delivered", appId, frame.body.length);
+            return;
+        }
+        if (!companionInstalled(packageName)) {
+            LOG.warn("Companion for watch app {} is not installed", appId);
+            return;
+        }
+        final String encoded = ZeppOsJsMessage.encodePayload(frame.body);
+        if (encoded == null) {
+            LOG.warn("Watch app {} message is too large, {} bytes", appId, frame.body.length);
+            return;
+        }
+        final Intent intent = WatchAppMessageIntents.incoming(device.getAddress(), appId, encoded, packageName);
+        if (intent == null || intent.getPackage() == null) {
+            LOG.warn("Watch app {} message was not addressed to a companion", appId);
+            return;
+        }
+        getContext().sendBroadcast(intent);
+        LOG.info("Delivered {} bytes from watch app {}", frame.body.length, appId);
+    }
+
+    private boolean messagesAllowed() {
+        final GBDevice device = getSupport().getDevice();
+        if (device == null) {
+            return false;
+        }
+        return GBApplication.getDeviceSpecificSharedPrefs(device.getAddress())
+                .getBoolean(IntentApiReceiver.THIRD_PARTY_APPS_WATCH_APP_MESSAGES, false);
+    }
+
+    private boolean companionInstalled(final String packageName) {
+        try {
+            getContext().getPackageManager().getPackageInfo(packageName, 0);
+            return true;
+        } catch (final PackageManager.NameNotFoundException e) {
+            return false;
+        }
     }
 
     private void handleAppsPayload(final byte[] payload) {

@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.robolectric.Shadows.shadowOf;
 
 import android.app.Application;
+import android.app.PendingIntent;
 import android.content.Intent;
 
 import org.junit.Test;
@@ -30,6 +31,7 @@ public class IntentApiReceiverTest extends TestBase {
     @Override
     public void setUp() throws Exception {
         super.setUp();
+        WatchAppCompanionRegistry.getInstance().clear();
         registerDeviceWithManager(new GBDevice(ADDRESS, "Testie", "Test Alias", "Test Folder", DeviceType.TEST));
         GBApplication.getDeviceSpecificSharedPrefs(ADDRESS).edit().clear().commit();
         GBApplication.getDeviceSpecificSharedPrefs(OTHER_ADDRESS).edit().clear().commit();
@@ -78,6 +80,66 @@ public class IntentApiReceiverTest extends TestBase {
     }
 
     @Test
+    public void watchAppMessage_forwardsBase64TextUnchanged() {
+        allowWatchAppMessages(ADDRESS);
+        final String base64 = "YQ==";
+
+        receiver.onReceive(getContext(), watchAppMessage(ADDRESS, APP_ID, base64));
+
+        final Intent forwarded = nextStartedService();
+        assertNotNull(forwarded);
+        assertArrayEquals(base64.getBytes(StandardCharsets.UTF_8),
+                forwarded.getByteArrayExtra(DeviceService.EXTRA_WATCH_APP_PAYLOAD));
+    }
+
+    @Test
+    public void watchAppMessage_replyTargetBindsNumericAppWithoutSending() {
+        allowWatchAppMessages(ADDRESS);
+        final PendingIntent reply = PendingIntent.getBroadcast(
+                getContext(), 0, new Intent("reply"), PendingIntent.FLAG_IMMUTABLE);
+
+        final Intent intent = new Intent(IntentApiReceiver.COMMAND_SEND_WATCH_APP_MESSAGE)
+                .putExtra(IntentApiReceiver.EXTRA_DEVICE, ADDRESS)
+                .putExtra("appId", "0391257")
+                .putExtra(WatchAppCompanionRegistry.EXTRA_REPLY_TO, reply);
+        receiver.onReceive(getContext(), intent);
+
+        assertNull(nextStartedService());
+        assertEquals(getContext().getPackageName(),
+                WatchAppCompanionRegistry.getInstance().packageFor(ADDRESS, "391257"));
+    }
+
+    @Test
+    public void watchAppMessage_replyTargetDoesNotBindAPackageNameAppId() {
+        allowWatchAppMessages(ADDRESS);
+        final PendingIntent reply = PendingIntent.getBroadcast(
+                getContext(), 0, new Intent("reply"), PendingIntent.FLAG_IMMUTABLE);
+
+        receiver.onReceive(getContext(), watchAppMessage(ADDRESS).putExtra(WatchAppCompanionRegistry.EXTRA_REPLY_TO, reply));
+
+        final Intent forwarded = nextStartedService();
+        assertNotNull(forwarded);
+        assertArrayEquals(PAYLOAD.getBytes(StandardCharsets.UTF_8),
+                forwarded.getByteArrayExtra(DeviceService.EXTRA_WATCH_APP_PAYLOAD));
+        assertNull(WatchAppCompanionRegistry.getInstance().packageFor(ADDRESS, APP_ID));
+    }
+
+    @Test
+    public void watchAppMessage_optInOffDoesNotBindAReplyTarget() {
+        final PendingIntent reply = PendingIntent.getBroadcast(
+                getContext(), 0, new Intent("reply"), PendingIntent.FLAG_IMMUTABLE);
+        final Intent intent = new Intent(IntentApiReceiver.COMMAND_SEND_WATCH_APP_MESSAGE)
+                .putExtra(IntentApiReceiver.EXTRA_DEVICE, ADDRESS)
+                .putExtra("appId", "391257")
+                .putExtra(WatchAppCompanionRegistry.EXTRA_REPLY_TO, reply);
+
+        receiver.onReceive(getContext(), intent);
+
+        assertNull(nextStartedService());
+        assertNull(WatchAppCompanionRegistry.getInstance().packageFor(ADDRESS, "391257"));
+    }
+
+    @Test
     public void watchAppMessage_rejectedForUnknownDevice() {
         allowWatchAppMessages(OTHER_ADDRESS);
 
@@ -93,9 +155,13 @@ public class IntentApiReceiverTest extends TestBase {
     }
 
     private Intent watchAppMessage(final String address) {
+        return watchAppMessage(address, APP_ID, PAYLOAD);
+    }
+
+    private Intent watchAppMessage(final String address, final String appId, final String payload) {
         final Intent intent = new Intent(IntentApiReceiver.COMMAND_SEND_WATCH_APP_MESSAGE)
-                .putExtra("appId", APP_ID)
-                .putExtra("payload", PAYLOAD);
+                .putExtra("appId", appId)
+                .putExtra("payload", payload);
         if (address != null) {
             intent.putExtra(IntentApiReceiver.EXTRA_DEVICE, address);
         }
