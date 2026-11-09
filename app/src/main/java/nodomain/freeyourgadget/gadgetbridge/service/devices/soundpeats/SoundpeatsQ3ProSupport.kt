@@ -19,6 +19,8 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.soundpeats
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_ANC_MODE
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_DUAL_CONNECT
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_DRAFT
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_MASTER
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_PRESET
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_FIND_EARBUDS
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_GAME_MODE
@@ -27,6 +29,7 @@ import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSett
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_TOUCH_LOCK
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_WATER_DRAINAGE
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsAncMode
+import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsCustomEqStore
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsEqPresets
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractHeadphoneBTBRDeviceSupport
@@ -134,19 +137,28 @@ class SoundpeatsQ3ProSupport : AbstractHeadphoneBTBRDeviceSupport(LOG, BUFFER_SI
                 SoundpeatsProtocol.encodeSetPromptVolume(prefs.getInt(config, 50))
             )
 
-            PREF_SOUNDPEATS_EQ_PRESET -> {
-                val preset = SoundpeatsEqPresets.Preset.fromPreference(prefs.getString(config, null))
-                val frames = SoundpeatsProtocol.encodeEqV2(preset.masterGainDb, preset.toBands())
-                val builder = createTransactionBuilder("set eq preset")
-                // The earbuds drop bands when the whole profile is written back to back; the vendor
-                // app sends them a few milliseconds apart.
-                frames.forEachIndexed { index, frame ->
-                    if (index > 0) {
-                        builder.sleep(EQ_FRAME_DELAY_MS)
-                    }
-                    builder.write(*frame)
+            PREF_SOUNDPEATS_EQ_DRAFT -> {
+                val gains = SoundpeatsCustomEqStore.EDIT_BANDS.indices.map {
+                    prefs.getInt("soundpeats_eq_band_$it", 0).toDouble()
                 }
-                builder.queue()
+                val master = prefs.getInt(PREF_SOUNDPEATS_EQ_MASTER, SoundpeatsEqPresets.MASTER_GAIN_DB.toInt()).toDouble()
+                sendEqFrames(master, SoundpeatsCustomEqStore.expandGains(gains))
+            }
+
+            PREF_SOUNDPEATS_EQ_PRESET -> {
+                val value = prefs.getString(config, null)
+                val customId = SoundpeatsCustomEqStore.customIdOf(value)
+                val custom = customId?.let { SoundpeatsCustomEqStore.find(prefs, it) }
+                val masterGainDb: Double
+                val bands: List<EqBand>
+                if (custom != null) {
+                    masterGainDb = custom.masterGainDb
+                    bands = custom.toBands()
+                } else {
+                    masterGainDb = SoundpeatsEqPresets.MASTER_GAIN_DB
+                    bands = SoundpeatsEqPresets.Preset.fromPreference(value).toBands()
+                }
+                sendEqFrames(masterGainDb, bands)
             }
 
 
@@ -197,6 +209,22 @@ class SoundpeatsQ3ProSupport : AbstractHeadphoneBTBRDeviceSupport(LOG, BUFFER_SI
         batteryTask?.cancel()
         batteryTimer.cancel()
         super.dispose()
+    }
+
+    /**
+     * The earbuds drop bands when the whole profile is written back to back, so the frames are
+     * paced the way the vendor app sends them.
+     */
+    private fun sendEqFrames(masterGainDb: Double, bands: List<EqBand>) {
+        val frames = SoundpeatsProtocol.encodeEqV2(masterGainDb, bands)
+        val builder = createTransactionBuilder("set eq")
+        frames.forEachIndexed { index, frame ->
+            if (index > 0) {
+                builder.sleep(EQ_FRAME_DELAY_MS)
+            }
+            builder.write(*frame)
+        }
+        builder.queue()
     }
 
     private fun sendCommand(taskName: String, payload: ByteArray) {

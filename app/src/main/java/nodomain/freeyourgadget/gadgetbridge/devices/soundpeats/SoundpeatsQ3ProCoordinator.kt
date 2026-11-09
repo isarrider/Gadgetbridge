@@ -16,9 +16,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.devices.soundpeats
 
+import android.widget.EditText
+import androidx.appcompat.app.AlertDialog
+import java.util.Locale
+import java.util.regex.Pattern
+import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_ANC_MODE
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_DUAL_CONNECT
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_MASTER
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_PRESET
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_FIND_EARBUDS
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_GAME_MODE
@@ -28,17 +34,18 @@ import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSett
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_WATER_DRAINAGE
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsScreen
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.DeviceSettingsSpec
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.ListEntry
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.components.enumList
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.deviceSettings
+import nodomain.freeyourgadget.gadgetbridge.activities.soundpeats.SoundpeatsEqEditorActivity
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLClassicDeviceCoordinator
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.devices.cards.QuickControl
 import nodomain.freeyourgadget.gadgetbridge.devices.cards.QuickControls
-import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryConfig
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundpeats.SoundpeatsQ3ProSupport
-import java.util.regex.Pattern
 
 /**
  * SOUNDPEATS Q3 Pro (vendor model id `S12`).
@@ -102,11 +109,18 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
                 icon = R.drawable.ic_surround,
                 defaultValue = SoundpeatsAncMode.OFF,
             )
-            enumList<SoundpeatsEqPresets.Preset>(
+            list(
                 key = PREF_SOUNDPEATS_EQ_PRESET,
                 title = R.string.pref_header_equalizer,
                 icon = R.drawable.ic_equalizer,
-                defaultValue = SoundpeatsEqPresets.Preset.CLASSIC,
+                defaultValue = SoundpeatsEqPresets.Preset.CLASSIC.name.lowercase(Locale.ROOT),
+                entriesProvider = { prefs ->
+                    SoundpeatsEqPresets.Preset.entries.map {
+                        ListEntry.Res(it.name.lowercase(Locale.ROOT), it.label)
+                    } + SoundpeatsCustomEqStore.list(prefs.preferences).map {
+                        ListEntry.Text(SoundpeatsCustomEqStore.customValue(it.id), it.name)
+                    }
+                },
             )
             switchSetting(
                 key = PREF_SOUNDPEATS_GAME_MODE,
@@ -144,6 +158,25 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
                 icon = R.drawable.ic_search,
                 defaultValue = false,
             )
+            category(
+                key = "soundpeats_custom_eq_category",
+                title = R.string.soundpeats_custom_eq,
+            ) {
+                externalSettings(
+                    key = "soundpeats_custom_eq_editor",
+                    title = R.string.soundpeats_custom_eq_edit,
+                    icon = R.drawable.ic_equalizer,
+                    connectedOnly = true,
+                    activityClass = SoundpeatsEqEditorActivity::class.java,
+                )
+                action(
+                    key = "soundpeats_custom_eq_delete",
+                    title = R.string.soundpeats_custom_eq_delete,
+                    icon = R.drawable.ic_delete,
+                    visibleWhen = { SoundpeatsCustomEqStore.customIdOf(it.getString(PREF_SOUNDPEATS_EQ_PRESET, null)) != null },
+                    onClick = { _, device -> deleteCustomEq(device) },
+                )
+            }
         }
 
         screen(
@@ -172,4 +205,25 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
             connectedOnly = false,
         )
     }
+
+
+
+
+    /** Removes the selected custom profile and falls back to a factory preset. */
+    private fun deleteCustomEq(device: GBDevice?): Boolean {
+        if (device == null) {
+            return false
+        }
+        val prefs = GBApplication.getDeviceSpecificSharedPrefs(device.address)
+        val id = SoundpeatsCustomEqStore.customIdOf(prefs.getString(PREF_SOUNDPEATS_EQ_PRESET, null))
+            ?: return false
+
+        SoundpeatsCustomEqStore.delete(prefs, id)
+        prefs.edit()
+            .putString(PREF_SOUNDPEATS_EQ_PRESET, SoundpeatsEqPresets.Preset.CLASSIC.name.lowercase(Locale.ROOT))
+            .apply()
+        GBApplication.deviceService(device).onSendConfiguration(PREF_SOUNDPEATS_EQ_PRESET)
+        return true
+    }
+
 }

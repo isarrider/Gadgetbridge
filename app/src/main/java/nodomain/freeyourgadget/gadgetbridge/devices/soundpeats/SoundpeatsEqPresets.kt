@@ -40,92 +40,86 @@ object SoundpeatsEqPresets {
     /** Q used for slots that the preset does not touch. */
     const val FILLER_Q = 0.8
 
+    /**
+     * Headroom the earbuds are always given. Captured traffic shows every equalizer frame the
+     * vendor app sends carrying -2 dB of master gain, whatever the preset is, so this is not a
+     * per-preset value.
+     */
+    const val MASTER_GAIN_DB = -2.0
+
     enum class Preset(
-        val masterGainDb: Double,
         private val frequencies: List<Int>,
         private val gains: List<Double>,
         private val qs: List<Double>,
         override val label: Int,
     ) : LabeledEntry {
         CLASSIC(
-            -2.0,
             listOf(20, 180, 420, 2000, 2800, 3800, 8200, 14000),
             listOf(-5.7, -9.4, -11.0, -4.2, 3.8, -3.2, -2.0, 3.5),
             listOf(0.2, 1.0, 0.5, 3.0, 1.2, 3.0, 4.0, 0.1),
             R.string.soundpeats_eq_preset_classic,
         ),
         TREBLE(
-            0.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 2.0, 2.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
             R.string.soundpeats_eq_preset_treble,
         ),
         BASS_BOOST(
-            0.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(2.0, 2.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
             R.string.soundpeats_eq_preset_bass_boost,
         ),
         BASS_REDUCTION(
-            0.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(-2.0, -2.0, -2.0, -1.0, 0.0, 0.0, 0.0, 0.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
             R.string.soundpeats_eq_preset_bass_reduction,
         ),
         ROCK(
-            0.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(1.0, 2.0, 2.0, 2.0, -4.0, 1.0, 2.0, 2.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
             R.string.soundpeats_eq_preset_rock,
         ),
         POPULAR(
-            0.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(-2.0, 1.0, 2.0, 2.0, 1.0, -2.0, -1.0, -2.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
             R.string.soundpeats_eq_preset_popular,
         ),
         ELECTRONIC(
-            0.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(2.0, 2.0, 1.0, -1.0, 1.0, 0.0, 1.0, 3.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
             R.string.soundpeats_eq_preset_electronic,
         ),
         FOLK(
-            0.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(-4.0, 4.0, -2.0, -1.0, 1.0, 2.0, 2.0, -1.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
             R.string.soundpeats_eq_preset_folk,
         ),
         CLASSICAL(
-            0.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(2.0, 2.0, 1.0, 1.0, -1.0, -1.0, -2.0, -3.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
             R.string.soundpeats_eq_preset_classical,
         ),
         ACG(
-            -2.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(3.0, 2.0, -5.0, -3.0, 2.0, 3.0, -4.0, 3.0),
             listOf(0.7, 1.0, 3.0, 1.5, 1.0, 1.2, 4.0, 1.0),
             R.string.soundpeats_eq_preset_acg,
         ),
         HIFI(
-            -2.0,
             listOf(62, 250, 600, 1000, 2800, 4000, 8000, 14000),
             listOf(2.0, -5.0, -4.0, 1.0, 4.0, -5.0, 3.0, 8.0),
             listOf(0.7, 2.0, 1.0, 1.0, 1.0, 4.0, 2.0, 1.5),
             R.string.soundpeats_eq_preset_hifi,
         ),
         BOOK_WHISPER(
-            -2.0,
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(-12.0, 2.0, 2.0, 1.0, 1.0, 4.0, 2.0, -12.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),

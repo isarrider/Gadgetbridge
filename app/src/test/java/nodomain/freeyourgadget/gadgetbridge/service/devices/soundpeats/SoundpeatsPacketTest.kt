@@ -17,6 +17,8 @@
 package nodomain.freeyourgadget.gadgetbridge.service.devices.soundpeats
 
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsAncMode
+import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsCustomEqStore
+import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsEqImport
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsEqPresets
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -200,7 +202,7 @@ class SoundpeatsPacketTest {
             EqBand(index = 3, freqHz = 180, gainDb = -9.4, q = 1.0),
         )
 
-        val frames = SoundpeatsProtocol.encodeEqV2(-2.0, bands)
+        val frames = SoundpeatsProtocol.encodeEqV2(SoundpeatsEqPresets.MASTER_GAIN_DB, bands)
 
         assertEquals(3, frames.size)
         frames.forEachIndexed { i, frame ->
@@ -233,13 +235,57 @@ class SoundpeatsPacketTest {
             "ff04000a001d0e021010ff88a41000d20199",
         )
 
-        val preset = SoundpeatsEqPresets.Preset.CLASSIC
-        val frames = SoundpeatsProtocol.encodeEqV2(preset.masterGainDb, preset.toBands())
+        val frames = SoundpeatsProtocol.encodeEqV2(
+            SoundpeatsEqPresets.MASTER_GAIN_DB,
+            SoundpeatsEqPresets.Preset.CLASSIC.toBands(),
+        )
 
         assertEquals(expected.size, frames.size)
         expected.forEachIndexed { i, hex ->
             val actual = frames[i].joinToString("") { "%02x".format(it) }
             assertEquals("frame $i", hex, actual)
         }
+    }
+
+    @Test
+    fun testCustomEqExpandsToDeviceSlots() {
+        val gains = listOf(1.0, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0)
+
+        val bands = SoundpeatsCustomEqStore.expandGains(gains)
+
+        assertEquals(16, bands.size)
+        // slots are one-based and follow the device table
+        assertEquals((1..16).toList(), bands.map { it.index })
+        assertEquals(SoundpeatsEqPresets.SLOT_FREQUENCIES, bands.map { it.freqHz })
+        // the eight edited bands land on their own slot
+        SoundpeatsCustomEqStore.EDIT_BANDS.forEachIndexed { i, frequency ->
+            val band = bands.first { it.freqHz == frequency && it.gainDb == gains[i] }
+            assertEquals(gains[i], band.gainDb, 0.001)
+        }
+        // everything else is sent flat
+        assertEquals(0.0, bands.first { it.freqHz == 20 }.gainDb, 0.001)
+        assertEquals(SoundpeatsEqPresets.FILLER_Q, bands.first { it.freqHz == 20 }.q, 0.001)
+    }
+
+    @Test
+    fun testImportParametricEq() {
+        val text = """
+            Preamp: -6.0 dB
+            Filter 1: ON PK Fc 62 Hz Gain 4.0 dB Q 0.70
+            Filter 2: ON PK Fc 250 Hz Gain -3.0 dB Q 1.00
+            Filter 3: ON LSC Fc 8000 Hz Gain 2.5 dB Q 0.70
+        """.trimIndent()
+
+        val filters = SoundpeatsEqImport.parse(text)
+        assertEquals(3, filters.size)
+        assertEquals(62.0, filters[0].frequencyHz, 0.01)
+        assertEquals(4.0, filters[0].gainDb, 0.01)
+
+        val gains = SoundpeatsEqImport.toBandGains(filters)
+        assertEquals(8, gains.size)
+        // bands are 62 / 125 / 250 / 500 / 1k / 2k / 4k / 8k
+        assertEquals(4.0, gains[0], 0.01)
+        assertEquals(-3.0, gains[2], 0.01)
+        assertEquals(2.5, gains[7], 0.01)
     }
 }
