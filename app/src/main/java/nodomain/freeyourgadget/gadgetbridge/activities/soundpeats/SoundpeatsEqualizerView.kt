@@ -201,6 +201,8 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                // dragging a point must not scroll the screen
+                parent?.requestDisallowInterceptTouchEvent(true)
                 val index = (((event.x - left) / cellWidth).toInt()).coerceIn(0, gains.size - 1)
                 if (abs(event.x - (left + cellWidth * (index + 0.5f))) > cellWidth) {
                     return false
@@ -215,7 +217,8 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (draggingBand >= 0) {
                     draggingBand = -1
-                    performClick()
+                    parent?.requestDisallowInterceptTouchEvent(false)
+                performClick()
                 onGainsChanged?.invoke(gains.toList(), true)
                     performClick()
                 }

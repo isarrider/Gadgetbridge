@@ -29,6 +29,7 @@ import androidx.appcompat.app.AlertDialog
 import com.google.android.material.button.MaterialButton
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.R
+import kotlin.math.roundToInt
 import nodomain.freeyourgadget.gadgetbridge.activities.AbstractGBActivity
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_DRAFT
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_MASTER
@@ -52,7 +53,7 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
     private lateinit var equalizerView: SoundpeatsEqualizerView
     private lateinit var masterSeekBar: SeekBar
     private lateinit var masterLabel: TextView
-    private val bandSeekBars = mutableListOf<SeekBar>()
+    private val bandSliders = mutableListOf<SoundpeatsBandSlider>()
     private val bandValueLabels = mutableListOf<TextView>()
     private var syncingSliders = false
 
@@ -90,9 +91,8 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
                 if (!syncingSliders) {
                     syncingSliders = true
                     gains.forEachIndexed { index, gain ->
-                        bandSeekBars.getOrNull(index)?.progress =
-                            (gain - SoundpeatsCustomEqStore.MIN_GAIN_DB).toInt()
-                        bandValueLabels.getOrNull(index)?.text = formatDb(gain.toInt())
+                        bandSliders.getOrNull(index)?.value = gain.toFloat()
+                        bandValueLabels.getOrNull(index)?.text = formatDb(gain.roundToInt())
                     }
                     syncingSliders = false
                 }
@@ -115,61 +115,71 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
         )
 
         val gains = readGains()
+        val strip = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.BOTTOM
+            setPadding(0, 0, 0, (18 * density).toInt())
+        }
+
         SoundpeatsCustomEqStore.EDIT_BANDS.forEachIndexed { index, frequency ->
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                minimumHeight = (44 * density).toInt()
-                setPadding(0, (2 * density).toInt(), 0, (2 * density).toInt())
+            val column = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                setPadding((6 * density).toInt(), 0, (6 * density).toInt(), 0)
             }
 
-            row.addView(
-                TextView(this).apply {
-                    text = SoundpeatsCustomEqStore.bandLabel(frequency)
-                    width = (56 * density).toInt()
-                }
-            )
-
             val valueLabel = TextView(this).apply {
-                text = formatDb(gains.getOrElse(index) { 0.0 }.toInt())
-                gravity = Gravity.END
-                width = (56 * density).toInt()
+                text = formatDb(gains.getOrElse(index) { 0.0 }.roundToInt())
+                gravity = Gravity.CENTER
             }
             bandValueLabels.add(valueLabel)
 
-            val seekBar = SeekBar(this).apply {
-                max = (SoundpeatsCustomEqStore.MAX_GAIN_DB - SoundpeatsCustomEqStore.MIN_GAIN_DB).toInt()
-                progress = (gains.getOrElse(index) { 0.0 } - SoundpeatsCustomEqStore.MIN_GAIN_DB).toInt()
-                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        if (!fromUser || syncingSliders) {
-                            return
-                        }
-                        val gain = SoundpeatsCustomEqStore.MIN_GAIN_DB + progress
-                        valueLabel.text = formatDb(gain.toInt())
+            val slider = SoundpeatsBandSlider(this).apply {
+                minDb = SoundpeatsCustomEqStore.MIN_GAIN_DB.toFloat()
+                maxDb = SoundpeatsCustomEqStore.MAX_GAIN_DB.toFloat()
+                value = gains.getOrElse(index) { 0.0 }.toFloat()
+                layoutParams = LinearLayout.LayoutParams(
+                    (32 * density).toInt(),
+                    (160 * density).toInt(),
+                )
+                onValueChanged = { value, released ->
+                    if (!syncingSliders) {
+                        valueLabel.text = formatDb(value.roundToInt())
                         val updated = equalizerView.getGains().toMutableList()
-                        updated[index] = gain
+                        updated[index] = value.toDouble()
                         syncingSliders = true
                         equalizerView.setGains(updated)
                         syncingSliders = false
                     }
-
-                    override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-
-                    override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                    if (released) {
                         writeGains(equalizerView.getGains())
                         applyDraft()
                     }
-                })
+                }
             }
-            bandSeekBars.add(seekBar)
-            row.addView(
-                seekBar,
-                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f),
+            bandSliders.add(slider)
+
+            column.addView(
+                TextView(this).apply {
+                    text = SoundpeatsCustomEqStore.bandLabel(frequency)
+                    gravity = Gravity.CENTER
+                }
             )
-            row.addView(valueLabel)
-            root.addView(row)
+            column.addView(slider)
+            column.addView(valueLabel)
+            strip.addView(column)
         }
+
+        root.addView(
+            android.widget.HorizontalScrollView(this).apply {
+                // keep the scrollbar always visible: it can be dragged, so the sliders below it are
+                // not touched by accident
+                isHorizontalScrollBarEnabled = true
+                isScrollbarFadingEnabled = false
+                setPadding(0, 0, 0, (30 * density).toInt())
+                addView(strip)
+            }
+        )
 
         root.addView(
             TextView(this).apply {
@@ -203,6 +213,15 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
         root.addView(masterSeekBar)
 
         root.addView(
+            android.view.View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    (24 * density).toInt(),
+                )
+            }
+        )
+
+        root.addView(
             MaterialButton(this).apply {
                 text = getString(R.string.soundpeats_custom_eq_save)
                 setOnClickListener { promptForName() }
@@ -223,9 +242,9 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
                     val flat = List(SoundpeatsCustomEqStore.EDIT_BANDS.size) { 0.0 }
                     equalizerView.setGains(flat)
                     syncingSliders = true
-                    bandSeekBars.forEachIndexed { index, seekBar ->
-                        seekBar.progress = (flat[index] - SoundpeatsCustomEqStore.MIN_GAIN_DB).toInt()
-                        bandValueLabels.getOrNull(index)?.text = formatDb(flat[index].toInt())
+                    bandSliders.forEachIndexed { index, slider ->
+                        slider.value = flat[index].toFloat()
+                        bandValueLabels.getOrNull(index)?.text = formatDb(flat[index].roundToInt())
                     }
                     syncingSliders = false
                     writeGains(flat)
