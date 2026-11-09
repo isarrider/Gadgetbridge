@@ -63,8 +63,10 @@ public class SleepDetailsParser extends XiaomiActivityParser {
                 headerSize = 1;
                 break;
             case 5:
-            case 6:
                 headerSize = 2;
+                break;
+            case 6:
+                headerSize = 3;
                 break;
             default:
                 LOG.warn("Unknown sleep details version {}", fileId.getVersion());
@@ -82,72 +84,28 @@ public class SleepDetailsParser extends XiaomiActivityParser {
         }
 
         final byte[] header = new byte[headerSize];
-        if (version != 6) {
-            buf.get(header);
-        }
+        buf.get(header);
 
         int isAwake;
         int bedTime;
         int wakeupTime;
         Long intoBedTime = null;
 
-        if (version == 6) {
-            // Version 6 (observed on Xiaomi Watch S5) has a fixed-size header without a section
-            // bitmask, and orders the fields differently from earlier versions:
-            //   u16 chunk identifier, u16 header length descriptor,
-            //   u32 bedTime, u32 wakeupTime, u8 isAwake,
-            //   9 bytes of unverified metadata (same role as in version 5),
-            //   u32 into-bed time, u32 wakeupTime (redundant),
-            //   24 reserved bytes (observed as zeros in all version 6 samples),
-            // followed by heart-rate samples (unit, count, firstRecordTime, u8 samples).
-            if (buf.remaining() < 54) {
-                LOG.warn("Truncated sleep details version 6 header");
-                return false;
-            }
-            final int chunkId = buf.getShort() & 0xffff;
-            final int v6HeaderLength = buf.getShort() & 0xffff;
-            LOG.debug("Sleep v6 header: chunkId={}, headerLength={}", chunkId, v6HeaderLength);
-            bedTime = buf.getInt();
-            wakeupTime = buf.getInt();
-            isAwake = buf.get() & 0xff;
-            buf.get(new byte[9]); // unverified metadata, same role as in version 5
-            intoBedTime = buf.getInt() * 1000L; // a few minutes before bedTime
-            buf.getInt(); // wakeupTime2, redundant with wakeupTime
-            buf.get(new byte[24]); // reserved, observed as zeros in all version 6 samples
+        isAwake = buf.get() & 0xff; // 0/1 - more correctly this would be !isSleepFinish
+        headerIdx++;
 
-            // Heart-rate samples have the same shape as in earlier versions, but are always
-            // present instead of being gated by a header bitmask
-            if (buf.remaining() < 4) {
-                LOG.warn("Truncated sleep details version 6 heart-rate section");
-                return false;
+        bedTime = buf.getInt();
+        headerIdx++;
+
+        wakeupTime = buf.getInt();
+        headerIdx++;
+
+        int sleepQuality = -1;
+        if (fileId.getVersion() >= 4) {
+            if (validData(header, headerIdx)) {
+                sleepQuality = buf.get() & 0xff;
             }
-            buf.getShort(); // time unit (observed 60)
-            final int heartRateCount = buf.getShort() & 0xffff;
-            if (heartRateCount > 0) {
-                if (buf.remaining() < 4 + heartRateCount) {
-                    LOG.warn("Truncated sleep details version 6 heart-rate samples");
-                    return false;
-                }
-                buf.getInt(); // firstRecordTime
-                buf.position(buf.position() + heartRateCount); // skip count u8 samples
-            }
-        } else {
-            isAwake = buf.get() & 0xff; // 0/1 - more correctly this would be !isSleepFinish
             headerIdx++;
-
-            bedTime = buf.getInt();
-            headerIdx++;
-
-            wakeupTime = buf.getInt();
-            headerIdx++;
-
-            int sleepQuality = -1;
-            if (fileId.getVersion() >= 4) {
-                if (validData(header, headerIdx)) {
-                    sleepQuality = buf.get() & 0xff;
-                }
-                headerIdx++;
-            }
         }
 
         // note on RR-intervals (msg type 1) on Xiaomi band 9, FW 2.3.93, HW M2345B1:
@@ -188,9 +146,19 @@ public class SleepDetailsParser extends XiaomiActivityParser {
             sample.setIntoBedTime(intoBedTime);
         }
 
+        if (version >= 6) {
+            if (buf.remaining() < 24) {
+                LOG.warn("Truncated sleep details version 6 extended header");
+                return false;
+            }
+            buf.get(new byte[24]); // unknown, all zeros in the seen v6 files
+            // Bits 8..18 are clear, and bit 19 is set in all seen v6 headers, which
+            // contain only heart rate samples
+            headerIdx = 19;
+        }
+
         // Heart rate samples
-        // Version 6 carries them in its fixed header instead (parsed above)
-        if (version != 6 && validData(header, headerIdx)) {
+        if (validData(header, headerIdx)) {
             LOG.debug("Heart rate samples from offset {}", Integer.toHexString(buf.position()));
             final int unit = buf.getShort(); // Time unit (i.e sample rate)
             final int count = buf.getShort();
@@ -209,8 +177,7 @@ public class SleepDetailsParser extends XiaomiActivityParser {
         headerIdx++;
 
         // SpO2 samples
-        // Not present in the version 6 fixed header
-        if (version != 6 && validData(header, headerIdx)) {
+        if (validData(header, headerIdx)) {
             LOG.debug("SpO₂ samples from offset {}", Integer.toHexString(buf.position()));
             final int unit = buf.getShort(); // Time unit (i.e sample rate)
             final int count = buf.getShort();
@@ -229,8 +196,7 @@ public class SleepDetailsParser extends XiaomiActivityParser {
         headerIdx++;
 
         // snore samples
-        // Not present in the version 6 fixed header
-        if (fileId.getVersion() >= 3 && version != 6) {
+        if (fileId.getVersion() >= 3) {
             if (validData(header, headerIdx)) {
                 LOG.debug("Snore level samples from offset {}", Integer.toHexString(buf.position()));
                 final int unit = buf.getShort(); // Time unit (i.e sample rate)

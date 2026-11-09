@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.imp
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Before;
@@ -95,7 +96,7 @@ public class SleepDetailsParserTest extends TestBase {
         final byte[] bytes = v6File(
                 bedTime,
                 wakeupTime,
-                bedTime - 300,
+                0,
                 new int[][]{
                         {0, 3}, // awake
                         {1, 25}, // light
@@ -127,7 +128,8 @@ public class SleepDetailsParserTest extends TestBase {
         final XiaomiSleepTimeSample summary = singleSummary();
         assertEquals(bedTime * 1000L, summary.getTimestamp());
         assertEquals(Long.valueOf(wakeupTime * 1000L), summary.getWakeupTime());
-        assertEquals(Long.valueOf((bedTime - 300) * 1000L), summary.getIntoBedTime());
+        // version 6 carries no into-bed time in the parsed header layout
+        assertNull(summary.getIntoBedTime());
         assertFalse(summary.getIsAwake());
     }
 
@@ -140,7 +142,7 @@ public class SleepDetailsParserTest extends TestBase {
         final byte[] bytes = v6File(
                 bedTime,
                 wakeupTime,
-                bedTime - 120,
+                1,
                 new int[][]{{1, 10}, {2, 5}, {3, 15}}
         );
 
@@ -155,11 +157,12 @@ public class SleepDetailsParserTest extends TestBase {
         final XiaomiSleepTimeSample summary = singleSummary();
         assertEquals(bedTime * 1000L, summary.getTimestamp());
         assertEquals(Long.valueOf(wakeupTime * 1000L), summary.getWakeupTime());
+        assertTrue(summary.getIsAwake());
     }
 
     @Test
     public void v6TruncatedHeaderIsRejected() {
-        final byte[] bytes = new byte[28]; // fileId + padding + 20 bytes, fixed header needs 54
+        final byte[] bytes = new byte[28]; // fileId + padding + 20 bytes, needs 3-byte header + 24-byte v6 block
         final ByteBuffer buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
         buf.putInt(1700000000);
         buf.put((byte) 8);
@@ -170,21 +173,29 @@ public class SleepDetailsParserTest extends TestBase {
     }
 
     @Test
-    public void v6TruncatedHeartRateSamplesAreRejected() {
-        final ByteBuffer buf = v6FixedHeader(1700000000, 1700000000 + 60 * 60, 1700000000 - 300);
-        buf.order(ByteOrder.LITTLE_ENDIAN);
-        buf.putShort((short) 60); // unit
-        buf.putShort((short) 500); // count, but only 10 sample bytes follow
-        for (int i = 0; i < 10; i++) {
-            buf.put((byte) 70);
-        }
+    public void v6TruncatedExtendedHeaderIsRejected() {
+        // standard v6 fields, but only 2 of the 24 extended-header bytes present
+        final ByteBuffer buf = ByteBuffer.allocate(64).order(ByteOrder.LITTLE_ENDIAN);
+        buf.putInt(1700000000); // fileId timestamp
+        buf.put((byte) 8); // timezone
+        buf.put((byte) 6); // version
+        buf.put((byte) 0x21); // activity / sleep / summary
+        buf.put((byte) 0); // padding
+        buf.put((byte) 0xdf); // 3-byte header, bit 3 (sleep quality) set
+        buf.put((byte) 0x00);
+        buf.put((byte) 0x10); // bit 19 (heart rate samples) set
+        buf.put((byte) 1); // isAwake
+        buf.putInt(1700000000); // bedTime
+        buf.putInt(1700000000 + 3600); // wakeupTime
+        buf.put((byte) 80); // sleep quality
+        buf.putShort((short) 60); // only 2 of the 24 extended-header bytes present
 
         assertFalse(new SleepDetailsParser().parse(getContext(), gbDevice, sleepFileId(6, 1700000000), trim(buf)));
     }
 
     @Test
     public void v6TruncatedStagePacketIsRejectedWithoutThrowing() {
-        final ByteBuffer buf = v6FixedHeader(1700000000, 1700000000 + 60 * 60, 1700000000 - 300);
+        final ByteBuffer buf = v6Header(1700000000, 1700000000 + 60 * 60, 0);
         buf.order(ByteOrder.LITTLE_ENDIAN);
         buf.putShort((short) 60); // unit
         buf.putShort((short) 0); // no heart-rate samples
@@ -257,8 +268,9 @@ public class SleepDetailsParserTest extends TestBase {
         final XiaomiSleepTimeSample summary = singleSummary();
         assertEquals(bedTime * 1000L, summary.getTimestamp());
         assertEquals(Long.valueOf(wakeupTime * 1000L), summary.getWakeupTime());
-        assertEquals(Long.valueOf(1788660960L * 1000L), summary.getIntoBedTime()); // 6 minutes before bed time
-        assertFalse(summary.getIsAwake());
+        // version 6 carries no into-bed time in the parsed header layout
+        assertNull(summary.getIntoBedTime());
+        assertTrue(summary.getIsAwake()); // isAwake byte is 1 in the capture
     }
 
     @Test
@@ -287,8 +299,9 @@ public class SleepDetailsParserTest extends TestBase {
         final XiaomiSleepTimeSample summary = singleSummary();
         assertEquals(bedTime * 1000L, summary.getTimestamp());
         assertEquals(Long.valueOf(wakeupTime * 1000L), summary.getWakeupTime());
-        assertEquals(Long.valueOf(1788730140L * 1000L), summary.getIntoBedTime()); // 9 minutes before bed time
-        assertFalse(summary.getIsAwake());
+        // version 6 carries no into-bed time in the parsed header layout
+        assertNull(summary.getIntoBedTime());
+        assertTrue(summary.getIsAwake()); // isAwake byte is 1 in the capture
     }
 
     private XiaomiActivityFileId sleepFileId(final int version, final int timestampSeconds) {
@@ -340,8 +353,8 @@ public class SleepDetailsParserTest extends TestBase {
         }
     }
 
-    private static byte[] v6File(final int bedTime, final int wakeupTime, final int intoBedTime, final int[][] words) {
-        final ByteBuffer buf = v6FixedHeader(bedTime, wakeupTime, intoBedTime);
+    private static byte[] v6File(final int bedTime, final int wakeupTime, final int isAwake, final int[][] words) {
+        final ByteBuffer buf = v6Header(bedTime, wakeupTime, isAwake);
         buf.order(ByteOrder.LITTLE_ENDIAN);
         buf.putShort((short) 60); // heart-rate unit
         buf.putShort((short) 4); // heart-rate count
@@ -352,22 +365,23 @@ public class SleepDetailsParserTest extends TestBase {
         return withCrc(bytes);
     }
 
-    private static ByteBuffer v6FixedHeader(final int bedTime, final int wakeupTime, final int intoBedTime) {
+    private static ByteBuffer v6Header(final int bedTime, final int wakeupTime, final int isAwake) {
         final ByteBuffer buf = ByteBuffer.allocate(512).order(ByteOrder.LITTLE_ENDIAN);
         buf.putInt(bedTime); // fileId timestamp
         buf.put((byte) 8); // timezone, 15-minute blocks
         buf.put((byte) 6); // version
         buf.put((byte) 0x21); // activity / sleep / summary
         buf.put((byte) 0); // padding
-        buf.putShort((short) 223); // chunk identifier, as observed
-        buf.putShort((short) 272); // header length descriptor, as observed
+        // 3-byte section bitmask, as observed in real v6 captures:
+        // bit 3 (sleep quality) and bit 19 (heart rate samples) set
+        buf.put((byte) 0xdf);
+        buf.put((byte) 0x00);
+        buf.put((byte) 0x10);
+        buf.put((byte) isAwake);
         buf.putInt(bedTime);
         buf.putInt(wakeupTime);
-        buf.put((byte) 0); // isAwake
-        buf.put(new byte[9]); // unverified metadata
-        buf.putInt(intoBedTime);
-        buf.putInt(wakeupTime); // wakeupTime2, redundant
-        buf.put(new byte[24]); // reserved
+        buf.put((byte) 80); // sleep quality, consumed when bit 3 is set
+        buf.put(new byte[24]); // unknown extended header, all zeros in the seen v6 files
         return buf;
     }
 
