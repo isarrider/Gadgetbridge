@@ -43,6 +43,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryConfig
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundpeats.SoundpeatsQ3ProSupport
+import androidx.core.content.edit
 
 /**
  * SOUNDPEATS Q3 Pro (vendor model id `S12`).
@@ -216,9 +217,9 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
             ?: return false
 
         SoundpeatsCustomEqStore.delete(prefs, id)
-        prefs.edit()
-            .putString(PREF_SOUNDPEATS_EQ_PRESET, SoundpeatsEqPresets.Preset.CLASSIC.name.lowercase(Locale.ROOT))
-            .apply()
+        prefs.edit {
+            putString(PREF_SOUNDPEATS_EQ_PRESET, SoundpeatsEqPresets.Preset.CLASSIC.name.lowercase(Locale.ROOT))
+        }
         GBApplication.deviceService(device).onSendConfiguration(PREF_SOUNDPEATS_EQ_PRESET)
         return true
     }

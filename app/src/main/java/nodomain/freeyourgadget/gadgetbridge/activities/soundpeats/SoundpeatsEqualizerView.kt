@@ -90,6 +90,7 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
         strokeJoin = Paint.Join.ROUND
         strokeCap = Paint.Cap.ROUND
     }
+    private val curvePath = Path()
     private val pointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = accentColor
         style = Paint.Style.FILL
@@ -165,13 +166,13 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
         }
 
         // curve + points
-        val path = Path()
+        curvePath.reset()
         gains.forEachIndexed { index, gain ->
             val x = left + cellWidth * (index + 0.5f)
             val y = yForDb(gain.toFloat(), top, plotHeight)
-            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            if (index == 0) curvePath.moveTo(x, y) else curvePath.lineTo(x, y)
         }
-        canvas.drawPath(path, linePaint)
+        canvas.drawPath(curvePath, linePaint)
         gains.forEachIndexed { index, gain ->
             val x = left + cellWidth * (index + 0.5f)
             val y = yForDb(gain.toFloat(), top, plotHeight)
@@ -183,6 +184,11 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
             val x = left + cellWidth * (index + 0.5f)
             canvas.drawText(label, x, height - 5f * density, labelPaint)
         }
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -208,7 +214,8 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (draggingBand >= 0) {
                     draggingBand = -1
-                    onGainsChanged?.invoke(gains.toList(), true)
+                    performClick()
+                onGainsChanged?.invoke(gains.toList(), true)
                     performClick()
                 }
                 return true

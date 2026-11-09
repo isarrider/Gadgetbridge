@@ -39,6 +39,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsEqPrese
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.util.GB
 import nodomain.freeyourgadget.gadgetbridge.util.kotlin.getParcelableCompat
+import androidx.core.content.edit
 
 /**
  * Graphical editor for a Soundpeats custom equalizer profile.
@@ -244,17 +245,17 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
         bandKeys.map { prefs().getInt(it, 0).toDouble() }
 
     private fun writeGains(gains: List<Double>) {
-        val editor = prefs().edit()
-        gains.forEachIndexed { index, gain ->
-            editor.putInt(bandKeys[index], gain.toInt())
+        prefs().edit {
+            gains.forEachIndexed { index, gain ->
+                putInt(bandKeys[index], gain.toInt())
+            }
         }
-        editor.apply()
     }
 
     private fun readMaster(): Int = prefs().getInt(PREF_SOUNDPEATS_EQ_MASTER, SoundpeatsEqPresets.MASTER_GAIN_DB.toInt())
 
     private fun writeMaster(value: Int) {
-        prefs().edit().putInt(PREF_SOUNDPEATS_EQ_MASTER, value).apply()
+        prefs().edit { putInt(PREF_SOUNDPEATS_EQ_MASTER, value) }
     }
 
     private fun masterFromProgress(progress: Int): Int =
@@ -284,9 +285,9 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
                     masterGainDb = readMaster().toDouble(),
                     gains = equalizerView.getGains(),
                 )
-                prefs().edit()
-                    .putString(PREF_SOUNDPEATS_EQ_PRESET, SoundpeatsCustomEqStore.customValue(profile.id))
-                    .apply()
+                prefs().edit {
+                    putString(PREF_SOUNDPEATS_EQ_PRESET, SoundpeatsCustomEqStore.customValue(profile.id))
+            }
                 GBApplication.deviceService(device).onSendConfiguration(PREF_SOUNDPEATS_EQ_PRESET)
                 GB.toast(this, getString(R.string.soundpeats_custom_eq_saved, name), Toast.LENGTH_SHORT, GB.INFO)
             }

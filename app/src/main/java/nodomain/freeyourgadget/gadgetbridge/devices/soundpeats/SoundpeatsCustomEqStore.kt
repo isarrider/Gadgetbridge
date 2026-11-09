@@ -21,6 +21,7 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.soundpeats.EqBand
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import androidx.core.content.edit
 
 /**
  * User-created equalizer profiles.
@@ -115,7 +116,7 @@ object SoundpeatsCustomEqStore {
                 }
             )
         }
-        prefs.edit().putString(PREF_KEY, array.toString()).apply()
+        prefs.edit { putString(PREF_KEY, array.toString()) }
     }
 
     /** Spreads the eight edited gains over the 16 device slots. */
