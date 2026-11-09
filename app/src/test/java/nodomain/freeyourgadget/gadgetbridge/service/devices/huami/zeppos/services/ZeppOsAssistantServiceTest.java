@@ -201,6 +201,73 @@ public class ZeppOsAssistantServiceTest extends TestBase {
         assertEquals(3, received.size());
     }
 
+    private int countWrites(final byte[] expected) {
+        // Unlike capturedWrites(), there may be no writes at all
+        final ArgumentCaptor<byte[]> captor = ArgumentCaptor.forClass(byte[].class);
+        verify(support, org.mockito.Mockito.atLeast(0))
+                .writeToChunked2021(anyString(), eq(ZeppOsAssistantService.ENDPOINT_ALEXA), captor.capture(), anyBoolean());
+        int n = 0;
+        for (final byte[] write : captor.getAllValues()) {
+            if (java.util.Arrays.equals(expected, write)) n++;
+        }
+        return n;
+    }
+
+    @Test
+    public void speechDetectedIsSentOnceWhenTheWatchAsksForVoiceDetection() {
+        // Zepp Flow (Amazfit Bip 6): record start with VAD_MODE_VOICE, round 1
+        service.handlePayload(startPayload());
+        service.handlePayload(new byte[]{0x0c, 0x00, 0x01, 0x00});
+        service.handlePayload(voicePayload(new byte[]{0x48, 0x01}));
+        service.handlePayload(voicePayload(new byte[]{0x48, 0x02}));
+        shadowOf(Looper.getMainLooper()).idle();
+
+        assertEquals(1, countWrites(new byte[]{0x0d}));
+    }
+
+    @Test
+    public void noSpeechDetectedWithoutVoiceDetectionMode() {
+        service.handlePayload(startPayload());
+        service.handlePayload(new byte[]{0x0c, 0x01, 0x01, 0x00}); // VAD_MODE_SKIP
+        service.handlePayload(voicePayload(new byte[]{0x48, 0x01}));
+        // Older watches (Band 7) never send a record start
+        service.handlePayload(startPayload());
+        service.handlePayload(voicePayload(new byte[]{0x48, 0x01}));
+        shadowOf(Looper.getMainLooper()).idle();
+
+        assertEquals(0, countWrites(new byte[]{0x0d}));
+    }
+
+    @Test
+    public void recordEndByTheWatchEndsTheVoiceSession() {
+        configureVoiceService();
+        service.handlePayload(startPayload());
+        service.handlePayload(new byte[]{0x0c, 0x00, 0x01, 0x00});
+        service.handlePayload(voicePayload(new byte[]{0x48, 0x01}));
+        service.handlePayload(new byte[]{0x0e, 0x02}); // USER_FINISH_SPEAK
+        shadowOf(Looper.getMainLooper()).idle();
+
+        assertEquals(2, received.size());
+        assertEquals(ZeppOsVoiceServiceBridge.MSG_VOICE_END, received.get(1).what);
+
+        // QUIT_BY_USER and the CMD_END that follow do not end it twice
+        service.handlePayload(new byte[]{0x0e, 0x01});
+        service.handlePayload(new byte[]{0x02});
+        shadowOf(Looper.getMainLooper()).idle();
+        assertEquals(2, received.size());
+    }
+
+    @Test
+    public void quitByUserAloneDoesNotEndTheVoiceSession() {
+        configureVoiceService();
+        service.handlePayload(startPayload());
+        service.handlePayload(voicePayload(new byte[]{0x48, 0x01}));
+        service.handlePayload(new byte[]{0x0e, 0x01});
+        shadowOf(Looper.getMainLooper()).idle();
+
+        assertEquals(1, received.size());
+    }
+
     @Test
     public void isConfigured() {
         assertTrue(ZeppOsVoiceServiceBridge.isConfigured(VOICE_PACKAGE, VOICE_CLASS));

@@ -74,6 +74,9 @@ public class ZeppOsAssistantService extends AbstractZeppOsService implements Zep
     private static final byte CMD_REPLY_SIMPLE = 0x09;
     private static final byte CMD_REPLY_VOICE = 0x0a;
     private static final byte CMD_REPLY_VOICE_MORE = 0x0b;
+    private static final byte CMD_RECORD_START = 0x0c;
+    private static final byte CMD_SPEECH_DETECTED = 0x0d;
+    private static final byte CMD_RECORD_END = 0x0e;
     private static final byte CMD_ERROR = 0x0f;
     private static final byte CMD_LANGUAGES_REQUEST = 0x10;
     private static final byte CMD_LANGUAGES_RESPONSE = 0x11;
@@ -85,6 +88,18 @@ public class ZeppOsAssistantService extends AbstractZeppOsService implements Zep
     private static final byte COMPLEX_REPLY_WEATHER = 0x01;
     private static final byte COMPLEX_REPLY_REMINDER = 0x02;
     private static final byte COMPLEX_REPLY_RICH_TEXT = 0x06;
+
+    /**
+     * With VAD_MODE_VOICE, the phone is expected to run voice activity detection and send {@link #CMD_SPEECH_DETECTED} once it hears speech, or the
+     * watch stops recording after ~6.5s with {@link #RECORD_END_TIMEOUT} (Zepp Flow).
+     */
+    private static final byte VAD_MODE_VOICE = 0x00;
+
+    /** {@link #CMD_RECORD_END} reasons */
+    private static final byte RECORD_END_NORMAL = 0x00;
+    private static final byte RECORD_END_QUIT_BY_USER = 0x01;
+    private static final byte RECORD_END_USER_FINISH_SPEAK = 0x02;
+    private static final byte RECORD_END_TIMEOUT = 0x03;
 
     private static final byte ERROR_NO_INTERNET = 0x03;
     private static final byte ERROR_UNAUTHORIZED = 0x06;
@@ -109,6 +124,8 @@ public class ZeppOsAssistantService extends AbstractZeppOsService implements Zep
      */
     private static final long RECORDING_LIMIT_MS = 14_000;
     private boolean recordingLimitScheduled;
+    /** The watch asked to detect speech, and we did not tell it yet that we heard some */
+    private boolean speechDetectionPending;
     private final Runnable recordingLimit = () -> {
         LOG.info("Recording limit of {}ms reached", RECORDING_LIMIT_MS);
         sendCmdTriggered(); // the watch stops listening and waits for the reply
@@ -143,6 +160,12 @@ public class ZeppOsAssistantService extends AbstractZeppOsService implements Zep
                 break;
             case CMD_VOICE_DATA:
                 handleVoiceData(payload);
+                break;
+            case CMD_RECORD_START:
+                handleRecordStart(payload);
+                break;
+            case CMD_RECORD_END:
+                handleRecordEnd(payload);
                 break;
             case CMD_LANGUAGES_RESPONSE:
                 handleLanguagesResponse(payload);
@@ -434,6 +457,7 @@ public class ZeppOsAssistantService extends AbstractZeppOsService implements Zep
         final int sampleRate = 16000; // FIXME how to detect sample rate?
 
         recordingLimitScheduled = false;
+        speechDetectionPending = false;
         handler.removeCallbacks(recordingLimit);
         if (startVoiceService()) {
             // The external voice service gets the raw opus frames, no need to decode or play them
@@ -509,8 +533,47 @@ public class ZeppOsAssistantService extends AbstractZeppOsService implements Zep
         }
     }
 
+    private void handleRecordStart(final byte[] payload) {
+        final byte vadMode = payload.length > 1 ? payload[1] : -1;
+        final int roundId = payload.length > 3 ? BLETypeConversions.toUint16(payload[2], payload[3]) : -1;
+        LOG.info("Assistant recording started: vadMode={}, roundId={}", vadMode, roundId);
+        speechDetectionPending = vadMode == VAD_MODE_VOICE;
+    }
+
+    private void handleRecordEnd(final byte[] payload) {
+        final byte reason = payload.length > 1 ? payload[1] : -1;
+        LOG.info("Assistant recording ended, reason={}", reason);
+        speechDetectionPending = false;
+        switch (reason) {
+            case RECORD_END_USER_FINISH_SPEAK:
+            case RECORD_END_TIMEOUT:
+            case RECORD_END_NORMAL:
+                // The watch stopped recording by itself and now waits for the reply
+                handler.removeCallbacks(recordingLimit);
+                if (isVoiceServiceActive()) {
+                    voiceServiceBridge.end();
+                }
+                break;
+            case RECORD_END_QUIT_BY_USER:
+                // The assistant was closed, CMD_END follows
+                break;
+        }
+    }
+
+    /**
+     * Without voice activity detection of our own, treat the first voice data as speech, so the watch keeps
+     * recording until the user finishes (or our {@link #RECORDING_LIMIT_MS}).
+     */
+    private void sendSpeechDetectedIfPending() {
+        if (speechDetectionPending) {
+            speechDetectionPending = false;
+            write("assistant speech detected", CMD_SPEECH_DETECTED);
+        }
+    }
+
     public void handleVoiceData(final byte[] payload) {
         LOG.info("Got {} bytes of voice data ({})", payload.length, BLETypeConversions.toUint32(payload, 1));
+        sendSpeechDetectedIfPending();
 
         if (DUMP_RAW_VOICE && rawVoiceOutputStream != null) {
             try {
