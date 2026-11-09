@@ -141,7 +141,7 @@ class SoundpeatsQ3ProSupport : AbstractHeadphoneBTBRDeviceSupport(LOG, BUFFER_SI
                     prefs.getInt(SoundpeatsCustomEqStore.bandKey(it), 0).toDouble()
                 }
                 val master = prefs.getInt(PREF_SOUNDPEATS_EQ_MASTER, SoundpeatsEqPresets.MASTER_GAIN_DB.toInt()).toDouble()
-                sendEqFrames(master, SoundpeatsCustomEqStore.expandGains(gains))
+                sendEqFrames(master, SoundpeatsCustomEqStore.toBands(gains))
             }
 
             PREF_SOUNDPEATS_EQ_PRESET -> {

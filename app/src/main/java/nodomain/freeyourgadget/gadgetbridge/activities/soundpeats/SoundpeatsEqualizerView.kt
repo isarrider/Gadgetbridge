@@ -21,6 +21,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
+import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsCustomEqStore
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.content.ContextCompat
@@ -40,7 +41,6 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : View(context, attrs) {
     companion object {
-        private const val BAND_COUNT = 8
         private const val dB_MIN = -12f
         private const val dB_MAX = 12f
         private const val GRID_STEP_DB = 6f
@@ -49,9 +49,8 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
     /** Called while dragging and on release. */
     var onGainsChanged: ((List<Double>, Boolean) -> Unit)? = null
 
-    private val bandLabels = listOf("62", "125", "250", "500", "1k", "2k", "4k", "8k")
 
-    private var gains = MutableList(BAND_COUNT) { 0.0 }
+    private var gains = MutableList(SoundpeatsCustomEqStore.EDIT_BANDS.size) { 0.0 }
     private var draggingBand = -1
 
     private val density = resources.displayMetrics.density
@@ -111,7 +110,7 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
     }
 
     fun setGains(values: List<Double>) {
-        gains = MutableList(BAND_COUNT) { values.getOrElse(it) { 0.0 } }
+        gains = MutableList(gains.size) { values.getOrElse(it) { 0.0 } }
         invalidate()
     }
 
@@ -130,7 +129,7 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
         val top = paddingTop
         val bottom = height - paddingBottom
         val plotHeight = bottom - top
-        val cellWidth = (right - left) / BAND_COUNT
+        val cellWidth = (right - left) / gains.size
         val centerY = top + plotHeight / 2f
 
         // horizontal dB grid with its axis labels
@@ -179,10 +178,12 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
             canvas.drawCircle(x, y, 4.5f * density, pointPaint)
         }
 
-        // band labels
-        bandLabels.forEachIndexed { index, label ->
-            val x = left + cellWidth * (index + 0.5f)
-            canvas.drawText(label, x, height - 5f * density, labelPaint)
+        // band labels, every other one so sixteen of them still fit
+        SoundpeatsCustomEqStore.EDIT_BANDS.forEachIndexed { index, frequency ->
+            if (index % 2 == 0) {
+                val x = left + cellWidth * (index + 0.5f)
+                canvas.drawText(SoundpeatsCustomEqStore.bandLabel(frequency), x, height - 5f * density, labelPaint)
+            }
         }
     }
 
@@ -196,11 +197,11 @@ class SoundpeatsEqualizerView @JvmOverloads constructor(
         val right = width - paddingRight - 8f * density
         val top = paddingTop
         val plotHeight = (height - paddingBottom) - top
-        val cellWidth = (right - left) / BAND_COUNT
+        val cellWidth = (right - left) / gains.size
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                val index = (((event.x - left) / cellWidth).toInt()).coerceIn(0, BAND_COUNT - 1)
+                val index = (((event.x - left) / cellWidth).toInt()).coerceIn(0, gains.size - 1)
                 if (abs(event.x - (left + cellWidth * (index + 0.5f))) > cellWidth) {
                     return false
                 }

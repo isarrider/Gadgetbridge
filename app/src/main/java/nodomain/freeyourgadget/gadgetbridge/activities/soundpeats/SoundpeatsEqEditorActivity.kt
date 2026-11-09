@@ -125,7 +125,7 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
 
             row.addView(
                 TextView(this).apply {
-                    text = getString(bandLabel(frequency))
+                    text = SoundpeatsCustomEqStore.bandLabel(frequency)
                     width = (56 * density).toInt()
                 }
             )
@@ -313,17 +313,6 @@ class SoundpeatsEqEditorActivity : AbstractGBActivity() {
         writeGains(gains)
         applyDraft()
         GB.toast(this, getString(R.string.soundpeats_custom_eq_import_done, filters.size), Toast.LENGTH_SHORT, GB.INFO)
-    }
-
-    private fun bandLabel(frequency: Int): Int = when (frequency) {
-        62 -> R.string.soundpeats_eq_band_62
-        125 -> R.string.soundpeats_eq_band_125
-        250 -> R.string.soundpeats_eq_band_250
-        500 -> R.string.soundpeats_eq_band_500
-        1000 -> R.string.soundpeats_eq_band_1000
-        2000 -> R.string.soundpeats_eq_band_2000
-        4000 -> R.string.soundpeats_eq_band_4000
-        else -> R.string.soundpeats_eq_band_8000
     }
 
     companion object {

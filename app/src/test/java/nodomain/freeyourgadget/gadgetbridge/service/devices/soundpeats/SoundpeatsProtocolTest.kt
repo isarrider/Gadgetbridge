@@ -145,23 +145,17 @@ class SoundpeatsProtocolTest {
     }
 
     @Test
-    fun testCustomEqExpandsToDeviceSlots() {
-        val gains = listOf(1.0, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0)
+    fun testCustomEqIsSentAsSixteenBands() {
+        val gains = SoundpeatsCustomEqStore.EDIT_BANDS.indices.map { it - 8.0 }
 
-        val bands = SoundpeatsCustomEqStore.expandGains(gains)
+        val bands = SoundpeatsCustomEqStore.toBands(gains)
 
         assertEquals(16, bands.size)
-        // slots are one-based and follow the device table
+        // bands are one-based and follow the editor order
         assertEquals((1..16).toList(), bands.map { it.index })
-        assertEquals(SoundpeatsEqPresets.SLOT_FREQUENCIES, bands.map { it.freqHz })
-        // the eight edited bands land on their own slot
-        SoundpeatsCustomEqStore.EDIT_BANDS.forEachIndexed { i, frequency ->
-            val band = bands.first { it.freqHz == frequency && it.gainDb == gains[i] }
-            assertEquals(gains[i], band.gainDb, 0.001)
-        }
-        // everything else is sent flat
-        assertEquals(0.0, bands.first { it.freqHz == 20 }.gainDb, 0.001)
-        assertEquals(SoundpeatsEqPresets.FILLER_Q, bands.first { it.freqHz == 20 }.q, 0.001)
+        assertEquals(SoundpeatsCustomEqStore.EDIT_BANDS, bands.map { it.freqHz })
+        bands.forEachIndexed { i, band -> assertEquals(gains[i], band.gainDb, 0.001) }
+        assertTrue(bands.all { it.q == SoundpeatsEqPresets.FILLER_Q })
     }
 
     @Test
@@ -179,10 +173,12 @@ class SoundpeatsProtocolTest {
         assertEquals(4.0, filters[0].gainDb, 0.01)
 
         val gains = SoundpeatsEqImport.toBandGains(filters)
-        assertEquals(8, gains.size)
-        // bands are 62 / 125 / 250 / 500 / 1k / 2k / 4k / 8k
-        assertEquals(4.0, gains[0], 0.01)
-        assertEquals(-3.0, gains[2], 0.01)
-        assertEquals(2.5, gains[7], 0.01)
+        assertEquals(16, gains.size)
+        // each filter lands on the closest band of the sixteen the editor exposes
+        assertEquals(4.0, gains[SoundpeatsCustomEqStore.EDIT_BANDS.indexOf(62)], 0.01)
+        assertEquals(-3.0, gains[SoundpeatsCustomEqStore.EDIT_BANDS.indexOf(250)], 0.01)
+        assertEquals(2.5, gains[SoundpeatsCustomEqStore.EDIT_BANDS.indexOf(8000)], 0.01)
+        // bands no filter is near stay flat
+        assertEquals(0.0, gains[SoundpeatsCustomEqStore.EDIT_BANDS.indexOf(20)], 0.01)
     }
 }

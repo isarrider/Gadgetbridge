@@ -6502,14 +6502,6 @@
     <string name="soundpeats_custom_eq_import_done">Imported %1$d filters</string>
     <string name="soundpeats_custom_eq_import_failed">No parametric filters found in that file</string>
     <string name="soundpeats_custom_eq_saved">Profile \"%1$s\" saved</string>
-    <string name="soundpeats_eq_band_62" translatable="false">62 Hz</string>
-    <string name="soundpeats_eq_band_125" translatable="false">125 Hz</string>
-    <string name="soundpeats_eq_band_250" translatable="false">250 Hz</string>
-    <string name="soundpeats_eq_band_500" translatable="false">500 Hz</string>
-    <string name="soundpeats_eq_band_1000" translatable="false">1 kHz</string>
-    <string name="soundpeats_eq_band_2000" translatable="false">2 kHz</string>
-    <string name="soundpeats_eq_band_4000" translatable="false">4 kHz</string>
-    <string name="soundpeats_eq_band_8000" translatable="false">8 kHz</string>
     <string name="soundpeats_water_drainage">Water drainage</string>
     <string name="soundpeats_water_drainage_summary">Run the water-ejection routine on the earbuds</string>
     <string name="soundpeats_find_earbuds">Find earbuds</string>

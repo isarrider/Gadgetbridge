@@ -20,21 +20,23 @@ import android.content.SharedPreferences
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundpeats.EqBand
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Locale
 import java.util.UUID
 import androidx.core.content.edit
 
 /**
  * User-created equalizer profiles.
  *
- * The earbuds take a full 16-slot parametric profile, but editing 16 bands on a phone is unusable,
- * so the editor exposes the eight graphic bands and the rest of the slots are sent flat.
+ * The earbuds take a parametric profile with as many bands as the frame declares, so the editor
+ * exposes sixteen bands and the profile is sent as-is. Every frequency below is one the vendor
+ * presets use with this device.
  *
  * Profiles live in the device-specific preferences as JSON, so they survive without any vendor
  * account.
  */
 object SoundpeatsCustomEqStore {
-    /** Graphic bands the editor exposes, in the order they are shown. */
-    val EDIT_BANDS = listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000)
+    /** Bands the editor exposes, in the order they are shown. */
+    val EDIT_BANDS = listOf(20, 62, 125, 180, 250, 420, 500, 600, 1000, 2000, 2800, 3800, 4000, 8000, 8200, 14000)
 
     const val PREF_KEY = "soundpeats_custom_eqs"
 
@@ -52,7 +54,7 @@ object SoundpeatsCustomEqStore {
         /** Gains for [EDIT_BANDS], same order. */
         val gains: List<Double>,
     ) {
-        fun toBands(): List<EqBand> = expandGains(gains)
+        fun toBands(): List<EqBand> = SoundpeatsCustomEqStore.toBands(gains)
     }
 
     fun list(prefs: SharedPreferences): List<CustomEq> {
@@ -95,6 +97,13 @@ object SoundpeatsCustomEqStore {
 
     fun find(prefs: SharedPreferences, id: String): CustomEq? = list(prefs).firstOrNull { it.id == id }
 
+    /** Short label of a band, e.g. 62, 1k, 2.8k. */
+    fun bandLabel(frequency: Int): String = when {
+        frequency >= 1000 && frequency % 1000 == 0 -> "${frequency / 1000}k"
+        frequency >= 1000 -> String.format(Locale.ROOT, "%.1fk", frequency / 1000.0)
+        else -> frequency.toString()
+    }
+
     /** Preference key of one editable band's gain, shared by the editor and the device support. */
     fun bandKey(index: Int): String = "soundpeats_eq_band_$index"
 
@@ -119,19 +128,14 @@ object SoundpeatsCustomEqStore {
         prefs.edit { putString(PREF_KEY, array.toString()) }
     }
 
-    /** Spreads the eight edited gains over the 16 device slots. */
-    fun expandGains(gains: List<Double>): List<EqBand> {
-        val byFrequency = EDIT_BANDS.mapIndexed { index, frequency ->
-            frequency to (gains.getOrElse(index) { 0.0 })
-        }.toMap()
-
-        return SoundpeatsEqPresets.SLOT_FREQUENCIES.mapIndexed { slot, frequency ->
-            val gain = byFrequency[frequency]
-            if (gain != null) {
-                EqBand(index = slot + 1, freqHz = frequency, gainDb = gain, q = SoundpeatsEqPresets.FILLER_Q)
-            } else {
-                EqBand(index = slot + 1, freqHz = frequency, gainDb = 0.0, q = SoundpeatsEqPresets.FILLER_Q)
-            }
+    /** Turns the edited gains into the bands that are written to the earbuds. */
+    fun toBands(gains: List<Double>): List<EqBand> =
+        EDIT_BANDS.mapIndexed { index, frequency ->
+            EqBand(
+                index = index + 1,
+                freqHz = frequency,
+                gainDb = gains.getOrElse(index) { 0.0 },
+                q = SoundpeatsEqPresets.FILLER_Q,
+            )
         }
-    }
 }

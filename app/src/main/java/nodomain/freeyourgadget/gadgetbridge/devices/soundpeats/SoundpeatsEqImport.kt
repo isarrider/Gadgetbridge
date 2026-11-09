@@ -49,13 +49,26 @@ object SoundpeatsEqImport {
             Filter(frequency, gain, q)
         }.toList()
 
-    /** Folds the filters onto the editable bands, in [SoundpeatsCustomEqStore.EDIT_BANDS] order. */
-    fun toBandGains(filters: List<Filter>): List<Double> =
-        SoundpeatsCustomEqStore.EDIT_BANDS.map { band ->
-            val closest = filters.minByOrNull { abs(octaves(band.toDouble(), it.frequencyHz)) }
-                ?: return@map 0.0
-            closest.gainDb.coerceIn(SoundpeatsCustomEqStore.MIN_GAIN_DB, SoundpeatsCustomEqStore.MAX_GAIN_DB)
+    /**
+     * Folds the filters onto the editable bands: each filter goes to the closest band and the bands
+     * no filter is near stay flat.
+     */
+    fun toBandGains(filters: List<Filter>): List<Double> {
+        val gains = MutableList(SoundpeatsCustomEqStore.EDIT_BANDS.size) { 0.0 }
+
+        filters.forEach { filter ->
+            val closest = SoundpeatsCustomEqStore.EDIT_BANDS.indices.minByOrNull { index ->
+                abs(octaves(SoundpeatsCustomEqStore.EDIT_BANDS[index].toDouble(), filter.frequencyHz))
+            } ?: return@forEach
+
+            gains[closest] = filter.gainDb.coerceIn(
+                SoundpeatsCustomEqStore.MIN_GAIN_DB,
+                SoundpeatsCustomEqStore.MAX_GAIN_DB,
+            )
         }
+
+        return gains
+    }
 
     private fun octaves(a: Double, b: Double): Double {
         if (a <= 0.0 || b <= 0.0) {
