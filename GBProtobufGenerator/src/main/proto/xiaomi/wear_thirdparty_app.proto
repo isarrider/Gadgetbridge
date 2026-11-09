@@ -22,7 +22,9 @@ message Rpk{
 
 message RpkLaunch {
   optional RpkInfoList app = 1; // id + sha from the rpk list
-  optional string wearPackage = 2; // package of the app on the band; the band also accepts the rpk id
+  // Xiaomi's Wearable SDK's launchWearApp uri (Xiaomi's docs say this is a page path). Seems
+  // ignored by the band, apps always open at their entry page.
+  optional string uri = 2;
 }
 
 message RpkAppStatus {

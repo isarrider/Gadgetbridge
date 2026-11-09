@@ -94,7 +94,7 @@ public class XiaomiRpkMessageFlowTest {
         Assert.assertEquals(XiaomiRpkService.CMD_RPK_LAUNCH, launch.getSubtype());
         Assert.assertEquals(APP_ID, launch.getRpk().getRpkLaunch().getApp().getId());
         Assert.assertEquals(SHA, launch.getRpk().getRpkLaunch().getApp().getSha());
-        Assert.assertEquals(APP_ID, launch.getRpk().getRpkLaunch().getWearPackage());
+        Assert.assertEquals(APP_ID, launch.getRpk().getRpkLaunch().getUri());
     }
 
     @Test

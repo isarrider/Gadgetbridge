@@ -151,7 +151,9 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
 
     private void launchWearApp(final String appId, final RpkInfoList rpkRef) {
         LOG.debug("Launching {}", appId);
-        // The official app sends the package of the app on the band as launch target; the band also accepts the rpk id
+        // Field 2 is the uri parameter in the SDK's launchWearApp. The band seems to ignore it
+        // (Band 9, fw 2.2.90). The app always opens on its entry page, independent of which uri is
+        // sent, or whether it's sent at all.
         getSupport().sendCommand("launch wear app " + appId, buildLaunchCommand(rpkRef, appId));
     }
 
@@ -273,11 +275,11 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         }
     }
 
-    static XiaomiProto.Command buildLaunchCommand(final RpkInfoList app, final String wearPackage) {
+    static XiaomiProto.Command buildLaunchCommand(final RpkInfoList app, final String uri) {
         return XiaomiProto.Command.newBuilder()
                 .setType(COMMAND_TYPE)
                 .setSubtype(CMD_RPK_LAUNCH)
-                .setRpk(Rpk.newBuilder().setRpkLaunch(RpkLaunch.newBuilder().setApp(app).setWearPackage(wearPackage)))
+                .setRpk(Rpk.newBuilder().setRpkLaunch(RpkLaunch.newBuilder().setApp(app).setUri(uri)))
                 .build();
     }
 
