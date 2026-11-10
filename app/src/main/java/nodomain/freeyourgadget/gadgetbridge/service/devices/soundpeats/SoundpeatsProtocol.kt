@@ -114,9 +114,10 @@ class SoundpeatsProtocol {
             SoundpeatsPacket.encode(SoundpeatsCommands.SET_WATER_DRAINAGE, booleanPayload(enabled))
 
         /**
-         * Starts or stops the ring. Left and right are separate commands. Confirmed on hardware:
-         * the ring starts with a non-zero payload and must be stopped explicitly, otherwise it keeps
-         * ringing, so a start is always paired with a matching stop.
+         * Starts or stops the ring. Left and right are separate commands, and the device wants them
+         * as their own frames with a gap in between, so this returns one frame per earbud instead of
+         * a single buffer. Confirmed on hardware: the ring starts with a non-zero payload and must be
+         * stopped explicitly, otherwise it keeps ringing, so a start is always paired with a stop.
          */
         fun encodeFindDevice(start: Boolean, target: FindDeviceTarget): List<ByteArray> {
             val payload = booleanPayload(start)

@@ -179,10 +179,12 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
         }
 
         screen(
-            key = DeviceSpecificSettingsScreen.CALLS_AND_NOTIFICATIONS.key,
-            title = R.string.pref_header_calls_and_notifications,
-            icon = R.drawable.ic_notifications,
+            key = DeviceSpecificSettingsScreen.CONNECTION.key,
+            title = R.string.pref_header_connection,
+            icon = R.drawable.ic_mtu,
         ) {
+            // The protocol only exposes a dual connection on/off, not the multipoint device list
+            // and pairing commands that MultipointPairingActivity drives, so this stays a switch.
             switchSetting(
                 key = PREF_SOUNDPEATS_DUAL_CONNECT,
                 title = R.string.dual_device_mode_title,
@@ -190,6 +192,13 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
                 icon = R.drawable.ic_link,
                 defaultValue = false,
             )
+        }
+
+        screen(
+            key = DeviceSpecificSettingsScreen.CALLS_AND_NOTIFICATIONS.key,
+            title = R.string.pref_header_calls_and_notifications,
+            icon = R.drawable.ic_notifications,
+        ) {
             switchSetting(
                 key = PREF_SOUNDPEATS_TOUCH_LOCK,
                 title = R.string.soundpeats_touch_lock,
