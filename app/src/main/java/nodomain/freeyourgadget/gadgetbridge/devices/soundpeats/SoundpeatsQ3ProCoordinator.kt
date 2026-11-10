@@ -183,8 +183,10 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
             title = R.string.pref_header_connection,
             icon = R.drawable.ic_mtu,
         ) {
-            // The protocol only exposes a dual connection on/off, not the multipoint device list
-            // and pairing commands that MultipointPairingActivity drives, so this stays a switch.
+            // The protocol only exposes a dual connection on/off (0x0314/0x0315). The earbuds do not
+            // answer the paired device list request (0x0352), so MultipointPairingActivity would show
+            // a switch and an unreachable empty list - the vendor app has nothing to show there
+            // either. This stays a plain switch.
             switchSetting(
                 key = PREF_SOUNDPEATS_DUAL_CONNECT,
                 title = R.string.dual_device_mode_title,
