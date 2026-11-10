@@ -15,13 +15,29 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.DeviceSettingsSpec
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.ListEntry
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.deviceSettings
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblProtocol
+import nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblTwsCapabilities
+import nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblTwsProduct
 import nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblTwsSupport
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs
 
-fun jblTuneBuds2Settings(): DeviceSettingsSpec = jblTwsSettings()
+fun jblTuneBuds2Settings(device: GBDevice): DeviceSettingsSpec =
+    jblTwsSettings(JblTwsProduct.TUNE_BUDS_2, device)
 
-private fun jblTwsSettings(): DeviceSettingsSpec = deviceSettings {
+fun jblTuneFlex2Settings(device: GBDevice): DeviceSettingsSpec =
+    jblTwsSettings(JblTwsProduct.TUNE_FLEX_2, device)
+
+private fun jblTwsSettings(
+    product: JblTwsProduct,
+    device: GBDevice,
+): DeviceSettingsSpec = deviceSettings {
+    val capabilities = product.capabilities
+    val ambientLevelSupported = capabilities.isAmbientLevelSupported
+    val accidentalTouchStatus =
+        capabilities.getAccidentalTouchFirmwareStatus(device.firmwareVersion)
+    val accidentalTouchAvailable =
+        accidentalTouchStatus == JblTwsCapabilities.FirmwareStatus.SUPPORTED
     category(
         key = "pref_jbl_tune_buds_2_category_noise_control",
         title = R.string.prefs_noise_control,
@@ -61,21 +77,23 @@ private fun jblTwsSettings(): DeviceSettingsSpec = deviceSettings {
             dependency = JblTwsSupport.PREF_ADAPTIVE_ANC,
             visibleWhen = prefIs(JblTwsSupport.PREF_SOUND_MODE, SOUND_MODE_ANC, SOUND_MODE_OFF),
         )
-        seekbar(
-            key = JblTwsSupport.PREF_AMBIENT_LEVEL,
-            title = R.string.pref_transparency_level,
-            icon = R.drawable.ic_surround,
-            min = 1,
-            max = 7,
-            defaultValue = 4,
-            visibleWhen = prefIs(JblTwsSupport.PREF_SOUND_MODE, SOUND_MODE_AMBIENT, SOUND_MODE_OFF),
-        )
+        if (ambientLevelSupported) {
+            seekbar(
+                key = JblTwsSupport.PREF_AMBIENT_LEVEL,
+                title = R.string.pref_transparency_level,
+                icon = R.drawable.ic_surround,
+                min = 1,
+                max = 7,
+                defaultValue = 4,
+                visibleWhen = prefIs(JblTwsSupport.PREF_SOUND_MODE, SOUND_MODE_AMBIENT, SOUND_MODE_OFF),
+            )
+        }
     }
 
     category(
         key = "pref_jbl_tune_buds_2_category_equalizer",
         title = R.string.prefs_equalizer,
-        visibleWhen = soundModeIsNot(SOUND_MODE_TALK_THRU),
+        visibleWhen = soundModeIsNot(SOUND_MODE_TALKTHRU),
     ) {
         for (band in EQ_BANDS) {
             seekbar(
@@ -99,7 +117,7 @@ private fun jblTwsSettings(): DeviceSettingsSpec = deviceSettings {
             entriesRes = R.array.jbl_tune_buds_2_spatial_audio_entries,
             entryValuesRes = R.array.jbl_tune_buds_2_spatial_audio_values,
             defaultValue = "0",
-            visibleWhen = soundModeIsNot(SOUND_MODE_TALK_THRU),
+            visibleWhen = soundModeIsNot(SOUND_MODE_TALKTHRU),
         )
         list(
             key = JblTwsSupport.PREF_LATENCY_MODE,
@@ -146,6 +164,24 @@ private fun jblTwsSettings(): DeviceSettingsSpec = deviceSettings {
             entryValuesRes = R.array.jbl_tune_buds_2_gesture_values,
             defaultValue = GESTURE_PLAYBACK_CONTROL,
         )
+        if (capabilities.supportsAccidentalTouch()) {
+            switchSetting(
+                key = JblTwsSupport.PREF_ACCIDENTAL_TOUCH,
+                title = R.string.pref_accidental_touch_prevention,
+                summary = when (accidentalTouchStatus) {
+                    JblTwsCapabilities.FirmwareStatus.SUPPORTED ->
+                        R.string.pref_accidental_touch_prevention_summary
+
+                    JblTwsCapabilities.FirmwareStatus.UNSUPPORTED ->
+                        R.string.pref_accidental_touch_prevention_firmware_too_old
+
+                    else -> R.string.pref_accidental_touch_prevention_firmware_unknown
+                },
+                icon = R.drawable.ic_hearing,
+                defaultValue = false,
+                enabled = accidentalTouchAvailable,
+            )
+        }
         list(
             key = JblTwsSupport.PREF_ASC_CYCLE,
             title = R.string.pref_jbl_tune_buds_2_asc_cycle,
@@ -221,7 +257,7 @@ private fun jblTwsSettings(): DeviceSettingsSpec = deviceSettings {
 
 private val SOUND_MODE_OFF = JblProtocol.SOUND_MODE_OFF.toString()
 private val SOUND_MODE_ANC = JblProtocol.SOUND_MODE_ANC.toString()
-private val SOUND_MODE_TALK_THRU = JblProtocol.SOUND_MODE_TALKTHRU.toString()
+private val SOUND_MODE_TALKTHRU = JblProtocol.SOUND_MODE_TALKTHRU.toString()
 private val SOUND_MODE_AMBIENT = JblProtocol.SOUND_MODE_AMBIENT.toString()
 
 private val GESTURE_AMBIENT_SOUND_CONTROL = JblProtocol.GESTURE_ROLE_AMBIENT_SOUND_CONTROL.toString()

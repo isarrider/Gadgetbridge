@@ -22,6 +22,7 @@ public final class JblProtocol {
 
     public static final byte HEADER_MAGIC = (byte) 0xAA;
     public static final int TUNE_BUDS_2_PRODUCT_ID = 0x210c;
+    public static final int TUNE_FLEX_2_PRODUCT_ID = 0x210e;
 
     // Harman service-data key carrying the PID/CRC advertisement. Shared by many JBL models,
     // so the PID inside it is what identifies the headset. ScanRecord.getServiceData() only
@@ -57,6 +58,7 @@ public final class JblProtocol {
     public static final byte CMD_SPATIAL_AUDIO          = (byte) 0x9D;
     public static final byte CMD_SAFE_SOUND             = (byte) 0xA5;
     public static final byte CMD_STEREO_BALANCE         = (byte) 0xA8;
+    public static final byte CMD_FEATURE_CONFIG         = (byte) 0xB1;
 
     // Subcommands for Noise Control (0x91)
     public static final byte SUB_NOISE_CONTROL_SET_MODES     = 0x10;
@@ -96,6 +98,11 @@ public final class JblProtocol {
     public static final byte FEATURE_BATTERY_CASE             = 0x1c;
     public static final byte FEATURE_SAFE_SOUND               = 0x20;
     public static final byte FEATURE_CALL_VOLUME_OPTIMIZER   = 0x23;
+
+    // Generic feature keys used by CMD_FEATURE_CONFIG (0xB1)
+    public static final byte FEATURE_KEY_ACCIDENTAL_TOUCH_PREVENTION = 0x04;
+    public static final byte FEATURE_CMD_GET    = 0x00;
+    public static final byte FEATURE_CMD_SET    = 0x01;
 
     // Spatial Audio Types
     public static final int SPATIAL_AUDIO_OFF                = 0;

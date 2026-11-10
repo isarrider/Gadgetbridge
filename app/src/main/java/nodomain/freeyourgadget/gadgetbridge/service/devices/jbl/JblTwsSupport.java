@@ -97,6 +97,7 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     public static final String PREF_GESTURE_RIGHT         = "pref_jbl_tune_buds_2_gesture_right";
     public static final String PREF_ASC_CYCLE             = "pref_jbl_tune_buds_2_asc_cycle";
     public static final String PREF_VOICE_PROMPTS         = "pref_jbl_tune_buds_2_voice_prompts";
+    public static final String PREF_ACCIDENTAL_TOUCH      = "pref_jbl_tune_buds_2_accidental_touch";
 
     // Initial state query packets
     private static final byte[] GET_MODES = buildPacket(CMD_NOISE_CONTROL, SUB_NOISE_CONTROL_GET_MODES);
@@ -106,6 +107,9 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     private static final byte[] GET_VOICE_PROMPTS = buildPacket(CMD_VOICE_PROMPTS, (byte) 0x04);
     private static final byte[] GET_EQ = buildPacket(CMD_EQ_SETTINGS_2, SUB_CMD_GET, (byte) 0xff);
     private static final byte[] GET_GESTURES = buildPacket(CMD_GESTURE_CONFIG, SUB_CMD_GET, (byte) 0xff);
+    private static final byte[] GET_ACCIDENTAL_TOUCH =
+            buildPacket(CMD_FEATURE_CONFIG, FEATURE_CMD_GET,
+                    FEATURE_KEY_ACCIDENTAL_TOUCH_PREVENTION, (byte) 0x00);
     private static final String[] EQ_BAND_PREFS = {
             PREF_EQ_BAND_32, PREF_EQ_BAND_64, PREF_EQ_BAND_125, PREF_EQ_BAND_250, PREF_EQ_BAND_500,
             PREF_EQ_BAND_1K, PREF_EQ_BAND_2K, PREF_EQ_BAND_4K, PREF_EQ_BAND_8K, PREF_EQ_BAND_16K
@@ -128,7 +132,7 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
 
     // Value last asked for, null once answered, so a refusal can be told apart from
     // the unsolicited report the device also sends on connect.
-    private final int productId;
+    private final JblTwsProduct product;
     private Integer mRequestedAnc = null;
     private Integer mRequestedBalance = null;
     private Integer mRequestedLatencyMode = null;
@@ -136,6 +140,9 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     private JblLeAddressScanner addressScanner;
     private boolean disposed;
     private boolean servicesDiscovered = false;
+    // At most one accidental touch state request per connection, deferred until
+    // the earbuds report their firmware. See maybeRequestAccidentalTouchState().
+    private boolean accidentalTouchStateRequested = false;
 
     private static final long EQ_WRITE_DELAY_MS = 200L;
 
@@ -148,9 +155,9 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
         }
     };
 
-    public JblTwsSupport(final int productId) {
+    public JblTwsSupport(@NonNull final JblTwsProduct product) {
         super();
-        this.productId = productId;
+        this.product = product;
         setAutoReconnect(true);
         setScanReconnect(true);
     }
@@ -183,6 +190,7 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             return false;
         }
         disposed = false;
+        accidentalTouchStateRequested = false;
         device.setUpdateState(GBDevice.State.CONNECTING, context);
 
         // Try the cached volatile LE address first.
@@ -204,7 +212,7 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
         if (disposed || (addressScanner != null && addressScanner.isInFlight())) {
             return;
         }
-        final JblLeAddressScanner scanner = new JblLeAddressScanner(context, productId);
+        final JblLeAddressScanner scanner = new JblLeAddressScanner(context, product.getProductId());
         addressScanner = scanner;
         scanner.start(new JblLeAddressScanner.Listener() {
             @Override
@@ -290,6 +298,10 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
         write(GET_VOICE_PROMPTS);
         write(GET_EQ);
         write(GET_GESTURES);
+        // Accidental touch prevention is requested from parseDeviceConfigResponse()
+        // once the earbuds report their firmware version on this connection. The
+        // database copy of the version may be stale. See
+        // maybeRequestAccidentalTouchState().
     }
 
     /**
@@ -352,6 +364,9 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             case BluetoothProfile.STATE_DISCONNECTED:
                 LOG.info("JBL: disconnected (status={})", status);
                 servicesDiscovered = false;
+                // The scan fallback below reconnects without going through
+                // connect(), so reset the per-connection request flag here too.
+                accidentalTouchStateRequested = false;
 
                 // Keep the cached address only after the expected JBL GATT
                 // service and notifications were configured. A successful LE
@@ -465,6 +480,9 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             case CMD_VOICE_PROMPTS:
                 parseVoicePromptsResponse(value);
                 break;
+            case CMD_FEATURE_CONFIG:
+                parseFeatureResponse(value);
+                break;
             default:
                 break;
         }
@@ -539,7 +557,8 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
                     write(
                             buildAncLevelCommand(prefs.getInt(PREF_ANC_LEVEL, 4)));
                 }
-            } else if (mode == SOUND_MODE_AMBIENT && (PREF_AMBIENT_LEVEL.equals(config) || PREF_SOUND_MODE.equals(config))) {
+            } else if (mode == SOUND_MODE_AMBIENT && product.getCapabilities().isAmbientLevelSupported()
+                    && (PREF_AMBIENT_LEVEL.equals(config) || PREF_SOUND_MODE.equals(config))) {
                 write(
                         buildAmbientLevelCommand(prefs.getInt(PREF_AMBIENT_LEVEL, 4)));
             } else if (isEqBandPref(config)) {
@@ -587,6 +606,21 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             } else if (PREF_VOICE_PROMPTS.equals(config)) {
                 final int vpType = Integer.parseInt(prefs.getString(PREF_VOICE_PROMPTS, "0"));
                 write(buildVoicePromptsCommand(vpType));
+            } else if (PREF_ACCIDENTAL_TOUCH.equals(config)) {
+                final boolean enabled = prefs.getBoolean(PREF_ACCIDENTAL_TOUCH, false);
+                if (isAccidentalTouchAvailable()) {
+                    write(buildAccidentalTouchCommand(enabled));
+                } else {
+                    final String minFirmware = product.getCapabilities().getAccidentalTouchMinFirmware();
+                    LOG.warn("JBL: accidental touch prevention is not available on this device/firmware"
+                            + " (minimum firmware: {})", minFirmware);
+                    if (minFirmware != null) {
+                        GB.toast(getContext().getString(
+                                        R.string.pref_accidental_touch_prevention_firmware_required,
+                                        minFirmware),
+                                Toast.LENGTH_SHORT, GB.INFO);
+                    }
+                }
             }
         } catch (final RuntimeException e) {
             LOG.error("Failed to send JBL configuration", e);
@@ -600,6 +634,48 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             }
         }
         return false;
+    }
+
+    private boolean isAccidentalTouchAvailable() {
+        return product.getCapabilities().isAccidentalTouchAvailableOnFirmware(
+                getDevice() == null ? null : getDevice().getFirmwareVersion());
+    }
+
+    /**
+     * Requests the accidental touch prevention state once per connection, after
+     * the earbuds have reported their firmware version.
+     *
+     * <p>Waiting for the firmware report on this connection avoids a stale-state
+     * race: the version persisted in Gadgetbridge may have been captured before
+     * the earbuds were updated while Gadgetbridge was disconnected. Reading the
+     * state during service setup would then either skip the request (stale
+     * version below the minimum) or send it to firmware that no longer supports
+     * it. The flag limits the request to one per connection because the device
+     * may report the firmware more than once.</p>
+     */
+    private void maybeRequestAccidentalTouchState() {
+        if (accidentalTouchStateRequested) {
+            return;
+        }
+        final GBDevice device = getDevice();
+        if (device == null) {
+            return;
+        }
+        final JblTwsCapabilities capabilities = product.getCapabilities();
+        switch (capabilities.getAccidentalTouchFirmwareStatus(device.getFirmwareVersion())) {
+            case SUPPORTED:
+                accidentalTouchStateRequested = true;
+                write(GET_ACCIDENTAL_TOUCH);
+                break;
+            case UNKNOWN:
+                LOG.warn("JBL: not requesting accidental touch state, firmware version is unknown");
+                break;
+            case UNSUPPORTED:
+            default:
+                LOG.info("JBL: not requesting accidental touch state, firmware {} requires {} or newer",
+                        device.getFirmwareVersion(), capabilities.getAccidentalTouchMinFirmware());
+                break;
+        }
     }
 
     // ─── Command builders ──────────────────────────────────────────────────
@@ -638,6 +714,13 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
         final byte clamped = (byte) Math.max(1, Math.min(7, level));
         return buildPacket(CMD_NOISE_CONTROL, SUB_NOISE_CONTROL_SET_ADVANCED,
                 FIELD_AMBIENT_AWARE_LEVEL, clamped);
+    }
+
+    private byte[] buildAccidentalTouchCommand(final boolean enabled) {
+        LOG.info("JBL TWS: Setting accidental touch prevention: {}", enabled);
+        return buildPacket(CMD_FEATURE_CONFIG, FEATURE_CMD_SET,
+                FEATURE_KEY_ACCIDENTAL_TOUCH_PREVENTION, (byte) 0x01,
+                (byte) (enabled ? 1 : 0));
     }
 
     private byte[] buildAutoCompensationCommand(final boolean enabled) {
@@ -1011,6 +1094,10 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
                     }
                     break;
                 case FIELD_AMBIENT_AWARE_LEVEL:
+                    if (!product.getCapabilities().isAmbientLevelSupported()) {
+                        LOG.info("JBL: ignoring ambient level from device (not supported by this product)");
+                        break;
+                    }
                     LOG.info("JBL: ambient level from device = {}", fieldValue);
                     if (fieldValue >= 1 && fieldValue <= 7 && prefs.getInt(PREF_AMBIENT_LEVEL, 4) != fieldValue) {
                         editor.putInt(PREF_AMBIENT_LEVEL, fieldValue);
@@ -1021,6 +1108,42 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
                     break;
             }
             i += 2;
+        }
+
+        if (modified) {
+            editor.apply();
+            getDevice().sendDeviceUpdateIntent(getContext());
+        }
+    }
+
+    private void parseFeatureResponse(final byte[] value) {
+        if (value.length < 6) {
+            return;
+        }
+
+        final int payloadLength = value[2] & 0xff;
+        final int payloadEnd = Math.min(value.length, 3 + payloadLength);
+        final SharedPreferences prefs =
+                GBApplication.getDeviceSpecificSharedPrefs(getDevice().getAddress());
+        final SharedPreferences.Editor editor = prefs.edit();
+        boolean modified = false;
+
+        int i = 4;
+        while (i + 1 < payloadEnd) {
+            final int key = value[i] & 0xff;
+            final int len = value[i + 1] & 0xff;
+            if (i + 2 + len > payloadEnd) {
+                break;
+            }
+            if (key == (FEATURE_KEY_ACCIDENTAL_TOUCH_PREVENTION & 0xff) && len >= 1) {
+                final boolean enabled = value[i + 2] != 0;
+                LOG.info("JBL: accidental touch prevention from device = {}", enabled);
+                if (prefs.getBoolean(PREF_ACCIDENTAL_TOUCH, false) != enabled) {
+                    editor.putBoolean(PREF_ACCIDENTAL_TOUCH, enabled);
+                    modified = true;
+                }
+            }
+            i += 2 + len;
         }
 
         if (modified) {
@@ -1088,10 +1211,11 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
                     modified = true;
                 }
             } else if (featureId == (FEATURE_FIRMWARE_VERSION & 0xff) && len >= 3) {
-            final String firmware = formatVersion(value, dataOffset);
-            LOG.info("JBL: firmware version from device = {}", firmware);
-            getDevice().setFirmwareVersion(firmware);
-            getDevice().sendDeviceUpdateIntent(broadcastContext());
+                final String firmware = formatVersion(value, dataOffset);
+                LOG.info("JBL: firmware version from device = {}", firmware);
+                getDevice().setFirmwareVersion(firmware);
+                getDevice().sendDeviceUpdateIntent(broadcastContext());
+                maybeRequestAccidentalTouchState();
             } else if (featureId == (FEATURE_CHARGING_CASE_FIRMWARE & 0xff) && len >= 3) {
                 final String caseFirmware = formatVersion(value, dataOffset);
                 LOG.info("JBL: charging case firmware version = {}", caseFirmware);

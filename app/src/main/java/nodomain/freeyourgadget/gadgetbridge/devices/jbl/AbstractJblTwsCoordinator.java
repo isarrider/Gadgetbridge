@@ -22,17 +22,20 @@ import nodomain.freeyourgadget.gadgetbridge.model.BatteryConfig;
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BluetoothCompanyIdentifiers;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblTwsProduct;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblTwsSupport;
 
 /**
  * Shared coordinator for JBL TWS headsets using Harman Protocol 3 over BLE.
  *
- * <p>Subclasses only provide the product ID, the Bluetooth name pattern, the
- * device name resource and the settings spec. Transport, bonding and battery
- * handling are identical across the models.</p>
+ * <p>Subclasses provide the product (which bundles the product ID and protocol
+ * capabilities), the Bluetooth name pattern, the device name resource and the
+ * settings spec. Transport, bonding and battery handling are identical across
+ * the models.</p>
  */
 public abstract class AbstractJblTwsCoordinator extends GenericHeadphonesCoordinator {
-    protected abstract int getProductId();
+    @NonNull
+    protected abstract JblTwsProduct getProduct();
 
     @Override
     public int getOrderPriority() {
@@ -67,10 +70,10 @@ public abstract class AbstractJblTwsCoordinator extends GenericHeadphonesCoordin
         // The manufacturer ID is shared by many JBL devices, and the Harman
         // service UUID is not model-specific. Match the product ID from the
         // manufacturer data first, then fall back to the Bluetooth name.
-        final byte[] product = candidate.getManufacturerSpecificData().get(
+        final byte[] manufacturerData = candidate.getManufacturerSpecificData().get(
                 BluetoothCompanyIdentifiers.ZHONGSHAN_CITY_RICHSOUND_ELECTRONIC_INDUSTRIAL_LTD);
-        if (product != null && product.length >= 2
-                && BLETypeConversions.toUint16(product) == getProductId()) {
+        if (manufacturerData != null && manufacturerData.length >= 2
+                && BLETypeConversions.toUint16(manufacturerData) == getProduct().getProductId()) {
             return true;
         }
 
@@ -94,7 +97,7 @@ public abstract class AbstractJblTwsCoordinator extends GenericHeadphonesCoordin
 
     @Override
     public DeviceSupport createDeviceSupport(@NonNull final GBDevice device) {
-        return new JblTwsSupport(getProductId());
+        return new JblTwsSupport(getProduct());
     }
 
     @Override
@@ -112,6 +115,7 @@ public abstract class AbstractJblTwsCoordinator extends GenericHeadphonesCoordin
         return DeviceKind.EARBUDS;
     }
 
+    @NonNull
     @Override
     protected abstract Pattern getSupportedDeviceName();
 }

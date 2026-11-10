@@ -16,13 +16,13 @@ import java.util.regex.Pattern;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.DeviceSettingsSpec;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
-import nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblProtocol;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblTwsProduct;
 
 /** Coordinator for the JBL Tune Buds 2 (BLE control channel). */
 public class JblTuneBuds2Coordinator extends AbstractJblTwsCoordinator {
     @Override
-    protected int getProductId() {
-        return JblProtocol.TUNE_BUDS_2_PRODUCT_ID;
+    protected JblTwsProduct getProduct() {
+        return JblTwsProduct.TUNE_BUDS_2;
     }
 
     @Override
@@ -32,7 +32,7 @@ public class JblTuneBuds2Coordinator extends AbstractJblTwsCoordinator {
 
     @Override
     public DeviceSettingsSpec getDeviceSettings(@NonNull final GBDevice device) {
-        return JblTwsSettingsKt.jblTuneBuds2Settings();
+        return JblTwsSettingsKt.jblTuneBuds2Settings(device);
     }
 
     @Override
