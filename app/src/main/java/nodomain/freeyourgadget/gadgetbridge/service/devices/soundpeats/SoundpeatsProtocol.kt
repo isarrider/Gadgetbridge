@@ -30,6 +30,7 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInf
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsAncMode
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
+import nodomain.freeyourgadget.gadgetbridge.model.FindDeviceTarget
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 import java.util.Locale
@@ -113,20 +114,21 @@ class SoundpeatsProtocol {
             SoundpeatsPacket.encode(SoundpeatsCommands.SET_WATER_DRAINAGE, booleanPayload(enabled))
 
         /**
-         * Starts or stops the ring on both earbuds. Confirmed on hardware: the ring starts with a
-         * non-zero payload and must be stopped explicitly, otherwise it keeps ringing.
+         * Starts or stops the ring. Left and right are separate commands. Confirmed on hardware:
+         * the ring starts with a non-zero payload and must be stopped explicitly, otherwise it keeps
+         * ringing, so a start is always paired with a matching stop.
          */
-        fun encodeFindEarbuds(ring: Boolean): ByteArray =
-            SoundpeatsPacket.encode(
-                SoundpeatsCommands.SET_LEFT_EAR_RING,
-                byteArrayOf(if (ring) 1 else 0)
-            )
+        fun encodeFindDevice(start: Boolean, target: FindDeviceTarget): List<ByteArray> {
+            val payload = booleanPayload(start)
+            val left = SoundpeatsPacket.encode(SoundpeatsCommands.SET_LEFT_EAR_RING, payload)
+            val right = SoundpeatsPacket.encode(SoundpeatsCommands.SET_RIGHT_EAR_RING, payload)
 
-        fun encodeFindRightEarbud(ring: Boolean): ByteArray =
-            SoundpeatsPacket.encode(
-                SoundpeatsCommands.SET_RIGHT_EAR_RING,
-                byteArrayOf(if (ring) 1 else 0)
-            )
+            return when (target) {
+                FindDeviceTarget.LEFT -> listOf(left)
+                FindDeviceTarget.RIGHT -> listOf(right)
+                else -> listOf(left, right)
+            }
+        }
 
         /**
          * One EQ v2 band frame. Layout established from captured traffic of the vendor app applying

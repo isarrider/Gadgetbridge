@@ -57,7 +57,7 @@ object SoundpeatsEqPresets {
             listOf(20, 180, 420, 2000, 2800, 3800, 8200, 14000),
             listOf(-5.7, -9.4, -11.0, -4.2, 3.8, -3.2, -2.0, 3.5),
             listOf(0.2, 1.0, 0.5, 3.0, 1.2, 3.0, 4.0, 0.1),
-            R.string.soundpeats_eq_preset_classic,
+            R.string.soundcore_equalizer_preset_classic,
         ),
         TREBLE(
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
@@ -69,7 +69,7 @@ object SoundpeatsEqPresets {
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(2.0, 2.0, 2.0, 1.0, 0.0, 0.0, 0.0, 0.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
-            R.string.soundpeats_eq_preset_bass_boost,
+            R.string.pref_title_equalizer_bass_boost,
         ),
         BASS_REDUCTION(
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
@@ -93,7 +93,7 @@ object SoundpeatsEqPresets {
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),
             listOf(2.0, 2.0, 1.0, -1.0, 1.0, 0.0, 1.0, 3.0),
             listOf(0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8),
-            R.string.soundpeats_eq_preset_electronic,
+            R.string.nothing_equalizer_electronic,
         ),
         FOLK(
             listOf(62, 125, 250, 500, 1000, 2000, 4000, 8000),

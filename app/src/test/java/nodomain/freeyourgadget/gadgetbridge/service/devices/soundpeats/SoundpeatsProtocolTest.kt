@@ -20,6 +20,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsAncMode
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsCustomEqStore
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsEqImport
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsEqPresets
+import nodomain.freeyourgadget.gadgetbridge.model.FindDeviceTarget
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -47,6 +48,27 @@ class SoundpeatsProtocolTest {
         assertEquals(0x03.toByte(), encoded[6])
         assertEquals(0x3E.toByte(), encoded[7])
         assertEquals(0x01.toByte(), encoded[8])
+    }
+
+    @Test
+    fun testEncodeFindDeviceRespectsTarget() {
+        val left = SoundpeatsProtocol.encodeFindDevice(true, FindDeviceTarget.LEFT)
+        val right = SoundpeatsProtocol.encodeFindDevice(true, FindDeviceTarget.RIGHT)
+        val all = SoundpeatsProtocol.encodeFindDevice(true, FindDeviceTarget.ALL)
+        val stop = SoundpeatsProtocol.encodeFindDevice(false, FindDeviceTarget.ALL)
+
+        // Left and right ring are separate commands: SET_LEFT_EAR_RING = 0x033A, SET_RIGHT_EAR_RING = 0x033B
+        assertEquals(1, left.size)
+        assertEquals(0x03.toByte(), left[0][6])
+        assertEquals(0x3A.toByte(), left[0][7])
+        assertEquals(0x01.toByte(), left[0][8])
+
+        assertEquals(1, right.size)
+        assertEquals(0x3B.toByte(), right[0][7])
+        assertEquals(0x01.toByte(), right[0][8])
+
+        assertEquals(listOf(left[0].toList(), right[0].toList()), all.map { it.toList() })
+        assertEquals(listOf(0x00.toByte(), 0x00.toByte()), stop.map { it[8] })
     }
 
     @Test

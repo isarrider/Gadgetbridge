@@ -53,6 +53,13 @@ class SoundpeatsQ3ProCoordinatorTest {
     }
 
     @Test
+    fun testFindDeviceAndBatteryPollingAreIntegrated() {
+        assertTrue(coordinator.supportsFindDevice(device))
+        assertTrue(coordinator.supportsFindDevicePerEarbud(device))
+        assertTrue(coordinator.addBatteryPollingSettings())
+    }
+
+    @Test
     fun testDeviceSupportIsCreated() {
         assertNotNull(coordinator.createDeviceSupport(device))
     }

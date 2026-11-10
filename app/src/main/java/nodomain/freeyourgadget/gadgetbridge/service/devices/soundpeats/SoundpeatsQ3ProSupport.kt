@@ -16,13 +16,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.soundpeats
 
+import android.os.Handler
+import android.os.Looper
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_BATTERY_POLLING_ENABLE
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_BATTERY_POLLING_INTERVAL
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_ANC_MODE
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_DUAL_CONNECT
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_DRAFT
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_MASTER
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_PRESET
-import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_FIND_EARBUDS
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_GAME_MODE
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_MOVIE_MODE
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_PROMPT_VOLUME
@@ -31,11 +34,10 @@ import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSett
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsCustomEqStore
 import nodomain.freeyourgadget.gadgetbridge.devices.soundpeats.SoundpeatsEqPresets
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.model.FindDeviceTarget
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractHeadphoneBTBRDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder
 import org.slf4j.LoggerFactory
-import java.util.Timer
-import java.util.TimerTask
 import java.util.UUID
 
 /**
@@ -50,14 +52,16 @@ class SoundpeatsQ3ProSupport : AbstractHeadphoneBTBRDeviceSupport(LOG, BUFFER_SI
         private const val BUFFER_SIZE = 1024
         private val SERIAL_PORT_SERVICE: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
         private const val RFCOMM_CHANNEL = 1
-        private const val BATTERY_POLL_INTERVAL_MS = 60_000L
         private const val BATTERY_QUERY_DELAY_MS = 300
         private const val EQ_FRAME_DELAY_MS = 40
     }
 
     private val protocol = SoundpeatsProtocol()
-    private val batteryTimer = Timer("soundpeats-battery", true)
-    private var batteryTask: TimerTask? = null
+    private val batteryPollHandler = Handler(Looper.getMainLooper())
+    private val batteryPollRunnable = Runnable {
+        pollBattery()
+        scheduleBatteryPoll()
+    }
 
     init {
         addSupportedService(SERIAL_PORT_SERVICE)
@@ -90,7 +94,7 @@ class SoundpeatsQ3ProSupport : AbstractHeadphoneBTBRDeviceSupport(LOG, BUFFER_SI
         builder.sleep(100)
         builder.write(*SoundpeatsProtocol.encodeGetWaterDrainage())
 
-        startBatteryPolling()
+        scheduleBatteryPoll()
 
         builder.setDeviceState(GBDevice.State.INITIALIZED)
         return builder
@@ -167,46 +171,54 @@ class SoundpeatsQ3ProSupport : AbstractHeadphoneBTBRDeviceSupport(LOG, BUFFER_SI
                 SoundpeatsProtocol.encodeSetWaterDrainage(prefs.getBoolean(config, false))
             )
 
-            PREF_SOUNDPEATS_FIND_EARBUDS -> sendFindEarbuds(prefs.getBoolean(config, false))
+            PREF_BATTERY_POLLING_ENABLE,
+            PREF_BATTERY_POLLING_INTERVAL -> scheduleBatteryPoll()
 
             else -> super.onSendConfiguration(config)
         }
     }
 
-    private fun sendFindEarbuds(ring: Boolean) {
-        val builder = createTransactionBuilder(if (ring) "find earbuds" else "stop find earbuds")
-        builder.write(*SoundpeatsProtocol.encodeFindEarbuds(ring))
-        builder.sleep(100)
-        builder.write(*SoundpeatsProtocol.encodeFindRightEarbud(ring))
+    override fun onFindDevice(start: Boolean, target: FindDeviceTarget) {
+        val builder = createTransactionBuilder(if (start) "find device" else "stop finding device")
+        SoundpeatsProtocol.encodeFindDevice(start, target).forEachIndexed { index, frame ->
+            if (index > 0) {
+                builder.sleep(100)
+            }
+            builder.write(*frame)
+        }
         builder.queue()
     }
 
     /**
      * The earbuds only report a battery level when asked, and an earbud that is charging or in the
-     * case answers 0xFF. Polling keeps all three levels on the device card up to date.
+     * case answers 0xFF, so all three levels are polled. The cadence comes from the battery polling
+     * preferences, which the coordinator exposes through addBatteryPollingSettings.
      */
-    private fun startBatteryPolling() {
-        batteryTask?.cancel()
-        batteryTask = object : TimerTask() {
-            override fun run() {
-                if (!isConnected) {
-                    return
-                }
-                val builder = createTransactionBuilder("poll battery")
-                builder.write(*SoundpeatsProtocol.encodeGetBattery(SoundpeatsProtocol.BATTERY_INDEX_LEFT))
-                builder.sleep(BATTERY_QUERY_DELAY_MS)
-                builder.write(*SoundpeatsProtocol.encodeGetBattery(SoundpeatsProtocol.BATTERY_INDEX_RIGHT))
-                builder.sleep(BATTERY_QUERY_DELAY_MS)
-                builder.write(*SoundpeatsProtocol.encodeGetBattery(SoundpeatsProtocol.BATTERY_INDEX_CASE))
-                builder.queue()
-            }
+    private fun scheduleBatteryPoll() {
+        batteryPollHandler.removeCallbacks(batteryPollRunnable)
+        if (devicePrefs.getBatteryPollingEnabled()) {
+            batteryPollHandler.postDelayed(
+                batteryPollRunnable,
+                devicePrefs.getBatteryPollingIntervalMinutes() * 60 * 1000L,
+            )
         }
-        batteryTimer.schedule(batteryTask, BATTERY_POLL_INTERVAL_MS, BATTERY_POLL_INTERVAL_MS)
+    }
+
+    private fun pollBattery() {
+        if (!isConnected) {
+            return
+        }
+        val builder = createTransactionBuilder("poll battery")
+        builder.write(*SoundpeatsProtocol.encodeGetBattery(SoundpeatsProtocol.BATTERY_INDEX_LEFT))
+        builder.sleep(BATTERY_QUERY_DELAY_MS)
+        builder.write(*SoundpeatsProtocol.encodeGetBattery(SoundpeatsProtocol.BATTERY_INDEX_RIGHT))
+        builder.sleep(BATTERY_QUERY_DELAY_MS)
+        builder.write(*SoundpeatsProtocol.encodeGetBattery(SoundpeatsProtocol.BATTERY_INDEX_CASE))
+        builder.queue()
     }
 
     override fun dispose() {
-        batteryTask?.cancel()
-        batteryTimer.cancel()
+        batteryPollHandler.removeCallbacksAndMessages(null)
         super.dispose()
     }
 

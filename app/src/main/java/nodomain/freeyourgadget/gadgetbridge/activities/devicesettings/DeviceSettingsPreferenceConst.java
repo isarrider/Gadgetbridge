@@ -450,10 +450,8 @@ public class DeviceSettingsPreferenceConst {
     public static final String PREF_SOUNDPEATS_EQ_PRESET = "soundpeats_eq_preset";
     public static final String PREF_SOUNDPEATS_EQ_MASTER = "soundpeats_eq_master";
     /** Virtual key: applies the unsaved profile being edited instead of the selected one. */
-    // Not a real preference: the editor bumps it to ask the device support to match the current curve.
     public static final String PREF_SOUNDPEATS_EQ_DRAFT = "soundpeats_eq_draft";
     public static final String PREF_SOUNDPEATS_WATER_DRAINAGE = "soundpeats_water_drainage";
-    public static final String PREF_SOUNDPEATS_FIND_EARBUDS = "soundpeats_find_earbuds";
 
     public static final String PREF_HUAWEI_FREEBUDS_INEAR = "pref_freebuds_inear_detection";
     public static final String PREF_HUAWEI_FREEBUDS_AUDIOMODE = "pref_freebuds_audiomode";

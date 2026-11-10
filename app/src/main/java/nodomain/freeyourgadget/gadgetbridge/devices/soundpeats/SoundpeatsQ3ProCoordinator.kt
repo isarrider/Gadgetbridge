@@ -23,7 +23,6 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_ANC_MODE
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_DUAL_CONNECT
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_EQ_PRESET
-import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_FIND_EARBUDS
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_GAME_MODE
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_MOVIE_MODE
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_PROMPT_VOLUME
@@ -81,6 +80,15 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
     )
 
     override fun supportsOSBatteryLevel(device: GBDevice): Boolean = true
+
+    /** The card exposes the standard find device action, which rings and stops the ring. */
+    override fun supportsFindDevice(device: GBDevice): Boolean = true
+
+    /** Left and right ear ring are separate commands, so each earbud can be rung on its own. */
+    override fun supportsFindDevicePerEarbud(device: GBDevice): Boolean = true
+
+    /** The earbuds only send a battery level as a reply, so it has to be polled. */
+    override fun addBatteryPollingSettings(): Boolean = true
 
     override fun supportsAppNotifications(device: GBDevice): Boolean = true
 
@@ -149,13 +157,6 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
                 icon = R.drawable.ic_volume_up,
                 defaultValue = false,
             )
-            switchSetting(
-                key = PREF_SOUNDPEATS_FIND_EARBUDS,
-                title = R.string.soundpeats_find_earbuds,
-                summary = R.string.soundpeats_find_earbuds_summary,
-                icon = R.drawable.ic_search,
-                defaultValue = false,
-            )
             category(
                 key = "soundpeats_custom_eq_category",
                 title = R.string.soundpeats_custom_eq,
@@ -203,9 +204,6 @@ open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
             connectedOnly = false,
         )
     }
-
-
-
 
     /** Removes the selected custom profile and falls back to a factory preset. */
     private fun deleteCustomEq(device: GBDevice?): Boolean {
