@@ -28,8 +28,11 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.UUID;
 
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiFWHelper;
@@ -41,6 +44,7 @@ import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class HuamiSupportTest {
     @Test
@@ -84,6 +88,62 @@ public class HuamiSupportTest {
             sum += Math.sqrt(gx * gx + gy * gy + gz * gz);
         }
         Assert.assertEquals(9.81, sum / 21, 2.5);
+    }
+
+    @Test
+    public void testRawSensorKeepAlive() {
+        final RecordingSupport support = new RecordingSupport();
+        final SleepAsAndroidSender sender = mock(SleepAsAndroidSender.class);
+        support.sleepAsAndroidSender = sender;
+        when(sender.isHeartRateRequested()).thenReturn(true);
+
+        // paused or not tracking: nothing
+        when(sender.acceptsAccelSamples()).thenReturn(false);
+        support.lastRawSensorDataMillis = 0;
+        support.rawSensorKeepAlive();
+        Assert.assertTrue(support.rawSensorCalls.isEmpty());
+        Assert.assertEquals(0, support.heartRatePings);
+
+        // streaming, started recently: ping only
+        when(sender.acceptsAccelSamples()).thenReturn(true);
+        support.lastRawSensorStartMillis = System.currentTimeMillis();
+        support.handleRawSensorData(GB.hexStringToByteArray("0100BEFF7D018AFF"));
+        support.rawSensorKeepAlive();
+        Assert.assertTrue(support.rawSensorCalls.isEmpty());
+        Assert.assertEquals(1, support.heartRatePings);
+
+        // band went silent: restart, still ping
+        support.lastRawSensorDataMillis = System.currentTimeMillis() - 30_000;
+        support.rawSensorKeepAlive();
+        Assert.assertEquals(Collections.singletonList(true), support.rawSensorCalls);
+        Assert.assertEquals(2, support.heartRatePings);
+
+        // streaming but started 55 s ago (Mi Band 4 stops after ~72 s): restart before it does
+        support.rawSensorCalls.clear();
+        support.lastRawSensorStartMillis = System.currentTimeMillis() - 55_000;
+        support.handleRawSensorData(GB.hexStringToByteArray("0100BEFF7D018AFF"));
+        support.rawSensorKeepAlive();
+        Assert.assertEquals(Collections.singletonList(true), support.rawSensorCalls);
+    }
+
+    private static class RecordingSupport extends HuamiSupport {
+        final List<Boolean> rawSensorCalls = new ArrayList<>();
+        int heartRatePings = 0;
+
+        @Override
+        protected void setRawSensor(final boolean enable) {
+            rawSensorCalls.add(enable);
+        }
+
+        @Override
+        protected void sendHeartRateKeepAlive() {
+            heartRatePings++;
+        }
+
+        @Override
+        public HuamiFWHelper createFWHelper(final Uri uri, final Context context) {
+            return null;
+        }
     }
 
     private HuamiSupport createSupport() {

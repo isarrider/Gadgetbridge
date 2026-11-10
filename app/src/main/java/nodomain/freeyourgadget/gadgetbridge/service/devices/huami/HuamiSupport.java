@@ -334,6 +334,11 @@ public abstract class HuamiSupport extends AbstractBTLESingleDeviceSupport
     protected SleepAsAndroidSender sleepAsAndroidSender;
     private ScheduledExecutorService saaHintScheduler;
     private ScheduledExecutorService saaAlarmScheduler;
+    private ScheduledExecutorService rawSensorWatchdog;
+    volatile long lastRawSensorDataMillis; // package-private for tests
+    volatile long lastRawSensorStartMillis; // package-private for tests
+    private static final long RAW_SENSOR_SILENCE_MILLIS = 20_000;
+    private static final long RAW_SENSOR_RESTART_MILLIS = 50_000; // Mi Band 4 stops after ~72 s; ticks every 10 s
 
     public HuamiSupport() {
         this(LOG);
@@ -369,6 +374,7 @@ public abstract class HuamiSupport extends AbstractBTLESingleDeviceSupport
     @CallSuper
     @Override
     public void dispose() {
+        stopRawSensorWatchdog();
         sleepAsAndroidSender.stopTracking();
         calendarSyncHandler.removeCallbacksAndMessages(null);
         super.dispose();
@@ -4041,9 +4047,12 @@ public abstract class HuamiSupport extends AbstractBTLESingleDeviceSupport
 
     protected void setRawSensor(final boolean enable) {
         LOG.info("Set raw sensor to {}", enable);
+        lastRawSensorDataMillis = lastRawSensorStartMillis = System.currentTimeMillis();
         try {
             final TransactionBuilder builder = performInitialized("set raw sensor");
             if (enable) {
+                // Mi Band 4 ignores a start while already streaming (its ~72 s timeout keeps running), so stop first
+                builder.write(HuamiService.UUID_CHARACTERISTIC_RAW_SENSOR_CONTROL, Huami2021Service.CMD_RAW_SENSOR_STOP);
                 builder.write(HuamiService.UUID_CHARACTERISTIC_RAW_SENSOR_CONTROL, Huami2021Service.CMD_RAW_SENSOR_START_1);
                 builder.write(HuamiService.UUID_CHARACTERISTIC_RAW_SENSOR_CONTROL, Huami2021Service.CMD_RAW_SENSOR_START_2);
                 builder.write(HuamiService.UUID_CHARACTERISTIC_RAW_SENSOR_CONTROL, Huami2021Service.CMD_RAW_SENSOR_START_3);
@@ -4057,7 +4066,54 @@ public abstract class HuamiSupport extends AbstractBTLESingleDeviceSupport
         }
     }
 
+    // The Mi Band 4 stops streaming raw sensor data ~72 s after the start commands
+    // (replying 10 02 07 on the control characteristic), so keep it alive while tracking.
+    private void startRawSensorWatchdog() {
+        stopRawSensorWatchdog();
+        rawSensorWatchdog = Executors.newSingleThreadScheduledExecutor();
+        rawSensorWatchdog.scheduleWithFixedDelay(this::rawSensorKeepAlive, 10, 10, TimeUnit.SECONDS);
+    }
+
+    private void stopRawSensorWatchdog() {
+        if (rawSensorWatchdog != null) {
+            rawSensorWatchdog.shutdownNow();
+            rawSensorWatchdog = null;
+        }
+    }
+
+    void rawSensorKeepAlive() {
+        if (sleepAsAndroidSender == null || !sleepAsAndroidSender.acceptsAccelSamples()) {
+            return; // not tracking, or paused: the sensor stays off until resumed
+        }
+        final long now = System.currentTimeMillis();
+        if (now - lastRawSensorStartMillis > RAW_SENSOR_RESTART_MILLIS) {
+            // restart before the band's ~72 s timeout instead of losing data until the silence check
+            setRawSensor(true);
+        } else if (now - lastRawSensorDataMillis > RAW_SENSOR_SILENCE_MILLIS) {
+            LOG.info("No raw sensor data for {} ms, restarting", now - lastRawSensorDataMillis);
+            setRawSensor(true);
+        }
+        // 0x16 keeps continuous heart rate alive; it does not keep the raw stream alive
+        if (sleepAsAndroidSender.isHeartRateRequested()) {
+            sendHeartRateKeepAlive();
+        }
+    }
+
+    protected void sendHeartRateKeepAlive() {
+        if (characteristicHRControlPoint == null) {
+            return;
+        }
+        try {
+            final TransactionBuilder builder = performInitialized("heart rate keep alive");
+            builder.write(characteristicHRControlPoint, new byte[]{0x16});
+            builder.queue();
+        } catch (final IOException e) {
+            LOG.error("Failed to send heart rate keep alive", e);
+        }
+    }
+
     protected void handleRawSensorData(final byte[] value) {
+        lastRawSensorDataMillis = System.currentTimeMillis();
         if (value == null || value.length < 2) {
             LOG.warn("Raw sensor value too short: {}", value == null ? -1 : value.length);
             return;
@@ -4129,8 +4185,10 @@ public abstract class HuamiSupport extends AbstractBTLESingleDeviceSupport
                     onEnableRealtimeHeartRateMeasurement(true);
                 }
                 setRawSensor(true);
+                startRawSensorWatchdog();
                 break;
             case SleepAsAndroidAction.STOP_TRACKING:
+                stopRawSensorWatchdog();
                 onEnableRealtimeHeartRateMeasurement(false);
                 setRawSensor(false);
                 sleepAsAndroidSender.stopTracking();
