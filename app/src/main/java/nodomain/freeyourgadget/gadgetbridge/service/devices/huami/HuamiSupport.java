@@ -4196,7 +4196,9 @@ public abstract class HuamiSupport extends AbstractBTLESingleDeviceSupport
             case SleepAsAndroidAction.SET_PAUSE: {
                 long pauseTimestamp = extras.getLong("TIMESTAMP");
                 long delay = pauseTimestamp > 0 ? pauseTimestamp - System.currentTimeMillis() : 0;
-                setRawSensor(delay > 0);
+                // paused until the timestamp: sensor off. When the pause ends on its own,
+                // the watchdog sees the silence and restarts it.
+                setRawSensor(delay <= 0);
                 sleepAsAndroidSender.pauseTracking(delay);
                 break;
             }

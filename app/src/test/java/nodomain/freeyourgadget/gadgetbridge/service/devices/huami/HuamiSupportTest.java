@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.huami;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
 import android.net.Uri;
+import android.os.Bundle;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,6 +30,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.GregorianCalendar;
@@ -36,6 +38,7 @@ import java.util.List;
 import java.util.UUID;
 
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiFWHelper;
+import nodomain.freeyourgadget.gadgetbridge.externalevents.sleepasandroid.SleepAsAndroidAction;
 import nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSender;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.actions.WriteAction;
@@ -88,6 +91,20 @@ public class HuamiSupportTest {
             sum += Math.sqrt(gx * gx + gy * gy + gz * gz);
         }
         Assert.assertEquals(9.81, sum / 21, 2.5);
+    }
+
+    @Test
+    public void testSleepAsAndroidPauseTurnsRawSensorOff() {
+        final RecordingSupport support = new RecordingSupport();
+        support.sleepAsAndroidSender = mock(SleepAsAndroidSender.class);
+        final Bundle extras = mock(Bundle.class);
+
+        when(extras.getLong("TIMESTAMP")).thenReturn(System.currentTimeMillis() + 60_000);
+        support.onSleepAsAndroidAction(SleepAsAndroidAction.SET_PAUSE, extras);
+        when(extras.getLong("TIMESTAMP")).thenReturn(0L);
+        support.onSleepAsAndroidAction(SleepAsAndroidAction.SET_PAUSE, extras);
+
+        Assert.assertEquals(Arrays.asList(false, true), support.rawSensorCalls);
     }
 
     @Test
