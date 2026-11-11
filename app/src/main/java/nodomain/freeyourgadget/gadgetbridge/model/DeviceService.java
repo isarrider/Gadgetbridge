@@ -117,6 +117,7 @@ public interface DeviceService extends EventHandler {
     String EXTRA_NAVIGATION_ETA = "navigation_eta";
     String EXTRA_NAVIGATION_TIME_TO_DESTINATION = "navigation_time_to_destination";
     String EXTRA_NAVIGATION_COMPLETION_PERCENT = "navigation_completion_percent";
+    String EXTRA_NAVIGATION_SOURCE = "navigation_source";
     String EXTRA_APP_UUID = "app_uuid";
     String EXTRA_APP_START = "app_start";
     String EXTRA_APP_CONFIG = "app_config";

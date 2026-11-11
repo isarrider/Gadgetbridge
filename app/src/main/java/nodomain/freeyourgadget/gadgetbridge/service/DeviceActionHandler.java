@@ -183,6 +183,14 @@ public class DeviceActionHandler {
                 break;
             case ACTION_SETNAVIGATIONINFO:
                 final NavigationInfoSpec navigationInfoSpec = new NavigationInfoSpec();
+                final String navigationSource = intentCopy.getStringExtra(EXTRA_NAVIGATION_SOURCE);
+                if (navigationSource != null) {
+                    try {
+                        navigationInfoSpec.setSource(NavigationInfoSpec.Source.valueOf(navigationSource));
+                    } catch (final IllegalArgumentException e) {
+                        LOG.warn("Unknown navigation source: {}", navigationSource);
+                    }
+                }
                 navigationInfoSpec.setInstruction(intentCopy.getStringExtra(EXTRA_NAVIGATION_INSTRUCTION));
                 navigationInfoSpec.setNextAction(intentCopy.getIntExtra(EXTRA_NAVIGATION_NEXT_ACTION, 0));
                 navigationInfoSpec.setDistanceToTurn(intentCopy.getStringExtra(EXTRA_NAVIGATION_DISTANCE_TO_TURN));
