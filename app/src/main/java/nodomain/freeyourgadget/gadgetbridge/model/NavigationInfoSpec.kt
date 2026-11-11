@@ -20,6 +20,14 @@ import nodomain.freeyourgadget.gadgetbridge.util.GBToStringBuilder
 import java.time.LocalTime
 
 class NavigationInfoSpec {
+    enum class Source {
+        UNKNOWN,
+        GOOGLE_MAPS,
+    }
+
+    // Source that produced this navigation update
+    var source: Source = Source.UNKNOWN
+
     // Next instruction
     var instruction: String? = null
 
@@ -70,6 +78,7 @@ class NavigationInfoSpec {
 
     override fun toString(): String {
         val tsb = GBToStringBuilder(this)
+        tsb.append("source", source)
         tsb.append("instruction", instruction)
         tsb.append("distanceToTurn", distanceToTurn)
         tsb.append("distanceToTurnMeters", distanceToTurnMeters)

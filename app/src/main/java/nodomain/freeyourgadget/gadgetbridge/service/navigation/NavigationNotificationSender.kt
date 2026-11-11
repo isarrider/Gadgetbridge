@@ -19,6 +19,7 @@ class NavigationNotificationSender(private val support: AbstractDeviceSupport) {
     private var lastSent: NavigationInfoSpec? = null
     private var lastSentAt = 0L
     private var posted = false
+    private var googleMapsNearAlertSent = false
 
     fun onSetNavigationInfo(nav: NavigationInfoSpec) {
         if (nav.instruction.isNullOrBlank() && nav.distanceToTurn.isNullOrBlank() && nav.ETA.isNullOrBlank()) {
@@ -27,8 +28,18 @@ class NavigationNotificationSender(private val support: AbstractDeviceSupport) {
         }
 
         val destinationReached = isDestinationReached(nav)
+        val googleMapsDecision = if (!destinationReached && nav.source == NavigationInfoSpec.Source.GOOGLE_MAPS) {
+            decideGoogleMapsSend(nav)
+        } else {
+            null
+        }
+
         if (destinationReached) {
             if (lastSent?.let { isDestinationReached(it) } == true) {
+                return
+            }
+        } else if (googleMapsDecision != null) {
+            if (googleMapsDecision == GoogleMapsDecision.NONE) {
                 return
             }
         } else if (!shouldSend(nav, support.devicePrefs)) {
@@ -64,16 +75,43 @@ class NavigationNotificationSender(private val support: AbstractDeviceSupport) {
         posted = true
         lastSent = nav
         lastSentAt = SystemClock.elapsedRealtime()
+        if (googleMapsDecision != null) {
+            googleMapsNearAlertSent = when (googleMapsDecision) {
+                GoogleMapsDecision.INITIAL -> nav.distanceToTurnMeters?.let { it <= GOOGLE_MAPS_NEAR_ALERT_METERS } == true
+                GoogleMapsDecision.NEAR_ALERT -> true
+                GoogleMapsDecision.NONE -> googleMapsNearAlertSent
+            }
+        }
     }
 
     private fun clear() {
         lastSent = null
+        googleMapsNearAlertSent = false
         if (!posted) {
             return
         }
         LOG.debug("Clearing navigation notification")
         support.onDeleteNotification(NOTIFICATION_ID)
         posted = false
+    }
+
+    private fun decideGoogleMapsSend(nav: NavigationInfoSpec): GoogleMapsDecision {
+        val last = lastSent ?: return GoogleMapsDecision.INITIAL
+        if (last.source != NavigationInfoSpec.Source.GOOGLE_MAPS) {
+            return GoogleMapsDecision.INITIAL
+        }
+        if (nav.nextAction != last.nextAction || nav.instruction != last.instruction) {
+            return GoogleMapsDecision.INITIAL
+        }
+        if (googleMapsNearAlertSent) {
+            return GoogleMapsDecision.NONE
+        }
+        val distance = nav.distanceToTurnMeters ?: return GoogleMapsDecision.NONE
+        return if (distance <= GOOGLE_MAPS_NEAR_ALERT_METERS) {
+            GoogleMapsDecision.NEAR_ALERT
+        } else {
+            GoogleMapsDecision.NONE
+        }
     }
 
     private fun shouldSend(nav: NavigationInfoSpec, devicePrefs: Prefs): Boolean {
@@ -111,5 +149,12 @@ class NavigationNotificationSender(private val support: AbstractDeviceSupport) {
         private const val NOTIFICATION_ID = 0x4E415649
         private const val FINISH_DISTANCE_METERS = 15
         private const val NEW_SEGMENT_DISTANCE_METERS = 5
+        private const val GOOGLE_MAPS_NEAR_ALERT_METERS = 100
+    }
+
+    private enum class GoogleMapsDecision {
+        INITIAL,
+        NEAR_ALERT,
+        NONE,
     }
 }

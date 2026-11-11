@@ -1254,6 +1254,7 @@ public class GoogleMapsNotificationHandler {
                 }
             }
             final NavigationInfoSpec navInfo = new NavigationInfoSpec();
+            navInfo.setSource(NavigationInfoSpec.Source.GOOGLE_MAPS);
             if (matchedIcon >= 0)
                 navInfo.setNextAction(matchedIcon);
             navInfo.setInstruction(instruction);
