@@ -78,6 +78,9 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
 
     // Actions waiting for rpk list, by rpk id, oldest first.
     private final Map<String, List<Consumer<RpkInfoList>>> awaitingSha = new HashMap<>();
+    // Actions waiting for the band to report the app launched, by rpk id, oldest first. Each runs once.
+    // Guarded by itself: written by callers of startWearApp and read on the Bluetooth thread.
+    private final Map<String, List<Runnable>> awaitingLaunch = new HashMap<>();
     // Whether the companion app of each rpk id said it is listening, kept across band reconnects.
     private final Map<String, Boolean> companionAppConnected = new HashMap<>();
 
@@ -149,6 +152,55 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         withRpkRef(appId, ref -> launchWearApp(appId, ref));
     }
 
+    /**
+     * Launch an app installed on the band and run an action once the band reports it launched
+     * (CMD_RPK_LAUNCHED), for example to send a message the app only receives while open.
+     * The band does not always answer: an app already open on its screen does not report another
+     * launch. The action is dropped on disconnect, when the app is not installed, or by
+     * {@link #cancelLaunchAction}, so a caller that waits for it should also have a timeout.
+     *
+     * @param appId rpk id as reported in the rpk list
+     * @param onLaunched runs at most once, on the thread handling band commands
+     */
+    public void startWearApp(final String appId, final Runnable onLaunched) {
+        synchronized (awaitingLaunch) {
+            awaitingLaunch.computeIfAbsent(appId, k -> new ArrayList<>()).add(onLaunched);
+        }
+        startWearApp(appId);
+    }
+
+    /**
+     * Drop an action passed to {@link #startWearApp(String, Runnable)} that has not run yet.
+     */
+    public void cancelLaunchAction(final String appId, final Runnable onLaunched) {
+        synchronized (awaitingLaunch) {
+            final List<Runnable> actions = awaitingLaunch.get(appId);
+            if (actions != null && actions.remove(onLaunched) && actions.isEmpty()) {
+                awaitingLaunch.remove(appId);
+            }
+        }
+    }
+
+    private void runLaunchActions(final String appId) {
+        final List<Runnable> actions;
+        synchronized (awaitingLaunch) {
+            actions = awaitingLaunch.remove(appId);
+        }
+        if (actions == null) {
+            return;
+        }
+        LOG.debug("Wear app {} launched, running {} waiting actions", appId, actions.size());
+        for (final Runnable action : actions) {
+            action.run();
+        }
+    }
+
+    private void dropLaunchActionsOfMissingApps() {
+        synchronized (awaitingLaunch) {
+            awaitingLaunch.keySet().retainAll(shaMap.keySet());
+        }
+    }
+
     private void launchWearApp(final String appId, final RpkInfoList rpkRef) {
         LOG.debug("Launching {}", appId);
         // Field 2 is the uri parameter in the SDK's launchWearApp. The band seems to ignore it
@@ -175,6 +227,8 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
 
     private void onWearAppLaunched(final RpkInfoList app) {
         final RpkInfoList ref = rpkRef(app.getId(), app.getSha());
+        // as the official app: messages first, then the companion app status
+        runLaunchActions(app.getId());
         sendAppStatus(ref, companionAppStatus(app.getId()));
     }
 
@@ -249,6 +303,9 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         // Clear all pending actions, otherwise commands (and thus messages) from before the
         // disconnect would run on the next rpk list, possibly much later.
         awaitingSha.clear();
+        synchronized (awaitingLaunch) {
+            awaitingLaunch.clear();
+        }
     }
 
     static RpkInfoList rpkRef(final String id, final ByteString sha) {
@@ -369,6 +426,7 @@ public class XiaomiRpkService extends AbstractXiaomiService implements XiaomiDat
         getSupport().evaluateGBDeviceEvent(appInfoCmd);
 
         runAwaitingActions();
+        dropLaunchActionsOfMissingApps();
     }
 
 

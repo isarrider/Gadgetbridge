@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -58,6 +59,9 @@ import nodomain.freeyourgadget.gadgetbridge.util.cgm.XdripBroadcast;
 /**
  * Stores the glucose readings broadcast by xDrip+ and sends each one, with a graph of the
  * stored readings, to an app on the watch. Disabled unless {@code PREF_CGM_WATCH_APP_ENABLED} is set for the device.
+ * <p>
+ * The watch app only receives messages while it is open, so each reading launches it and is sent
+ * once the band reports it launched. The watch app is expected to store the reading and close.
  */
 public class XiaomiCgmSender {
     private static final Logger LOG = LoggerFactory.getLogger(XiaomiCgmSender.class);
@@ -66,10 +70,19 @@ public class XiaomiCgmSender {
     static final int DEFAULT_LOW_MGDL = 70;
     static final int DEFAULT_HIGH_MGDL = 180;
 
+    /**
+     * How long a reading waits for the watch app to report it launched before it is sent anyway.
+     * The band does not report a launch of an app that is already open on its screen, and a
+     * stuck watch app may not answer at all; a reading never waits longer than this.
+     */
+    static final long LAUNCH_TIMEOUT_MS = 10_000;
+
     private final XiaomiSupport support;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Executor executor;
     private Context context;
+    // Readings waiting for the watch app to launch. Guarded by this.
+    private final List<PendingMessage> pendingMessages = new ArrayList<>();
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
@@ -100,6 +113,7 @@ public class XiaomiCgmSender {
     }
 
     public void stop() {
+        dropPendingMessages();
         if (context != null) {
             context.unregisterReceiver(receiver);
             context = null;
@@ -143,11 +157,71 @@ public class XiaomiCgmSender {
             try {
                 final String payload = WatchDripPayload.build(
                         CgmSnapshot.fromSamples(samples, reading, mgdl, low, high), now, hours, phoneBattery());
-                handler.post(() -> support.onSendWatchAppMessage(appId, payload.getBytes(StandardCharsets.UTF_8)));
+                final PendingMessage message = new PendingMessage(appId, payload.getBytes(StandardCharsets.UTF_8));
+                handler.post(message::launchApp);
             } catch (final Exception e) {
                 LOG.error("Failed to build the glucose message", e);
             }
         });
+    }
+
+    private synchronized void dropPendingMessages() {
+        for (final PendingMessage message : pendingMessages) {
+            message.drop();
+        }
+        pendingMessages.clear();
+    }
+
+    /**
+     * One reading for the watch app: launched with the app, sent when the band reports the app
+     * launched or when {@link #LAUNCH_TIMEOUT_MS} runs out, whichever comes first, and only once.
+     */
+    private final class PendingMessage implements Runnable {
+        private final String appId;
+        private final byte[] payload;
+        private final Runnable onLaunched = () -> handler.post(this::send);
+
+        PendingMessage(final String appId, final byte[] payload) {
+            this.appId = appId;
+            this.payload = payload;
+        }
+
+        void launchApp() {
+            synchronized (XiaomiCgmSender.this) {
+                pendingMessages.add(this);
+            }
+            handler.postDelayed(this, LAUNCH_TIMEOUT_MS);
+            support.getRpkService().startWearApp(appId, onLaunched);
+        }
+
+        /** The launch was not answered in time. */
+        @Override
+        public void run() {
+            synchronized (XiaomiCgmSender.this) {
+                if (!pendingMessages.contains(this)) {
+                    return;
+                }
+                LOG.debug("Watch app {} did not report a launch within {} ms, sending anyway", appId, LAUNCH_TIMEOUT_MS);
+                support.getRpkService().cancelLaunchAction(appId, onLaunched);
+                send();
+            }
+        }
+
+        private void send() {
+            synchronized (XiaomiCgmSender.this) {
+                if (!pendingMessages.remove(this)) {
+                    return;
+                }
+                handler.removeCallbacks(this);
+                support.getRpkService().sendWearAppMessage(appId, payload);
+            }
+        }
+
+        /** Called with the lock held, by {@link #dropPendingMessages}. */
+        private void drop() {
+            handler.removeCallbacks(this);
+            support.getRpkService().cancelLaunchAction(appId, onLaunched);
+        }
     }
 
     /** @return the stored readings from {@code from} on, oldest first, including the new one */

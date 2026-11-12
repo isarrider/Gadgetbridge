@@ -175,6 +175,98 @@ public class XiaomiRpkMessageFlowTest {
     }
 
     @Test
+    public void launchActionRunsWhenTheBandReportsTheAppLaunched() {
+        service.handleCommand(rpkList(APP_ID));
+        final Runnable action = Mockito.mock(Runnable.class);
+        service.startWearApp(APP_ID, action);
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_LAUNCH, single(sentCommands()).getSubtype());
+        Mockito.verify(action, Mockito.never()).run();
+
+        service.handleCommand(launched(APP_ID));
+        Mockito.verify(action).run();
+    }
+
+    @Test
+    public void launchActionRunsBeforeTheStatus() {
+        service.handleCommand(rpkList(APP_ID));
+        service.startWearApp(APP_ID, () -> service.sendWearAppMessage(APP_ID, PAYLOAD));
+        Mockito.clearInvocations(support);
+
+        service.handleCommand(launched(APP_ID));
+        final List<XiaomiProto.Command> sent = sentCommands();
+        Assert.assertEquals(2, sent.size());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_MESSAGE_TO_WATCH, sent.get(0).getSubtype());
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_APP_STATUS, sent.get(1).getSubtype());
+    }
+
+    @Test
+    public void launchActionRunsOnlyOnce() {
+        service.handleCommand(rpkList(APP_ID));
+        final Runnable action = Mockito.mock(Runnable.class);
+        service.startWearApp(APP_ID, action);
+        service.handleCommand(launched(APP_ID));
+        service.handleCommand(launched(APP_ID));
+        Mockito.verify(action, Mockito.times(1)).run();
+    }
+
+    @Test
+    public void launchActionWaitsForTheListOfAnUnknownApp() {
+        final Runnable action = Mockito.mock(Runnable.class);
+        service.startWearApp(APP_ID, action);
+        service.handleCommand(rpkList(APP_ID));
+        Assert.assertEquals(XiaomiRpkService.CMD_RPK_LAUNCH, single(sentCommands()).getSubtype());
+
+        service.handleCommand(launched(APP_ID));
+        Mockito.verify(action).run();
+    }
+
+    @Test
+    public void launchActionIsNotRunForAnotherApp() {
+        service.handleCommand(rpkList(APP_ID));
+        final Runnable action = Mockito.mock(Runnable.class);
+        service.startWearApp(APP_ID, action);
+        service.handleCommand(launched("org.example.other"));
+        Mockito.verify(action, Mockito.never()).run();
+    }
+
+    @Test
+    public void cancelledLaunchActionIsNotRun() {
+        service.handleCommand(rpkList(APP_ID));
+        final Runnable action = Mockito.mock(Runnable.class);
+        final Runnable kept = Mockito.mock(Runnable.class);
+        service.startWearApp(APP_ID, action);
+        service.startWearApp(APP_ID, kept);
+        service.cancelLaunchAction(APP_ID, action);
+
+        service.handleCommand(launched(APP_ID));
+        Mockito.verify(action, Mockito.never()).run();
+        Mockito.verify(kept).run();
+    }
+
+    @Test
+    public void disconnectDropsLaunchActions() {
+        service.handleCommand(rpkList(APP_ID));
+        final Runnable action = Mockito.mock(Runnable.class);
+        service.startWearApp(APP_ID, action);
+        service.onDisconnect();
+
+        service.handleCommand(launched(APP_ID));
+        Mockito.verify(action, Mockito.never()).run();
+    }
+
+    @Test
+    public void launchActionOfAnAppMissingOnTheBandIsDropped() {
+        final Runnable action = Mockito.mock(Runnable.class);
+        service.startWearApp(APP_ID, action);
+        service.handleCommand(rpkList("org.example.other"));
+
+        // the app is installed later and opened by hand
+        service.handleCommand(rpkList(APP_ID));
+        service.handleCommand(launched(APP_ID));
+        Mockito.verify(action, Mockito.never()).run();
+    }
+
+    @Test
     public void launchWhileNotAllowedSendsDisconnected() {
         service.handleCommand(launched(APP_ID));
         Assert.assertEquals(XiaomiRpkService.RPK_APP_STATUS_DISCONNECTED, sentStatus());
