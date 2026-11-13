@@ -72,7 +72,7 @@ class OneTouchSupport : AbstractBTLESingleDeviceSupport(LOG) {
 
     override fun setContext(
         gbDevice: GBDevice,
-        btAdapter: BluetoothAdapter,
+        btAdapter: BluetoothAdapter?,
         dependencies: DeviceSupportDependencies
     ) {
         super.setContext(gbDevice, btAdapter, dependencies)

@@ -10,6 +10,7 @@ import io.mockk.verify
 import nodomain.freeyourgadget.gadgetbridge.BuildConfig
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.service.devices.test.TestDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.ScopedPrefsProvider
 import org.junit.Assert.assertNotNull
@@ -46,6 +47,17 @@ class DeviceSupportFactoryTest {
         val support = factory.createDeviceSupport(device(NoOpDeviceSupport::class.java.name))
 
         assertTrue(support is NoOpDeviceSupport)
+        assertSame(context, support!!.context)
+    }
+
+    @Test
+    fun kotlinSupportBuiltByClassNameOnAPhoneWithoutBluetoothGetsTheFactoryContext() {
+        every { bluetoothManager.adapter } returns null
+        val factory = DeviceSupportFactory(dependencies)
+
+        val support = factory.createDeviceSupport(device(TestDeviceSupport::class.java.name))
+
+        assertTrue(support is TestDeviceSupport)
         assertSame(context, support!!.context)
     }
 

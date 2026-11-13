@@ -303,7 +303,7 @@ class JabraEvolve255Support : AbstractHeadphoneBTBRDeviceSupport(LOG) {
 
     override fun useAutoConnect(): Boolean = true
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter?, dependencies: DeviceSupportDependencies) {
         super.setContext(gbDevice, btAdapter, dependencies)
         if (coordinator.supportsMultipointPairing()) {
             registerMultipointReceiver()

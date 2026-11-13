@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.hardware.usb.UsbAccessory;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
@@ -12,7 +13,7 @@ public abstract class AbstractBluetoothDeviceSupport extends AbstractDeviceSuppo
 
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
-                           @NonNull final BluetoothAdapter btAdapter,
+                           @Nullable final BluetoothAdapter btAdapter,
                            @NonNull final DeviceSupportDependencies dependencies) {
         super.setContext(gbDevice, btAdapter, dependencies);
         this.btAdapter = btAdapter;

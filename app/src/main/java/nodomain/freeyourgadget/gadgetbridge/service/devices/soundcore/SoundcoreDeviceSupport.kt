@@ -152,7 +152,7 @@ open class SoundcoreDeviceSupport : AbstractHeadphoneSerialDeviceSupportV2<Sound
         builder.queue()
     }
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter?, dependencies: DeviceSupportDependencies) {
         super.setContext(gbDevice, btAdapter, dependencies)
 
         val coordinator = gbDevice.deviceCoordinator as? SoundcoreEarbudsCoordinator

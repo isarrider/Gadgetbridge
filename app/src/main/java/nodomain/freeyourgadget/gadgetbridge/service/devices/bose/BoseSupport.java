@@ -26,6 +26,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.slf4j.Logger;
@@ -144,7 +145,7 @@ public class BoseSupport extends AbstractHeadphoneBTBRDeviceSupport {
 
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
-                           @NonNull final BluetoothAdapter btAdapter,
+                           @Nullable final BluetoothAdapter btAdapter,
                            @NonNull final DeviceSupportDependencies dependencies) {
         super.setContext(gbDevice, btAdapter, dependencies);
         deviceConfig = ((AbstractBoseCoordinator) gbDevice.getDeviceCoordinator()).getDeviceConfig();

@@ -97,7 +97,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
 
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
-                           @NonNull final BluetoothAdapter btAdapter,
+                           @Nullable final BluetoothAdapter btAdapter,
                            @NonNull final DeviceSupportDependencies dependencies) {
         this.gbDevice = gbDevice;
         this.dependencies = dependencies;

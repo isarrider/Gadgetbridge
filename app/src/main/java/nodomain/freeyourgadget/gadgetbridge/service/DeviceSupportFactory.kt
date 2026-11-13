@@ -42,8 +42,8 @@ import java.util.EnumSet
 class DeviceSupportFactory internal constructor(private val dependencies: DeviceSupportDependencies) {
     private val context: Context = dependencies.context
 
-    // Null on a phone without Bluetooth. Left as the Java platform type on purpose: the class-name and TCP paths
-    // pass it to setContext's @NonNull adapter parameter even when it's null, as the Java factory did.
+    // Null on a phone without Bluetooth. The class-name and TCP paths still pass it to setContext, whose adapter
+    // parameter is nullable for that reason.
     private val btAdapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
 
     @Synchronized

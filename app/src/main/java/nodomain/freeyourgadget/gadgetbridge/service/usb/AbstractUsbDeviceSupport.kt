@@ -52,7 +52,7 @@ abstract class AbstractUsbDeviceSupport(private val logger: Logger) : AbstractDe
     /// TODO: Maybe we could?
     override fun canReconnect(): Boolean = false
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter?, dependencies: DeviceSupportDependencies) {
         throw IllegalStateException("This is a USB support class")
     }
 

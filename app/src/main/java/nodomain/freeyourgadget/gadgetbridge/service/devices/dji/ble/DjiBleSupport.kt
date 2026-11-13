@@ -50,7 +50,7 @@ class DjiBleSupport : AbstractBTLESingleDeviceSupport(LOG) {
         addSupportedService(UUID_SERVICE_DJI)
     }
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter?, dependencies: DeviceSupportDependencies) {
         super.setContext(gbDevice, btAdapter, dependencies)
         if (!coordinator.supportsGallery(gbDevice)) {
             return

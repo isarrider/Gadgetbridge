@@ -26,6 +26,7 @@ import android.os.Handler;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.slf4j.Logger;
@@ -158,7 +159,7 @@ public class OppoHeadphonesSupport extends AbstractHeadphoneBTBRDeviceSupport {
     }
 
     @Override
-    public void setContext(@NonNull GBDevice gbDevice, @NonNull BluetoothAdapter btAdapter, @NonNull DeviceSupportDependencies dependencies) {
+    public void setContext(@NonNull GBDevice gbDevice, @Nullable BluetoothAdapter btAdapter, @NonNull DeviceSupportDependencies dependencies) {
         super.setContext(gbDevice, btAdapter, dependencies);
         if (getCoordinator().supportsMultipoint(getDevice())) {
             multipointReceiverSetup();

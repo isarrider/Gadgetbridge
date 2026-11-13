@@ -43,7 +43,7 @@ open class TestDeviceSupport : AbstractBluetoothDeviceSupport() {
     private val handler = Handler(Looper.getMainLooper())
     private var gallerySource: TestGallerySource? = null
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter?, dependencies: DeviceSupportDependencies) {
         super.setContext(gbDevice, btAdapter, dependencies)
         progressNotification = GBProgressNotification(dependencies.context, GB.NOTIFICATION_CHANNEL_ID_TRANSFER)
     }

@@ -28,7 +28,7 @@ abstract class AbstractHeadphoneBLEDeviceSupport(logger: Logger) :
 
     private lateinit var headphoneHelper: HeadphoneHelper
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter?, dependencies: DeviceSupportDependencies) {
         super.setContext(gbDevice, btAdapter, dependencies)
         headphoneHelper = HeadphoneHelper(this.context, device, this)
     }

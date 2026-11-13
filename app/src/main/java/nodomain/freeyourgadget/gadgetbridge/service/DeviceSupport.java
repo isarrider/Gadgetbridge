@@ -22,6 +22,7 @@ import android.hardware.usb.UsbAccessory;
 
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import nodomain.freeyourgadget.gadgetbridge.devices.EventHandler;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -45,11 +46,11 @@ public interface DeviceSupport extends EventHandler {
      * Sets all context information needed for the instance to operate. Only called for Bluetooth support classes.
      *
      * @param gbDevice  the device to operate with
-     * @param btAdapter the bluetooth adapter to use
+     * @param btAdapter the bluetooth adapter to use, or null on a phone without Bluetooth
      * @param dependencies the app-wide dependencies, including the android context, e.g. to look up resources
      */
     void setContext(@NonNull GBDevice gbDevice,
-                    @NonNull BluetoothAdapter btAdapter,
+                    @Nullable BluetoothAdapter btAdapter,
                     @NonNull DeviceSupportDependencies dependencies);
 
     /**
