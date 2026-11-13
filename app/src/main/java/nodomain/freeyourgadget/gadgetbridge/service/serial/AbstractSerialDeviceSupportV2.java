@@ -17,7 +17,6 @@
 package nodomain.freeyourgadget.gadgetbridge.service.serial;
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.ParcelUuid;
@@ -44,6 +43,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.MusicStateSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.Reminder;
 import nodomain.freeyourgadget.gadgetbridge.model.WorldClock;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.AbstractBTBRDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 
@@ -89,8 +89,8 @@ public abstract class AbstractSerialDeviceSupportV2<T extends GBDeviceProtocol> 
     }
 
     @Override
-    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         this.mDeviceProtocol = createDeviceProtocol();
     }
 

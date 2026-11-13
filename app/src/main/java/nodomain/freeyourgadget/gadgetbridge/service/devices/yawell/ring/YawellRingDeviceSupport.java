@@ -21,7 +21,6 @@ import static nodomain.freeyourgadget.gadgetbridge.util.DateTimeUtils.formatIso8
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
@@ -67,6 +66,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.DistanceUnit;
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService;
@@ -142,11 +142,11 @@ public class YawellRingDeviceSupport extends AbstractBTLESingleDeviceSupport {
     }
 
     @Override
-    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, Context context) {
+    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, DeviceSupportDependencies dependencies) {
         if (gbDevice.getFirmwareVersion() != null) {
             setCachedFirmwareVersion(gbDevice.getFirmwareVersion());
         }
-        super.setContext(gbDevice, btAdapter, context);
+        super.setContext(gbDevice, btAdapter, dependencies);
     }
 
     public String getCachedFirmwareVersion() {

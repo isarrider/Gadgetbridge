@@ -17,7 +17,6 @@
 package nodomain.freeyourgadget.gadgetbridge.service.devices.test
 
 import android.bluetooth.BluetoothAdapter
-import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import nodomain.freeyourgadget.gadgetbridge.R
@@ -30,6 +29,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.test.TestDeviceRand
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractBluetoothDeviceSupport
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies
 import nodomain.freeyourgadget.gadgetbridge.service.gallery.GallerySourceRegistry
 import nodomain.freeyourgadget.gadgetbridge.util.GB
 import nodomain.freeyourgadget.gadgetbridge.util.notifications.GBProgressNotification
@@ -43,9 +43,9 @@ open class TestDeviceSupport : AbstractBluetoothDeviceSupport() {
     private val handler = Handler(Looper.getMainLooper())
     private var gallerySource: TestGallerySource? = null
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, context: Context) {
-        super.setContext(gbDevice, btAdapter, context)
-        progressNotification = GBProgressNotification(context, GB.NOTIFICATION_CHANNEL_ID_TRANSFER)
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies)
+        progressNotification = GBProgressNotification(dependencies.context, GB.NOTIFICATION_CHANNEL_ID_TRANSFER)
     }
 
     override fun connect(): Boolean {

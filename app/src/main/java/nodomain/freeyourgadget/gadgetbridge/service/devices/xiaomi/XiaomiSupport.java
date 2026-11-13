@@ -18,7 +18,6 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi;
 
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -58,6 +57,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.WorldClock;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.sleepasandroid.SleepAsAndroidAction;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.XiaomiProto;
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractBluetoothDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidAlarmController;
 import nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSender;
 import nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidVibration;
@@ -190,20 +190,20 @@ public class XiaomiSupport extends AbstractBluetoothDeviceSupport {
     @Override
     public void setContext(@NonNull final GBDevice device,
                            @NonNull final BluetoothAdapter adapter,
-                           @NonNull final Context context) {
+                           @NonNull final DeviceSupportDependencies dependencies) {
         // FIXME unsetDynamicState unsets the fw version, which causes problems..
         if (device.getFirmwareVersion() != null) {
             setCachedFirmwareVersion(device.getFirmwareVersion());
         }
 
-        super.setContext(device, adapter, context);
+        super.setContext(device, adapter, dependencies);
 
         for (AbstractXiaomiService service : mServiceMap.values()) {
-            service.setContext(context);
+            service.setContext(dependencies.getContext());
         }
 
         if (getConnectionSpecificSupport() != null) {
-            getConnectionSpecificSupport().setContext(device, adapter, context);
+            getConnectionSpecificSupport().setContext(device, adapter, dependencies);
         }
 
         if (device.getDeviceCoordinator().supportsSleepAsAndroid(device)) {

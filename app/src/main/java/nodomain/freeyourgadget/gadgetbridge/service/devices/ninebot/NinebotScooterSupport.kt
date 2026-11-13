@@ -19,7 +19,6 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.ninebot
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
-import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -31,6 +30,7 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventUpdateDevi
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventUpdatePreferences
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder
 import nodomain.freeyourgadget.gadgetbridge.util.GB
@@ -149,8 +149,8 @@ class NinebotScooterSupport : AbstractBTLESingleDeviceSupport(LOG) {
         return builder
     }
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, context: Context) {
-        super.setContext(gbDevice, btAdapter, context)
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies)
         restartSearch()
     }
 

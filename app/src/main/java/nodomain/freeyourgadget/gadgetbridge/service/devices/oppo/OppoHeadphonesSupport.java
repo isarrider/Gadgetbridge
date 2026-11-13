@@ -57,6 +57,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.oppo.OppoHeadphonesPreferenc
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractHeadphoneBTBRDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.oppo.commands.AncConfigType;
@@ -157,8 +158,8 @@ public class OppoHeadphonesSupport extends AbstractHeadphoneBTBRDeviceSupport {
     }
 
     @Override
-    public void setContext(@NonNull GBDevice gbDevice, @NonNull BluetoothAdapter btAdapter, @NonNull Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+    public void setContext(@NonNull GBDevice gbDevice, @NonNull BluetoothAdapter btAdapter, @NonNull DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         if (getCoordinator().supportsMultipoint(getDevice())) {
             multipointReceiverSetup();
         }

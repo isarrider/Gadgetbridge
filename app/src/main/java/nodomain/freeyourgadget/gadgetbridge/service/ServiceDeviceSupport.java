@@ -80,15 +80,15 @@ public class ServiceDeviceSupport implements DeviceSupport {
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
                            @NonNull final BluetoothAdapter btAdapter,
-                           @NonNull final Context context) {
-        delegate.setContext(gbDevice, btAdapter, context);
+                           @NonNull final DeviceSupportDependencies dependencies) {
+        delegate.setContext(gbDevice, btAdapter, dependencies);
     }
 
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
                            @NonNull final UsbAccessory usbAccessory,
-                           @NonNull final Context context) {
-        delegate.setContext(gbDevice, usbAccessory, context);
+                           @NonNull final DeviceSupportDependencies dependencies) {
+        delegate.setContext(gbDevice, usbAccessory, dependencies);
     }
 
     @Override

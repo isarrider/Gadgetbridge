@@ -79,7 +79,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
     private static final Logger LOG = LoggerFactory.getLogger(AbstractDeviceSupport.class);
 
     protected GBDevice gbDevice;
-    private Context context;
+    private DeviceSupportDependencies dependencies;
     private boolean autoReconnect, scanReconnect;
     private NavigationNotificationSender navigationNotificationSender;
 
@@ -99,17 +99,17 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
                            @NonNull final BluetoothAdapter btAdapter,
-                           @NonNull final Context context) {
+                           @NonNull final DeviceSupportDependencies dependencies) {
         this.gbDevice = gbDevice;
-        this.context = context;
+        this.dependencies = dependencies;
     }
 
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
                            @NonNull final UsbAccessory usbAccessory,
-                           @NonNull final Context context) {
+                           @NonNull final DeviceSupportDependencies dependencies) {
         this.gbDevice = gbDevice;
-        this.context = context;
+        this.dependencies = dependencies;
     }
 
     /**
@@ -124,8 +124,8 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
             .putExtra(EXTRA_PAIRING_ERROR_ADDRESS, gbDevice.getAddress())
             .putExtra(EXTRA_PAIRING_ERROR_MESSAGE, message.toString())
             .putExtra(EXTRA_PAIRING_ERROR_AUTH_KEY, isAuthKeyError);
-        if (!LocalBroadcastManager.getInstance(context).sendBroadcast(intent)) {
-            GB.toast(context, message.toString(), Toast.LENGTH_LONG, GB.WARN);
+        if (!LocalBroadcastManager.getInstance(getContext()).sendBroadcast(intent)) {
+            GB.toast(getContext(), message.toString(), Toast.LENGTH_LONG, GB.WARN);
         }
     }
 
@@ -184,12 +184,13 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
 
     @Override
     public Context getContext() {
-        return context;
+        // Null before setContext, as it was when the Context was stored directly.
+        return dependencies == null ? null : dependencies.getContext();
     }
 
     public void evaluateGBDeviceEvent(final GBDeviceEvent deviceEvent) {
         LOG.debug("Evaluating event: {}", deviceEvent);
-        deviceEvent.evaluate(context, gbDevice);
+        deviceEvent.evaluate(getContext(), gbDevice);
     }
 
     public void handleGBDeviceEvent(final GBDeviceEvent deviceEvent) {

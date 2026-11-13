@@ -50,6 +50,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.bose.BoseDeviceConfig;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractHeadphoneBTBRDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.util.StringUtils;
 
@@ -144,10 +145,10 @@ public class BoseSupport extends AbstractHeadphoneBTBRDeviceSupport {
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
                            @NonNull final BluetoothAdapter btAdapter,
-                           @NonNull final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+                           @NonNull final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         deviceConfig = ((AbstractBoseCoordinator) gbDevice.getDeviceCoordinator()).getDeviceConfig();
-        context.registerReceiver(a2dpReceiver,
+        dependencies.getContext().registerReceiver(a2dpReceiver,
                 new IntentFilter("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED"));
         final IntentFilter multipointFilter = new IntentFilter();
         multipointFilter.addAction(MultipointPairingActivity.ACTION_MULTIPOINT_ENABLE);
@@ -158,7 +159,7 @@ public class BoseSupport extends AbstractHeadphoneBTBRDeviceSupport {
         multipointFilter.addAction(MultipointPairingActivity.ACTION_MULTIPOINT_DISCONNECT_DEVICE);
         multipointFilter.addAction(MultipointPairingActivity.ACTION_MULTIPOINT_FORGET_DEVICE);
         multipointFilter.addAction(MultipointPairingActivity.ACTION_MULTIPOINT_START_PAIRING);
-        LocalBroadcastManager.getInstance(context).registerReceiver(multipointReceiver, multipointFilter);
+        LocalBroadcastManager.getInstance(dependencies.getContext()).registerReceiver(multipointReceiver, multipointFilter);
     }
 
     @Override

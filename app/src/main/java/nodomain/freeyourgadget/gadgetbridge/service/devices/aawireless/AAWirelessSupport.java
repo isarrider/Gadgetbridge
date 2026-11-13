@@ -39,6 +39,7 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventUpdatePref
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.proto.aawireless.AAWirelessProto;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.AbstractBTBRDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
@@ -92,8 +93,8 @@ public class AAWirelessSupport extends AbstractBTBRDeviceSupport {
     }
 
     @Override
-    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         final IntentFilter commandFilter = new IntentFilter();
         commandFilter.addAction(AAWirelessPrefs.ACTION_PHONE_SWITCH);
         commandFilter.addAction(AAWirelessPrefs.ACTION_PHONE_SORT);

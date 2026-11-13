@@ -19,7 +19,6 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.huawei;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.content.Context;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -45,6 +44,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.MusicSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.MusicStateSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.NavigationInfoSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
@@ -66,9 +66,9 @@ public class HuaweiLESupport extends AbstractBTLESingleDeviceSupport {
     }
 
     @Override
-    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, Context context) {
-        super.setContext(gbDevice, btAdapter, context);
-        supportProvider.setContext(gbDevice, context);
+    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
+        supportProvider.setContext(gbDevice, dependencies.getContext());
     }
 
     @Override

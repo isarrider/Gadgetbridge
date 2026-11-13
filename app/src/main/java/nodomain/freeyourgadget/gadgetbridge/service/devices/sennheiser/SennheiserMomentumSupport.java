@@ -52,6 +52,7 @@ import nodomain.freeyourgadget.gadgetbridge.externalevents.BluetoothStateChangeR
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractHeadphoneBTBRDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs;
 
@@ -87,10 +88,10 @@ public class SennheiserMomentumSupport extends AbstractHeadphoneBTBRDeviceSuppor
     }
 
     @Override
-    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         if (!batteryReceiverRegistered) {
-            ContextCompat.registerReceiver(context, batteryReceiver,
+            ContextCompat.registerReceiver(dependencies.getContext(), batteryReceiver,
                     new IntentFilter(BluetoothStateChangeReceiver.ANDROID_BLUETOOTH_DEVICE_ACTION_BATTERY_LEVEL_CHANGED),
                     ContextCompat.RECEIVER_EXPORTED);
             batteryReceiverRegistered = true;

@@ -46,22 +46,22 @@ public interface DeviceSupport extends EventHandler {
      *
      * @param gbDevice  the device to operate with
      * @param btAdapter the bluetooth adapter to use
-     * @param context   the android context, e.g. to look up resources
+     * @param dependencies the app-wide dependencies, including the android context, e.g. to look up resources
      */
     void setContext(@NonNull GBDevice gbDevice,
                     @NonNull BluetoothAdapter btAdapter,
-                    @NonNull Context context);
+                    @NonNull DeviceSupportDependencies dependencies);
 
     /**
      * Sets all context information needed for the instance to operate. Only called for USB support classes.
      *
      * @param gbDevice     the device to operate with
      * @param usbAccessory the usb accessory to use
-     * @param context      the android context, e.g. to look up resources
+     * @param dependencies the app-wide dependencies, including the android context, e.g. to look up resources
      */
     void setContext(@NonNull GBDevice gbDevice,
                     @NonNull UsbAccessory usbAccessory,
-                    @NonNull Context context);
+                    @NonNull DeviceSupportDependencies dependencies);
 
     /**
      * Returns whether a transport-level connection is established with the device

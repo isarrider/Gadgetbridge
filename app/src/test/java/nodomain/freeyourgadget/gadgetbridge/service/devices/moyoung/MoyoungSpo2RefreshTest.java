@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.devices.moyoung.MoyoungConstants;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.test.TestBase;
 
 /**
@@ -50,7 +51,7 @@ public class MoyoungSpo2RefreshTest extends TestBase {
     public void setUpSupport() {
         final GBDevice device = createDummyGDevice("00:00:00:00:00:02");
         support = new MoyoungDeviceSupport();
-        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), getContext());
+        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), new DeviceSupportDependencies(getContext()));
         dataIn = new BluetoothGattCharacteristic(MoyoungConstants.UUID_CHARACTERISTIC_DATA_IN,
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ);

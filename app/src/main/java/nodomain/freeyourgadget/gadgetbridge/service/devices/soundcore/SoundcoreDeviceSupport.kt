@@ -24,6 +24,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst
 import nodomain.freeyourgadget.gadgetbridge.activities.multipoint.MultipointPairingActivity
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies
 import nodomain.freeyourgadget.gadgetbridge.util.kotlin.getParcelableCompat
 import android.content.Context
 import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.SoundcoreEarbudsCoordinator
@@ -151,8 +152,8 @@ open class SoundcoreDeviceSupport : AbstractHeadphoneSerialDeviceSupportV2<Sound
         builder.queue()
     }
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, context: Context) {
-        super.setContext(gbDevice, btAdapter, context)
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies)
 
         val coordinator = gbDevice.deviceCoordinator as? SoundcoreEarbudsCoordinator
             ?: throw IllegalArgumentException("Expected a SoundcoreEarbudsCoordinator for Soundcore earbuds support")
@@ -163,7 +164,7 @@ open class SoundcoreDeviceSupport : AbstractHeadphoneSerialDeviceSupportV2<Sound
             actions.isNotEmpty() && !multipointReceiverRegistered
         ) {
             val filter = IntentFilter().apply { actions.forEach { addAction(it) } }
-            LocalBroadcastManager.getInstance(context).registerReceiver(multipointReceiver, filter)
+            LocalBroadcastManager.getInstance(dependencies.context).registerReceiver(multipointReceiver, filter)
             multipointReceiverRegistered = true
         }
     }

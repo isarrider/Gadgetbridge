@@ -17,6 +17,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractBluetoothDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.HeadphoneHelper;
 
 public class GenericHeadphonesSupport extends AbstractBluetoothDeviceSupport implements HeadphoneHelper.Callback {
@@ -76,8 +77,8 @@ public class GenericHeadphonesSupport extends AbstractBluetoothDeviceSupport imp
     }
 
     @Override
-    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         headphoneHelper = new HeadphoneHelper(getContext(), getDevice(), this);
     }
 

@@ -75,6 +75,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.weather.Weather;
 import nodomain.freeyourgadget.gadgetbridge.model.weather.WeatherMapper;
 import nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
@@ -235,10 +236,10 @@ public class CmfWatchProSupport extends AbstractBTLESingleDeviceSupport implemen
     }
 
     @Override
-    public void setContext(final GBDevice device, final BluetoothAdapter adapter, final Context context) {
-        super.setContext(device, adapter, context);
+    public void setContext(final GBDevice device, final BluetoothAdapter adapter, final DeviceSupportDependencies dependencies) {
+        super.setContext(device, adapter, dependencies);
 
-        mediaManager = new MediaManager(context);
+        mediaManager = new MediaManager(dependencies.getContext());
     }
 
     @Override

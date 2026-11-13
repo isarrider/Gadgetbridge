@@ -95,6 +95,7 @@ import nodomain.freeyourgadget.gadgetbridge.entities.UltrahumanDeviceStateSample
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceService;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BleNamesResolver;
@@ -278,7 +279,7 @@ public class UltrahumanDeviceSupport extends AbstractBTLESingleDeviceSupport {
     }
 
     @Override
-    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final Context context) {
+    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final DeviceSupportDependencies dependencies) {
         // a completed "this" is required so do the initialization here and not in the constructor
         if (CommandReceiver == null) {
             addSupportedService(UltrahumanConstants.UUID_SERVICE_REQUEST);
@@ -294,7 +295,7 @@ public class UltrahumanDeviceSupport extends AbstractBTLESingleDeviceSupport {
             addSupportedProfile(deviceProfile);
         }
 
-        super.setContext(gbDevice, btAdapter, context);
+        super.setContext(gbDevice, btAdapter, dependencies);
         ProgressNotification = new GBProgressNotification(getContext(), GB.NOTIFICATION_CHANNEL_ID_TRANSFER);
     }
 

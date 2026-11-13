@@ -55,6 +55,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.TemperatureUnit;
 import nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.weather.Weather;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLEMultiDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BtLEQueue;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
@@ -156,7 +157,7 @@ public class G1DeviceSupport extends AbstractBTLEMultiDeviceSupport {
     }
 
     @Override
-    public void setContext(GBDevice device, BluetoothAdapter btAdapter, Context context) {
+    public void setContext(GBDevice device, BluetoothAdapter btAdapter, DeviceSupportDependencies dependencies) {
         // Determine the left and right names based on if this is the parent device or not.
         // Ignore any context sets from non-left devices.
         G1Constants.Side side = G1Constants.getSideFromFullName(device.getName());
@@ -175,13 +176,13 @@ public class G1DeviceSupport extends AbstractBTLEMultiDeviceSupport {
             }
 
             // The left device acts as the parent device
-            super.setContext(device, btAdapter, context);
+            super.setContext(device, btAdapter, dependencies);
         } else {
             // This should only happen during pairing. Once the devices are linked by the
             // entries for right and left devices in the device specific preferences, this will
             // never be called on the right device again. BUT we need this to connect to the right
             // device before the devices are linked.
-            super.setContext(device, btAdapter, context);
+            super.setContext(device, btAdapter, dependencies);
         }
 
         if (backgroundTasksHandler == null) {
@@ -192,7 +193,7 @@ public class G1DeviceSupport extends AbstractBTLEMultiDeviceSupport {
         // Register to receive silent mode intent calls from the UI.
         if (intentReceiver == null) {
             intentReceiver = new IntentReceiver();
-            ContextCompat.registerReceiver(context, intentReceiver,
+            ContextCompat.registerReceiver(dependencies.getContext(), intentReceiver,
                                            new IntentFilter(G1Constants.INTENT_TOGGLE_SILENT_MODE),
                                            ContextCompat.RECEIVER_NOT_EXPORTED);
         }

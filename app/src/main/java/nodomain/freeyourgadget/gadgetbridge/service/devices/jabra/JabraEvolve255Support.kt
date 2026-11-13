@@ -58,6 +58,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractHeadphoneBTBRDeviceSupport
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder
 import nodomain.freeyourgadget.gadgetbridge.util.kotlin.getParcelableCompat
 import org.slf4j.LoggerFactory
@@ -302,8 +303,8 @@ class JabraEvolve255Support : AbstractHeadphoneBTBRDeviceSupport(LOG) {
 
     override fun useAutoConnect(): Boolean = true
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, context: Context) {
-        super.setContext(gbDevice, btAdapter, context)
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies)
         if (coordinator.supportsMultipointPairing()) {
             registerMultipointReceiver()
         }

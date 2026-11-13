@@ -17,7 +17,6 @@
 package nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos;
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -54,6 +53,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.MusicStateSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.Reminder;
 import nodomain.freeyourgadget.gadgetbridge.model.WorldClock;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.AbstractBTBRDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
@@ -106,9 +106,9 @@ public class ZeppOsBtbrSupport extends AbstractBTBRDeviceSupport implements Zepp
     }
 
     @Override
-    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
-        zeppOsSupport.setContext(gbDevice, btAdapter, context);
+    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
+        zeppOsSupport.setContext(gbDevice, btAdapter, dependencies);
     }
 
     @Override

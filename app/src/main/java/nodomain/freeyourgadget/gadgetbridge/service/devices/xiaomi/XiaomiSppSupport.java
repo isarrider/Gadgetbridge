@@ -20,7 +20,6 @@ import static nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.Xiaomi
 import static nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSppPacketV1.OPCODE_READ;
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -38,6 +37,7 @@ import java.util.UUID;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventUpdateDeviceInfo;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.XiaomiProto;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.AbstractBTBRDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiChannelHandler.Channel;
@@ -111,8 +111,8 @@ public class XiaomiSppSupport extends XiaomiConnectionSupport {
     }
 
     @Override
-    public void setContext(GBDevice device, BluetoothAdapter adapter, Context context) {
-        this.commsSupport.setContext(device, adapter, context);
+    public void setContext(GBDevice device, BluetoothAdapter adapter, DeviceSupportDependencies dependencies) {
+        this.commsSupport.setContext(device, adapter, dependencies);
     }
 
     @Override

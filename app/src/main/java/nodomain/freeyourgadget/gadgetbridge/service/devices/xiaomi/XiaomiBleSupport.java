@@ -19,7 +19,6 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.content.Context;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -32,6 +31,7 @@ import java.util.UUID;
 
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.XiaomiProto;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.BtLEQueue;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
@@ -136,8 +136,8 @@ public class XiaomiBleSupport extends XiaomiConnectionSupport {
     }
 
     @Override
-    public void setContext(GBDevice device, BluetoothAdapter adapter, Context context) {
-        this.commsSupport.setContext(device, adapter, context);
+    public void setContext(GBDevice device, BluetoothAdapter adapter, DeviceSupportDependencies dependencies) {
+        this.commsSupport.setContext(device, adapter, dependencies);
     }
 
     @Override

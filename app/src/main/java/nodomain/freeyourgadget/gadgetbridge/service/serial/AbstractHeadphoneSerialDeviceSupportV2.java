@@ -17,12 +17,12 @@
 package nodomain.freeyourgadget.gadgetbridge.service.serial;
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractHeadphoneBTBRDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.HeadphoneHelper;
 
 /**
@@ -44,8 +44,8 @@ public abstract class AbstractHeadphoneSerialDeviceSupportV2<T extends GBDeviceP
     }
 
     @Override
-    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         headphoneHelper = new HeadphoneHelper(getContext(), getDevice(), this);
     }
 

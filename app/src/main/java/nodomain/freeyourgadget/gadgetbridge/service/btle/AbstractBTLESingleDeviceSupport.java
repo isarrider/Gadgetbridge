@@ -26,7 +26,6 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
-import android.content.Context;
 
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
@@ -45,6 +44,7 @@ import java.util.UUID;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.actions.CheckInitializedAction;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.AbstractBleProfile;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
@@ -122,8 +122,8 @@ public abstract class AbstractBTLESingleDeviceSupport extends AbstractBTLEDevice
 
     @CallSuper
     @Override
-    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
 
         if(BleIntentApi.isEnabled(gbDevice)) {
             bleApi = new BleIntentApi(this, 0);

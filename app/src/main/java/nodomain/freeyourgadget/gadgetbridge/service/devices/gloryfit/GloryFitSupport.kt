@@ -19,7 +19,6 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.gloryfit
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
-import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -50,6 +49,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.TemperatureUnit
 import nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec
 import nodomain.freeyourgadget.gadgetbridge.model.weather.OwmCondition
 import nodomain.freeyourgadget.gadgetbridge.model.weather.Weather
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder
 import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.wena3.protocol.packets.notification.defines.VibrationKind
@@ -92,9 +92,9 @@ class GloryFitSupport : AbstractBTLESingleDeviceSupport(LOG) {
         return true
     }
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, context: Context) {
-        super.setContext(gbDevice, btAdapter, context)
-        mMediaManager = MediaManager(context)
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies)
+        mMediaManager = MediaManager(dependencies.context)
         mAppNotificationSettingsRepository = AppSpecificNotificationSettingsRepository(gbDevice)
     }
 

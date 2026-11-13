@@ -17,7 +17,6 @@
 package nodomain.freeyourgadget.gadgetbridge.service
 
 import android.bluetooth.BluetoothAdapter
-import android.content.Context
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec
@@ -29,8 +28,8 @@ abstract class AbstractHeadphoneBLEDeviceSupport(logger: Logger) :
 
     private lateinit var headphoneHelper: HeadphoneHelper
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, context: Context) {
-        super.setContext(gbDevice, btAdapter, context)
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies)
         headphoneHelper = HeadphoneHelper(this.context, device, this)
     }
 

@@ -9,6 +9,7 @@ import android.widget.Toast
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventUpdateDeviceState
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractDeviceSupport
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies
 import nodomain.freeyourgadget.gadgetbridge.util.GB
 import org.slf4j.Logger
 import java.io.FileInputStream
@@ -51,12 +52,12 @@ abstract class AbstractUsbDeviceSupport(private val logger: Logger) : AbstractDe
     /// TODO: Maybe we could?
     override fun canReconnect(): Boolean = false
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, context: Context) {
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
         throw IllegalStateException("This is a USB support class")
     }
 
-    override fun setContext(gbDevice: GBDevice, usbAccessory: UsbAccessory, context: Context) {
-        super.setContext(gbDevice, usbAccessory, context)
+    override fun setContext(gbDevice: GBDevice, usbAccessory: UsbAccessory, dependencies: DeviceSupportDependencies) {
+        super.setContext(gbDevice, usbAccessory, dependencies)
         this.usbAccessory = usbAccessory
     }
 

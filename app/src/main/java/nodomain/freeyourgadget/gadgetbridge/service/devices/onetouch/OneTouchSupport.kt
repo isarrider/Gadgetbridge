@@ -3,7 +3,6 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.onetouch
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
-import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import nodomain.freeyourgadget.gadgetbridge.BuildConfig
@@ -17,6 +16,7 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInf
 import nodomain.freeyourgadget.gadgetbridge.devices.GlucoseSampleProvider
 import nodomain.freeyourgadget.gadgetbridge.entities.GlucoseSample
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder
@@ -73,10 +73,10 @@ class OneTouchSupport : AbstractBTLESingleDeviceSupport(LOG) {
     override fun setContext(
         gbDevice: GBDevice,
         btAdapter: BluetoothAdapter,
-        context: Context
+        dependencies: DeviceSupportDependencies
     ) {
-        super.setContext(gbDevice, btAdapter, context)
-        transferNotification = GBProgressNotification(context, GB.NOTIFICATION_CHANNEL_ID_TRANSFER)
+        super.setContext(gbDevice, btAdapter, dependencies)
+        transferNotification = GBProgressNotification(dependencies.context, GB.NOTIFICATION_CHANNEL_ID_TRANSFER)
     }
 
     override fun useAutoConnect(): Boolean {

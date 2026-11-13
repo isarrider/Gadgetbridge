@@ -124,6 +124,7 @@ import nodomain.freeyourgadget.gadgetbridge.proto.garmin.GdiFindMyWatch;
 import nodomain.freeyourgadget.gadgetbridge.proto.garmin.GdiInstalledApps;
 import nodomain.freeyourgadget.gadgetbridge.proto.garmin.GdiRealtimeSettings;
 import nodomain.freeyourgadget.gadgetbridge.proto.garmin.GdiSmartProto.Smart;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSender;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
@@ -270,11 +271,11 @@ public class GarminSupport extends AbstractBTLESingleDeviceSupport implements IC
     }
 
     @Override
-    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
-        this.mediaManager = new MediaManager(context);
-        this.protocolBufferHandler.setContext(gbDevice, btAdapter, context);
-        this.transferNotification = new GBProgressNotification(context, GB.NOTIFICATION_CHANNEL_ID_TRANSFER);
+    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
+        this.mediaManager = new MediaManager(dependencies.getContext());
+        this.protocolBufferHandler.setContext(gbDevice, btAdapter, dependencies.getContext());
+        this.transferNotification = new GBProgressNotification(dependencies.getContext(), GB.NOTIFICATION_CHANNEL_ID_TRANSFER);
         if (gbDevice.getDeviceCoordinator().supportsSleepAsAndroid(gbDevice)) {
             this.sleepAsAndroidSender = new SleepAsAndroidSender(gbDevice);
         }

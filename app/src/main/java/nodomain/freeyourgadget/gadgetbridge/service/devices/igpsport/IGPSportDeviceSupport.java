@@ -23,7 +23,6 @@ import static nodomain.freeyourgadget.gadgetbridge.devices.igpsport.IGPSportCons
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -77,6 +76,7 @@ import nodomain.freeyourgadget.gadgetbridge.proto.igpsport.Ins;
 import nodomain.freeyourgadget.gadgetbridge.proto.igpsport.Media;
 import nodomain.freeyourgadget.gadgetbridge.proto.igpsport.PeripheralCommon;
 import nodomain.freeyourgadget.gadgetbridge.proto.igpsport.RoutePlan;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService;
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
@@ -749,10 +749,10 @@ public class IGPSportDeviceSupport extends AbstractBTLESingleDeviceSupport {
     }
 
     @Override
-    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
-        this.mediaManager = new MediaManager(context);
-        this.downloadManager.setContext(context);
+    public void setContext(final GBDevice gbDevice, final BluetoothAdapter btAdapter, final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
+        this.mediaManager = new MediaManager(dependencies.getContext());
+        this.downloadManager.setContext(dependencies.getContext());
     }
 
     @Override

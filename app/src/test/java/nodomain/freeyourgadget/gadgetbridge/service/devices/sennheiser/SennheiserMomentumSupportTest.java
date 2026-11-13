@@ -34,6 +34,7 @@ import org.robolectric.shadows.ShadowLooper;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.BluetoothStateChangeReceiver;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.BtBRAction;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.actions.WriteAction;
@@ -54,7 +55,7 @@ public class SennheiserMomentumSupportTest extends TestBase {
         device = new GBDevice(ADDRESS, "MOMENTUM M2 IEBT", null, null, DeviceType.SENNHEISER_MOMENTUM_IN_EAR_WIRELESS);
         device.setState(GBDevice.State.WAITING_FOR_RECONNECT);
         support = new SennheiserMomentumSupport();
-        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), getContext());
+        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), new DeviceSupportDependencies(getContext()));
     }
 
     @After

@@ -420,7 +420,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         LOG.debug("DeviceCommunicationService is being created");
         super.onCreate();
         logLastExitReason();
-        mFactory = new DeviceSupportFactory(this);
+        mFactory = new DeviceSupportFactory(new DeviceSupportDependencies(this));
         deviceReceiversManager = new DeviceReceiversManager(this);
 
         registerInternalReceivers();

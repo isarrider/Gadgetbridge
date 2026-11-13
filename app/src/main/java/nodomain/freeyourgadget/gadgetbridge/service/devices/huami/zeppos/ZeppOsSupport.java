@@ -21,7 +21,6 @@ import static nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.
 import static nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos.services.ZeppOsConfigService.ConfigArg.SLEEP_HIGH_ACCURACY_MONITORING;
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -69,6 +68,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
 import nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes;
 import nodomain.freeyourgadget.gadgetbridge.model.WorldClock;
 import nodomain.freeyourgadget.gadgetbridge.service.AbstractBluetoothDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.SleepAsAndroidSender;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.Huami2021Service;
@@ -268,8 +268,8 @@ public class ZeppOsSupport extends AbstractBluetoothDeviceSupport
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
                            @NonNull final BluetoothAdapter btAdapter,
-                           @NonNull final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+                           @NonNull final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         sleepAsAndroidSender = new SleepAsAndroidSender(gbDevice);
         heartRateService.setSleepAsAndroidSender(sleepAsAndroidSender);
         final RealtimeSamplesAggregator realtimeSamplesAggregator = new RealtimeSamplesAggregator(getContext(), getDevice());
@@ -277,7 +277,7 @@ public class ZeppOsSupport extends AbstractBluetoothDeviceSupport
         stepsService.setRealtimeSamplesAggregator(realtimeSamplesAggregator);
 
         if (getCoordinator().supportsWifiFtp(gbDevice)) {
-            wifiFtpSession = new ZeppOsWifiFtpSession(context, gbDevice, wifiService, ftpServerService);
+            wifiFtpSession = new ZeppOsWifiFtpSession(dependencies.getContext(), gbDevice, wifiService, ftpServerService);
             ftpExecutor = Executors.newSingleThreadExecutor();
             ftpMusicManager = new ZeppOsFtpMusicManager(this, wifiFtpSession, ftpExecutor);
             voiceMemosService.setFtpSession(wifiFtpSession, ftpExecutor);

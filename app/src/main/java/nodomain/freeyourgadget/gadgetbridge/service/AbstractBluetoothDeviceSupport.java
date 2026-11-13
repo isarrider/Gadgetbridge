@@ -1,7 +1,6 @@
 package nodomain.freeyourgadget.gadgetbridge.service;
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 import android.hardware.usb.UsbAccessory;
 
 import androidx.annotation.NonNull;
@@ -14,15 +13,15 @@ public abstract class AbstractBluetoothDeviceSupport extends AbstractDeviceSuppo
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
                            @NonNull final BluetoothAdapter btAdapter,
-                           @NonNull final Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+                           @NonNull final DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         this.btAdapter = btAdapter;
     }
 
     @Override
     public void setContext(@NonNull final GBDevice gbDevice,
                            @NonNull final UsbAccessory usbAccessory,
-                           @NonNull final Context context) {
+                           @NonNull final DeviceSupportDependencies dependencies) {
         throw new IllegalStateException("This is a Bluetooth support class");
     }
 

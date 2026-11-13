@@ -17,12 +17,12 @@
 package nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi;
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 
 import androidx.annotation.Nullable;
 
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.proto.xiaomi.XiaomiProto;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 
 public abstract class XiaomiConnectionSupport {
     public abstract boolean connect();
@@ -30,7 +30,7 @@ public abstract class XiaomiConnectionSupport {
     public abstract void onUploadProgress(int textRsrc, int progressPercent, boolean ongoing);
     public abstract void runOnQueue(String taskName, Runnable run);
     public abstract void dispose();
-    public abstract void setContext(final GBDevice device, final BluetoothAdapter adapter, final Context context);
+    public abstract void setContext(final GBDevice device, final BluetoothAdapter adapter, final DeviceSupportDependencies dependencies);
     public abstract void sendCommand(final String taskName, final XiaomiProto.Command command);
     public abstract void sendDataChunk(final String taskName, final byte[] chunk, @Nullable final XiaomiSendCallback callback);
     public void setAutoReconnect(final boolean enabled) {}

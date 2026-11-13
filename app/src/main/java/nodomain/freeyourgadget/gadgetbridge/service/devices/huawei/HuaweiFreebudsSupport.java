@@ -18,7 +18,6 @@
 package nodomain.freeyourgadget.gadgetbridge.service.devices.huawei;
 
 import android.bluetooth.BluetoothAdapter;
-import android.content.Context;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -38,6 +37,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
 import nodomain.freeyourgadget.gadgetbridge.model.FindDeviceTarget;
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.service.HeadphoneHelper;
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.requests.GetAdaptiveVolumeRequest;
@@ -68,8 +68,8 @@ public class HuaweiFreebudsSupport extends HuaweiBRSupport implements HeadphoneH
     }
 
     @Override
-    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, Context context) {
-        super.setContext(gbDevice, btAdapter, context);
+    public void setContext(GBDevice gbDevice, BluetoothAdapter btAdapter, DeviceSupportDependencies dependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies);
         headphoneHelper = new HeadphoneHelper(getContext(), getDevice(), this);
     }
 

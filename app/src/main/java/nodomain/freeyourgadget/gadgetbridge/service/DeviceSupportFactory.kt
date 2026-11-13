@@ -40,7 +40,9 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.EnumSet
 
-class DeviceSupportFactory internal constructor(private val context: Context) {
+class DeviceSupportFactory internal constructor(private val dependencies: DeviceSupportDependencies) {
+    private val context: Context = dependencies.context
+
     // Null on a phone without Bluetooth. Left as the Java platform type on purpose: the class-name and TCP paths
     // pass it to setContext's @NonNull adapter parameter even when it's null, as the Java factory did.
     private val btAdapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
@@ -75,7 +77,7 @@ class DeviceSupportFactory internal constructor(private val context: Context) {
             val constructor = deviceSupportClass.getConstructor()
             val support = constructor.newInstance() as DeviceSupport
             // has to create the device itself
-            support.setContext(device, btAdapter, context)
+            support.setContext(device, btAdapter, dependencies)
             return support
         } catch (e: ClassNotFoundException) {
             LOG.warn("Unable to find DeviceSupport class {} for {}", className, device.address)
@@ -116,7 +118,7 @@ class DeviceSupportFactory internal constructor(private val context: Context) {
 
         try {
             val deviceSupport: DeviceSupport = createServiceDeviceSupport(gbDevice)
-            deviceSupport.setContext(gbDevice, btAdapter, context)
+            deviceSupport.setContext(gbDevice, btAdapter, dependencies)
             return deviceSupport
         } catch (e: Exception) {
             throw GBException(context.getString(R.string.cannot_connect_bt_address_invalid_), e)
@@ -127,7 +129,7 @@ class DeviceSupportFactory internal constructor(private val context: Context) {
     private fun createTCPDeviceSupport(gbDevice: GBDevice): DeviceSupport {
         try {
             val deviceSupport: DeviceSupport = ServiceDeviceSupport(PebbleSupport(), EnumSet.of(ServiceDeviceSupport.Flags.BUSY_CHECKING))
-            deviceSupport.setContext(gbDevice, btAdapter, context)
+            deviceSupport.setContext(gbDevice, btAdapter, dependencies)
             return deviceSupport
         } catch (e: Exception) {
             throw GBException("cannot connect to $gbDevice", e) // FIXME: localize
@@ -150,7 +152,7 @@ class DeviceSupportFactory internal constructor(private val context: Context) {
 
         try {
             val deviceSupport: DeviceSupport = createServiceDeviceSupport(gbDevice)
-            deviceSupport.setContext(gbDevice, accessory, context)
+            deviceSupport.setContext(gbDevice, accessory, dependencies)
             return deviceSupport
         } catch (e: Exception) {
             throw GBException("cannot connect to $gbDevice", e)

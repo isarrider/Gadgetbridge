@@ -3,7 +3,6 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.dji.ble
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
-import android.content.Context
 import android.os.Bundle
 import io.kaitai.struct.KaitaiStruct
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
@@ -17,6 +16,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.kaitai.DumlBattery
 import nodomain.freeyourgadget.gadgetbridge.kaitai.DumlWifi
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies
 import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder
 import nodomain.freeyourgadget.gadgetbridge.service.devices.dji.DjiPrefs
@@ -50,12 +50,12 @@ class DjiBleSupport : AbstractBTLESingleDeviceSupport(LOG) {
         addSupportedService(UUID_SERVICE_DJI)
     }
 
-    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, context: Context) {
-        super.setContext(gbDevice, btAdapter, context)
+    override fun setContext(gbDevice: GBDevice, btAdapter: BluetoothAdapter, dependencies: DeviceSupportDependencies) {
+        super.setContext(gbDevice, btAdapter, dependencies)
         if (!coordinator.supportsGallery(gbDevice)) {
             return
         }
-        val session = DjiWifiSession(context, gbDevice) { cmd, payload ->
+        val session = DjiWifiSession(dependencies.context, gbDevice) { cmd, payload ->
             sendPacket(
                 "wifi 0x%02x".format(cmd),
                 receiver = DumlAddress.WIFI,

@@ -5,6 +5,8 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import org.junit.Assert.assertNotNull
@@ -26,7 +28,8 @@ class DeviceSupportFactoryTest {
     private val coordinator = mockk<DeviceCoordinator> {
         every { connectionType } returns DeviceCoordinator.ConnectionType.BOTH
     }
-    private val factory = DeviceSupportFactory(context)
+    private val dependencies = DeviceSupportDependencies(context)
+    private val factory = DeviceSupportFactory(dependencies)
 
     private fun device(deviceAddress: String) = mockk<GBDevice> {
         every { address } returns deviceAddress
@@ -44,7 +47,7 @@ class DeviceSupportFactoryTest {
     @Test
     fun bluetoothSupportIsWrappedAndGetsTheFactoryContext() {
         val device = device("00:11:22:33:44:55")
-        val inner = NoOpDeviceSupport()
+        val inner = spyk(NoOpDeviceSupport())
         every { coordinator.createDeviceSupport(device) } returns inner
         every { coordinator.initialFlags } returns EnumSet.noneOf(ServiceDeviceSupport.Flags::class.java)
 
@@ -54,12 +57,13 @@ class DeviceSupportFactoryTest {
         assertTrue(support is ServiceDeviceSupport)
         assertSame(context, inner.context)
         assertSame(context, support!!.context)
+        verify { inner.setContext(device, bluetoothAdapter, dependencies) }
     }
 }
 
 /**
  * A support that does nothing. The factory's class-name path builds a support by reflection, so it needs a real
- * class with a public no-arg constructor.
+ * class with a public no-arg constructor; tests that check calls on it wrap it in a MockK spy.
  */
 class NoOpDeviceSupport : AbstractDeviceSupport() {
     override fun connect(): Boolean = false

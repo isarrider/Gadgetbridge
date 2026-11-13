@@ -39,6 +39,7 @@ import org.robolectric.shadows.ShadowBluetoothAdapter;
 import org.robolectric.shadows.ShadowLooper;
 
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
 import nodomain.freeyourgadget.gadgetbridge.test.TestBase;
 
 /**
@@ -61,7 +62,7 @@ public class GenericHeadphonesSupportTest extends TestBase {
         adapter = shadowOf(BluetoothAdapter.getDefaultAdapter());
         adapter.setProfileProxy(BluetoothProfile.HEADSET, headsetService);
         support = new GenericHeadphonesSupport();
-        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), getContext());
+        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), new DeviceSupportDependencies(getContext()));
     }
 
     @After
