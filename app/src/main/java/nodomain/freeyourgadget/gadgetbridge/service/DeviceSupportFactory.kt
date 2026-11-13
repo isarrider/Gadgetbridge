@@ -23,175 +23,165 @@
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
-package nodomain.freeyourgadget.gadgetbridge.service;
+package nodomain.freeyourgadget.gadgetbridge.service
 
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
-import android.content.Context;
-import android.hardware.usb.UsbAccessory;
-import android.hardware.usb.UsbManager;
+import android.bluetooth.BluetoothManager
+import android.content.Context
+import android.hardware.usb.UsbAccessory
+import android.hardware.usb.UsbManager
+import nodomain.freeyourgadget.gadgetbridge.BuildConfig
+import nodomain.freeyourgadget.gadgetbridge.GBApplication
+import nodomain.freeyourgadget.gadgetbridge.GBException
+import nodomain.freeyourgadget.gadgetbridge.R
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.service.devices.pebble.PebbleSupport
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.EnumSet
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+class DeviceSupportFactory internal constructor(private val context: Context) {
+    // Null on a phone without Bluetooth. Left as the Java platform type on purpose: the class-name and TCP paths
+    // pass it to setContext's @NonNull adapter parameter even when it's null, as the Java factory did.
+    private val btAdapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import nodomain.freeyourgadget.gadgetbridge.BuildConfig;
-import nodomain.freeyourgadget.gadgetbridge.GBApplication;
-import nodomain.freeyourgadget.gadgetbridge.GBException;
-import nodomain.freeyourgadget.gadgetbridge.R;
-import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
-import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
-import nodomain.freeyourgadget.gadgetbridge.service.devices.pebble.PebbleSupport;
-import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs;
-
-import java.lang.reflect.Constructor;
-import java.util.EnumSet;
-
-public class DeviceSupportFactory {
-    private static final Logger LOG = LoggerFactory.getLogger(DeviceSupportFactory.class);
-
-    private final BluetoothAdapter mBtAdapter;
-    private final Context mContext;
-
-    DeviceSupportFactory(Context context) {
-        mContext = context;
-        final BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
-        mBtAdapter = bluetoothManager.getAdapter();
-    }
-
-    @Nullable
-    public synchronized DeviceSupport createDeviceSupport(final @NonNull GBDevice device) throws GBException {
-        if (device.getDeviceCoordinator().getConnectionType() == DeviceCoordinator.ConnectionType.USB) {
-            return createUsbDeviceSupport(device);
+    @Synchronized
+    @Throws(GBException::class)
+    fun createDeviceSupport(device: GBDevice): DeviceSupport? {
+        if (device.deviceCoordinator.connectionType == DeviceCoordinator.ConnectionType.USB) {
+            return createUsbDeviceSupport(device)
         }
 
-        final String deviceAddress = device.getAddress();
-        final int indexFirstColon = deviceAddress.indexOf(":");
-        if (indexFirstColon > 0) {
+        val deviceAddress = device.address
+        val indexFirstColon = deviceAddress.indexOf(":")
+        return if (indexFirstColon > 0) {
             if (indexFirstColon == deviceAddress.lastIndexOf(":")) { // only one colon
-                return createTCPDeviceSupport(device);
+                createTCPDeviceSupport(device)
             } else {
                 // multiple colons -- bt?
-                return createBTDeviceSupport(device);
+                createBTDeviceSupport(device)
             }
         } else {
             // no colon at all, maybe a class name?
-            return createClassNameDeviceSupport(device);
+            createClassNameDeviceSupport(device)
         }
     }
 
-    @Nullable
-    private DeviceSupport createClassNameDeviceSupport(GBDevice device) throws GBException {
-        final String className = device.getAddress();
+    @Throws(GBException::class)
+    private fun createClassNameDeviceSupport(device: GBDevice): DeviceSupport? {
+        val className = device.address
         try {
-            final Class<?> deviceSupportClass = Class.forName(className);
-            final Constructor<?> constructor = deviceSupportClass.getConstructor();
-            final DeviceSupport support = (DeviceSupport) constructor.newInstance();
+            val deviceSupportClass = Class.forName(className)
+            val constructor = deviceSupportClass.getConstructor()
+            val support = constructor.newInstance() as DeviceSupport
             // has to create the device itself
-            support.setContext(device, mBtAdapter, mContext);
-            return support;
-        } catch (ClassNotFoundException e) {
-            LOG.warn("Unable to find DeviceSupport class {} for {}", className, device.getAddress());
-            return null; // not a class, or not known at least
-        } catch (Exception e) {
-            throw new GBException("Error creating DeviceSupport instance for " + className, e);
+            support.setContext(device, btAdapter, context)
+            return support
+        } catch (e: ClassNotFoundException) {
+            LOG.warn("Unable to find DeviceSupport class {} for {}", className, device.address)
+            return null // not a class, or not known at least
+        } catch (e: Exception) {
+            throw GBException("Error creating DeviceSupport instance for $className", e)
         }
     }
 
-    private ServiceDeviceSupport createServiceDeviceSupport(GBDevice device) throws GBException {
-        final DeviceCoordinator coordinator = device.getDeviceCoordinator();
+    @Throws(GBException::class)
+    private fun createServiceDeviceSupport(device: GBDevice): ServiceDeviceSupport {
+        val coordinator = device.deviceCoordinator
 
-        final DeviceSupport supportInstance = coordinator.createDeviceSupport(device);
+        val supportInstance = coordinator.createDeviceSupport(device)
 
-        final EnumSet<ServiceDeviceSupport.Flags> initialFlags = coordinator.getInitialFlags();
+        val initialFlags = coordinator.initialFlags
         if (BuildConfig.DEBUG && initialFlags.contains(ServiceDeviceSupport.Flags.BUSY_CHECKING)) {
-            final DevicePrefs devicePrefs = GBApplication.getDevicePrefs(device);
+            val devicePrefs = GBApplication.getDevicePrefs(device)
             if (devicePrefs.getBoolean("pref_device_debug_remove_busy_checking", false)) {
-                LOG.warn("Removing BUSY_CHECKING flag from {}", device.getAddress());
-                initialFlags.remove(ServiceDeviceSupport.Flags.BUSY_CHECKING);
+                LOG.warn("Removing BUSY_CHECKING flag from {}", device.address)
+                initialFlags.remove(ServiceDeviceSupport.Flags.BUSY_CHECKING)
             }
         }
 
-        return new ServiceDeviceSupport(supportInstance, initialFlags);
+        return ServiceDeviceSupport(supportInstance, initialFlags)
     }
 
-    @Nullable
-    private DeviceSupport createBTDeviceSupport(final GBDevice gbDevice) throws GBException {
-        if (mBtAdapter == null) {
-            LOG.warn("Unable to create bt device support for {} - no bt adapter", gbDevice.getAddress());
-            return null;
+    @Throws(GBException::class)
+    private fun createBTDeviceSupport(gbDevice: GBDevice): DeviceSupport? {
+        if (btAdapter == null) {
+            LOG.warn("Unable to create bt device support for {} - no bt adapter", gbDevice.address)
+            return null
         }
-        if (!mBtAdapter.isEnabled()) {
-            LOG.warn("Unable to create bt device support for {} - bt is disabled", gbDevice.getAddress());
-            return null;
+        if (!btAdapter.isEnabled) {
+            LOG.warn("Unable to create bt device support for {} - bt is disabled", gbDevice.address)
+            return null
         }
 
         try {
-            final DeviceSupport deviceSupport = createServiceDeviceSupport(gbDevice);
-            deviceSupport.setContext(gbDevice, mBtAdapter, mContext);
-            return deviceSupport;
-        } catch (final Exception e) {
-            throw new GBException(mContext.getString(R.string.cannot_connect_bt_address_invalid_), e);
+            val deviceSupport: DeviceSupport = createServiceDeviceSupport(gbDevice)
+            deviceSupport.setContext(gbDevice, btAdapter, context)
+            return deviceSupport
+        } catch (e: Exception) {
+            throw GBException(context.getString(R.string.cannot_connect_bt_address_invalid_), e)
         }
     }
 
-    private DeviceSupport createTCPDeviceSupport(final GBDevice gbDevice) throws GBException {
+    @Throws(GBException::class)
+    private fun createTCPDeviceSupport(gbDevice: GBDevice): DeviceSupport {
         try {
-            final DeviceSupport deviceSupport = new ServiceDeviceSupport(new PebbleSupport(), EnumSet.of(ServiceDeviceSupport.Flags.BUSY_CHECKING));
-            deviceSupport.setContext(gbDevice, mBtAdapter, mContext);
-            return deviceSupport;
-        } catch (Exception e) {
-            throw new GBException("cannot connect to " + gbDevice, e); // FIXME: localize
+            val deviceSupport: DeviceSupport = ServiceDeviceSupport(PebbleSupport(), EnumSet.of(ServiceDeviceSupport.Flags.BUSY_CHECKING))
+            deviceSupport.setContext(gbDevice, btAdapter, context)
+            return deviceSupport
+        } catch (e: Exception) {
+            throw GBException("cannot connect to $gbDevice", e) // FIXME: localize
         }
     }
 
-    @Nullable
-    private DeviceSupport createUsbDeviceSupport(final GBDevice gbDevice) throws GBException {
-        final UsbManager manager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
+    @Throws(GBException::class)
+    private fun createUsbDeviceSupport(gbDevice: GBDevice): DeviceSupport? {
+        val manager = context.getSystemService(Context.USB_SERVICE) as UsbManager?
         if (manager == null) {
-            LOG.warn("No UsbManager available on this device");
-            return null;
+            LOG.warn("No UsbManager available on this device")
+            return null
         }
 
-        final UsbAccessory accessory = findUsbAccessory(manager, gbDevice);
+        val accessory = findUsbAccessory(manager, gbDevice)
         if (accessory == null) {
-            LOG.warn("No compatible USB accessory attached for {}", gbDevice.getAddress());
-            return null;
+            LOG.warn("No compatible USB accessory attached for {}", gbDevice.address)
+            return null
         }
 
         try {
-            final DeviceSupport deviceSupport = createServiceDeviceSupport(gbDevice);
-            deviceSupport.setContext(gbDevice, accessory, mContext);
-            return deviceSupport;
-        } catch (final Exception e) {
-            throw new GBException("cannot connect to " + gbDevice, e);
+            val deviceSupport: DeviceSupport = createServiceDeviceSupport(gbDevice)
+            deviceSupport.setContext(gbDevice, accessory, context)
+            return deviceSupport
+        } catch (e: Exception) {
+            throw GBException("cannot connect to $gbDevice", e)
         }
     }
 
-    @Nullable
-    private UsbAccessory findUsbAccessory(final UsbManager usbManager, final GBDevice gbDevice) {
-        final UsbAccessory[] accessoryList = usbManager.getAccessoryList();
+    private fun findUsbAccessory(usbManager: UsbManager, gbDevice: GBDevice): UsbAccessory? {
+        val accessoryList = usbManager.accessoryList
         if (accessoryList == null) {
-            LOG.warn("USB accessory list is null");
-            return null;
+            LOG.warn("USB accessory list is null")
+            return null
         }
 
-        for (final UsbAccessory candidate : accessoryList) {
-            LOG.debug("Checking compatibility with {}", candidate);
+        for (candidate in accessoryList) {
+            LOG.debug("Checking compatibility with {}", candidate)
             if (!usbManager.hasPermission(candidate)) {
                 // when we get here, we must already have permission. If not, it's not this device
-                continue;
+                continue
             }
             // We don't check if the coordinator supports it, since it might be an unsupported device
             // that was added as a test device. Once we reach here, we must be able to match by
             // serial number.
-            if (gbDevice.getAddress().equals("usb:" + candidate.getSerial())) {
-                return candidate;
+            if (gbDevice.address == "usb:" + candidate.serial) {
+                return candidate
             }
         }
 
-        return null;
+        return null
+    }
+
+    companion object {
+        private val LOG: Logger = LoggerFactory.getLogger(DeviceSupportFactory::class.java)
     }
 }
