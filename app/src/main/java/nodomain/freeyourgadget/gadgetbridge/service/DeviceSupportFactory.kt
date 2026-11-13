@@ -25,6 +25,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service
 
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.hardware.usb.UsbAccessory
@@ -42,9 +43,10 @@ import java.util.EnumSet
 class DeviceSupportFactory internal constructor(private val dependencies: DeviceSupportDependencies) {
     private val context: Context = dependencies.context
 
-    // Null on a phone without Bluetooth. The class-name and TCP paths still pass it to setContext, whose adapter
-    // parameter is nullable for that reason.
-    private val btAdapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+    // Null on a phone without Bluetooth, whether the Bluetooth service itself is missing or it has no adapter. The
+    // class-name and TCP paths still pass it to setContext, whose adapter parameter is nullable for that reason.
+    private val btAdapter: BluetoothAdapter? =
+        (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager?)?.adapter
 
     @Synchronized
     @Throws(GBException::class)

@@ -14,6 +14,7 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.test.TestDeviceSuppo
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.ScopedPrefsProvider
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -59,6 +60,24 @@ class DeviceSupportFactoryTest {
 
         assertTrue(support is TestDeviceSupport)
         assertSame(context, support!!.context)
+    }
+
+    @Test
+    fun supportBuiltByClassNameWithoutABluetoothServiceGetsTheFactoryContext() {
+        every { context.getSystemService(Context.BLUETOOTH_SERVICE) } returns null
+        val factory = DeviceSupportFactory(dependencies)
+
+        val support = factory.createDeviceSupport(device(NoOpDeviceSupport::class.java.name))
+
+        assertSame(context, support!!.context)
+    }
+
+    @Test
+    fun bluetoothDeviceWithoutABluetoothServiceGetsNoSupport() {
+        every { context.getSystemService(Context.BLUETOOTH_SERVICE) } returns null
+        val factory = DeviceSupportFactory(dependencies)
+
+        assertNull(factory.createDeviceSupport(device("00:11:22:33:44:55")))
     }
 
     @Test
