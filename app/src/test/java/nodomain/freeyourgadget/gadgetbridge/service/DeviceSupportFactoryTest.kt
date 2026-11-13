@@ -7,12 +7,15 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import nodomain.freeyourgadget.gadgetbridge.BuildConfig
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.ScopedPrefsProvider
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.util.EnumSet
 
@@ -60,6 +63,45 @@ class DeviceSupportFactoryTest {
         assertSame(context, inner.context)
         assertSame(context, support!!.context)
         verify { inner.setContext(device, bluetoothAdapter, dependencies) }
+    }
+
+    @Test
+    fun bypassBusyCheckingSettingRemovesBusyChecking() {
+        val built = busyDeviceSupportWithBusyChecking(bypass = true)
+
+        built.wrapper.onSetTime()
+
+        verify { built.inner.onSetTime() }
+    }
+
+    @Test
+    fun withoutBypassBusyCheckingSettingABusyDeviceIgnoresCommands() {
+        val built = busyDeviceSupportWithBusyChecking(bypass = false)
+
+        built.wrapper.onSetTime()
+
+        verify(exactly = 0) { built.inner.onSetTime() }
+    }
+
+    private class Built(val wrapper: DeviceSupport, val inner: DeviceSupport)
+
+    /** Builds a support for a busy device whose coordinator asks for busy checking. */
+    private fun busyDeviceSupportWithBusyChecking(bypass: Boolean): Built {
+        // The factory only reads the setting in debug builds.
+        assumeTrue(BuildConfig.DEBUG)
+        val device = device("00:11:22:33:44:55")
+        every { device.isBusy } returns true
+        // Logged when busy checking ignores a command.
+        every { device.busyTask } returns null
+        val inner = spyk(NoOpDeviceSupport())
+        every { coordinator.createDeviceSupport(device) } returns inner
+        every { coordinator.initialFlags } returns EnumSet.of(ServiceDeviceSupport.Flags.BUSY_CHECKING)
+        val devicePrefs = mockk<DevicePrefs> {
+            every { getBoolean("pref_device_debug_remove_busy_checking", false) } returns bypass
+        }
+        every { scopedPrefs.getDevicePrefs(device) } returns devicePrefs
+
+        return Built(factory.createDeviceSupport(device)!!, inner)
     }
 }
 

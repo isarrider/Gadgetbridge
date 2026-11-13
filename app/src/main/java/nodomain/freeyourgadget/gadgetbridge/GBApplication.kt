@@ -577,12 +577,18 @@ open class GBApplication : Application() {
             return app().doNotDisturbPolicy.getGrantedInterruptionFilter()
         }
 
+        /**
+         * In a DeviceSupport: `dependencies.scopedPrefs`, from `setContext`.
+         */
         @Deprecated("Use Hilt DI to inject ScopedPrefsProvider instead.")
         @JvmStatic
         fun getDeviceSpecificSharedPrefs(deviceIdentifier: CharSequence?): SharedPreferences {
             return app().scopedPrefs.getDeviceSpecificSharedPrefs(deviceIdentifier)
         }
 
+        /**
+         * In a DeviceSupport: `getDevicePrefs()`, or `dependencies.scopedPrefs` from `setContext`.
+         */
         @Deprecated("Use Hilt DI to inject ScopedPrefsProvider instead.")
         @JvmStatic
         fun getDevicePrefs(gbDevice: GBDevice): DevicePrefs {

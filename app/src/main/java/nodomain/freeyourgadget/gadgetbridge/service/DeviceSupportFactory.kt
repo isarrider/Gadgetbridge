@@ -30,7 +30,6 @@ import android.content.Context
 import android.hardware.usb.UsbAccessory
 import android.hardware.usb.UsbManager
 import nodomain.freeyourgadget.gadgetbridge.BuildConfig
-import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.GBException
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
@@ -95,7 +94,7 @@ class DeviceSupportFactory internal constructor(private val dependencies: Device
 
         val initialFlags = coordinator.initialFlags
         if (BuildConfig.DEBUG && initialFlags.contains(ServiceDeviceSupport.Flags.BUSY_CHECKING)) {
-            val devicePrefs = GBApplication.getDevicePrefs(device)
+            val devicePrefs = dependencies.scopedPrefs.getDevicePrefs(device)
             if (devicePrefs.getBoolean("pref_device_debug_remove_busy_checking", false)) {
                 LOG.warn("Removing BUSY_CHECKING flag from {}", device.address)
                 initialFlags.remove(ServiceDeviceSupport.Flags.BUSY_CHECKING)

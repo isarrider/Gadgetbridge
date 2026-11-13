@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.appmanager.config.DynamicAppConfig;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
@@ -199,7 +198,7 @@ public abstract class AbstractDeviceSupport implements DeviceSupport {
     }
 
     public DevicePrefs getDevicePrefs() {
-        return GBApplication.getDevicePrefs(gbDevice);
+        return dependencies.getScopedPrefs().getDevicePrefs(gbDevice);
     }
 
     @Override
