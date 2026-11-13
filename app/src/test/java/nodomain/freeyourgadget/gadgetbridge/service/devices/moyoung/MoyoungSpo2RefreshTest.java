@@ -51,7 +51,7 @@ public class MoyoungSpo2RefreshTest extends TestBase {
     public void setUpSupport() {
         final GBDevice device = createDummyGDevice("00:00:00:00:00:02");
         support = new MoyoungDeviceSupport();
-        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), new DeviceSupportDependencies(getContext()));
+        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), new DeviceSupportDependencies(getContext(), GBApplication.app().getScopedPrefs()));
         dataIn = new BluetoothGattCharacteristic(MoyoungConstants.UUID_CHARACTERISTIC_DATA_IN,
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ);

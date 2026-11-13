@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminCapability;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminPreferences;
 import nodomain.freeyourgadget.gadgetbridge.entities.BaseActivitySummary;
@@ -79,7 +80,7 @@ public class ExploreSyncHandlerTest extends TestBase {
         support.setContext(
                 new GBDevice(DEVICE_ADDRESS, "TestFenix", null, null, DeviceType.GARMIN_FENIX_7_PRO),
                 (BluetoothAdapter) null,
-                new DeviceSupportDependencies(org.robolectric.RuntimeEnvironment.getApplication()));
+                new DeviceSupportDependencies(org.robolectric.RuntimeEnvironment.getApplication(), GBApplication.app().getScopedPrefs()));
         support.getDevicePrefs().getPreferences().edit()
                 .putBoolean("garmin_exploresync", true)
                 .putStringSet(GarminPreferences.PREF_GARMIN_CAPABILITIES,

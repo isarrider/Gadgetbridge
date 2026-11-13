@@ -72,6 +72,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
+
 import nodomain.freeyourgadget.gadgetbridge.BuildConfig;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.GBException;
@@ -88,7 +92,9 @@ import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 import nodomain.freeyourgadget.gadgetbridge.util.permissions.GBPermission;
+import nodomain.freeyourgadget.gadgetbridge.util.preferences.ScopedPrefsProvider;
 
+@AndroidEntryPoint
 public class DeviceCommunicationService extends Service implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static class DeviceStruct {
         private GBDevice device;
@@ -141,6 +147,9 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
     private static final Logger LOG = LoggerFactory.getLogger(DeviceCommunicationService.class);
 
     private DeviceSupportFactory mFactory;
+
+    @Inject
+    ScopedPrefsProvider scopedPrefs;
     private final ArrayList<DeviceStruct> deviceStructs = new ArrayList<>(1);
     private final HashMap<String, ArrayList<Intent>> cachedNotifications = new HashMap<>();
     private DeviceReceiversManager deviceReceiversManager;
@@ -420,7 +429,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         LOG.debug("DeviceCommunicationService is being created");
         super.onCreate();
         logLastExitReason();
-        mFactory = new DeviceSupportFactory(new DeviceSupportDependencies(this));
+        mFactory = new DeviceSupportFactory(new DeviceSupportDependencies(this, scopedPrefs));
         deviceReceiversManager = new DeviceReceiversManager(this);
 
         registerInternalReceivers();

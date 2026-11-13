@@ -1,6 +1,7 @@
 package nodomain.freeyourgadget.gadgetbridge.service
 
 import android.content.Context
+import nodomain.freeyourgadget.gadgetbridge.util.preferences.ScopedPrefsProvider
 
 /**
  * The app-wide dependencies a [DeviceSupport] gets through [DeviceSupport.setContext]. Hilt can't build supports,
@@ -21,4 +22,6 @@ import android.content.Context
 class DeviceSupportDependencies(
     /** The Context supports run in: the `DeviceCommunicationService`. */
     val context: Context,
+    /** Device-specific preferences, read through [AbstractDeviceSupport.getDevicePrefs]. */
+    val scopedPrefs: ScopedPrefsProvider,
 )

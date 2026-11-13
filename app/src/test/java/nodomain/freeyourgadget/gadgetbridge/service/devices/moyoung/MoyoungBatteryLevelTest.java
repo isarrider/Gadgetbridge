@@ -26,6 +26,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import org.junit.Before;
 import org.junit.Test;
 
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupportDependencies;
@@ -45,7 +46,7 @@ public class MoyoungBatteryLevelTest extends TestBase {
     public void setUpSupport() {
         device = createDummyGDevice("00:00:00:00:00:01");
         support = new MoyoungDeviceSupport();
-        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), new DeviceSupportDependencies(getContext()));
+        support.setContext(device, BluetoothAdapter.getDefaultAdapter(), new DeviceSupportDependencies(getContext(), GBApplication.app().getScopedPrefs()));
         batteryLevel = new BluetoothGattCharacteristic(GattCharacteristic.CHARACTERISTIC_BATTERY_LEVEL.uuid,
                 BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_NOTIFY,
                 BluetoothGattCharacteristic.PERMISSION_READ);

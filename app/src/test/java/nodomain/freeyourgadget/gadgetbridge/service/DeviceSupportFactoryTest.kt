@@ -9,6 +9,7 @@ import io.mockk.spyk
 import io.mockk.verify
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.util.preferences.ScopedPrefsProvider
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -28,7 +29,8 @@ class DeviceSupportFactoryTest {
     private val coordinator = mockk<DeviceCoordinator> {
         every { connectionType } returns DeviceCoordinator.ConnectionType.BOTH
     }
-    private val dependencies = DeviceSupportDependencies(context)
+    private val scopedPrefs = mockk<ScopedPrefsProvider>()
+    private val dependencies = DeviceSupportDependencies(context, scopedPrefs)
     private val factory = DeviceSupportFactory(dependencies)
 
     private fun device(deviceAddress: String) = mockk<GBDevice> {
