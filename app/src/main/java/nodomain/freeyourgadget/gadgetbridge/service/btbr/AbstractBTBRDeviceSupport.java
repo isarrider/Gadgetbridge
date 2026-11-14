@@ -105,6 +105,9 @@ public abstract class AbstractBTBRDeviceSupport extends AbstractBluetoothDeviceS
                         getConnectDelayMillis(),
                         getRfcommChannel()
                 );
+                mQueue.setInsecure(useInsecureRfcommSocket());
+                mQueue.setExtraConnectRetries(getExtraConnectRetries(), getConnectRetryDelayMillis());
+                mQueue.setFastReconnect(getFastReconnectBudget(), getFastReconnectWindowMillis());
             }
             return mQueue.connect();
         }
@@ -279,6 +282,54 @@ public abstract class AbstractBTBRDeviceSupport extends AbstractBluetoothDeviceS
 
     protected int getBufferSize() {
         return mBufferSize;
+    }
+
+    /**
+     * Whether to create the primary RFCOMM socket via {@link android.bluetooth.BluetoothDevice
+     * #createInsecureRfcommSocketToServiceRecord} instead of the secure variant. Defaults to
+     * {@code false} (secure), matching the previous, only behaviour. Some devices/Android BT
+     * stacks fail the secure socket's connect() handshake even on an already-bonded/
+     * authenticated link; the insecure variant skips that extra socket-level handshake and can
+     * work around it.
+     */
+    protected boolean useInsecureRfcommSocket() {
+        return false;
+    }
+
+    /**
+     * Extra socket-connect attempts to make immediately (recreating the socket each time) before
+     * surfacing a connect failure normally. Defaults to 0 (single attempt, previous behaviour).
+     * Some devices/stacks intermittently fail the first attempt(s) but succeed on an immediate
+     * retry; this is cheaper than waiting for the external auto-reconnect backoff.
+     */
+    protected int getExtraConnectRetries() {
+        return 0;
+    }
+
+    /**
+     * Delay between retries triggered by {@link #getExtraConnectRetries()}.
+     */
+    protected int getConnectRetryDelayMillis() {
+        return 300;
+    }
+
+    /**
+     * Number of times to immediately (re)connect (recreating the socket, re-running device
+     * init) if the connection drops again within {@link #getFastReconnectWindowMillis()} of
+     * having connected, instead of falling back to the external, multi-second auto-reconnect
+     * backoff. Defaults to 0 (previous behaviour: always defer to the external backoff). Some
+     * devices/sessions need several quick back-to-back connect cycles before "settling" into
+     * a stable session.
+     */
+    protected int getFastReconnectBudget() {
+        return 0;
+    }
+
+    /**
+     * See {@link #getFastReconnectBudget()}.
+     */
+    protected int getFastReconnectWindowMillis() {
+        return 1000;
     }
 
     /**

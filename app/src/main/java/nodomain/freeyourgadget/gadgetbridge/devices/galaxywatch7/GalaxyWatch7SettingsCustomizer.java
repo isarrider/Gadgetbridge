@@ -1,0 +1,197 @@
+/*  Copyright (C) 2026 pwnie69
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.devices.galaxywatch7;
+
+import android.os.Parcel;
+
+import androidx.preference.ListPreference;
+import androidx.preference.Preference;
+
+import java.util.Collections;
+import java.util.Set;
+
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsCustomizer;
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsHandler;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.galaxywatch7.GalaxyWatch7DeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
+
+/**
+ * Wires the Galaxy Watch7 settings switches to the device support: without a change handler, a
+ * plain preference change never reaches {@code onSendConfiguration}, so toggles would not be sent
+ * to the watch. {@code addPreferenceHandlerFor} attaches the listener that dispatches the change.
+ */
+public class GalaxyWatch7SettingsCustomizer implements DeviceSpecificSettingsCustomizer {
+    private static final String[] SENT_PREFERENCES = new String[]{
+            "pref_galaxywatch7_advanced_action_button_siren_enabled",
+            "pref_galaxywatch7_advanced_gestures_dismiss_alerts_and_reject_calls",
+            "pref_galaxywatch7_advanced_gestures_quick_action",
+            "pref_galaxywatch7_advanced_gestures_quick_action_watchface_second_action_enabled",
+            "pref_galaxywatch7_advanced_gestures_raise_to_talk_enabled",
+            "pref_galaxywatch7_advanced_labs_quicklaunch_enabled",
+            "pref_galaxywatch7_advanced_media_control_auto_launch_media_controls",
+            "pref_galaxywatch7_advanced_media_control_show_ongoing_icon",
+            "pref_galaxywatch7_bedtime_turn_on_scheduled",
+            "pref_galaxywatch7_display_always_on_display",
+            "pref_galaxywatch7_display_auto_low_brightness",
+            "pref_galaxywatch7_display_bold_font",
+            "pref_galaxywatch7_display_show_charging_info",
+            "pref_galaxywatch7_display_touch_sensitivity",
+            "pref_galaxywatch7_display_wake_on_touch_screen",
+            "pref_galaxywatch7_display_wake_on_turning_bezel",
+            "pref_galaxywatch7_display_wake_on_wrist_raised",
+            "pref_galaxywatch7_general_touch_bezel",
+            "pref_galaxywatch7_general_touch_bezel_feedback",
+            "pref_galaxywatch7_sound_settings_system_sounds_charging_sound",
+            "pref_galaxywatch7_sound_settings_system_sounds_dialing_keypad_tone",
+            "pref_galaxywatch7_sound_settings_system_sounds_hourly_chime",
+            "pref_galaxywatch7_sound_settings_system_sounds_samsung_keyboard",
+            "pref_galaxywatch7_sound_settings_system_sounds_ticking_sound",
+            "pref_galaxywatch7_sound_settings_system_sounds_touch_sound",
+            "pref_galaxywatch7_sound_settings_system_sounds_unlock_sound",
+            "pref_galaxywatch7_sound_settings_system_vibration_charging",
+            "pref_galaxywatch7_sound_settings_system_vibration_dialing_keypad",
+            "pref_galaxywatch7_sound_settings_system_vibration_samsung_keyboard",
+            "pref_galaxywatch7_advanced_bixby_enabled",
+            "pref_galaxywatch7_display_outdoor_mode",
+            "pref_galaxywatch7_sound_vibration_feedback",
+            "pref_galaxywatch7_sound_vibration_with_sound",
+            "pref_galaxywatch7_phone_dnd_sync",
+            "pref_galaxywatch7_sound_volume_accessibility",
+            "pref_galaxywatch7_sound_volume_bixby",
+            // Sliders and lists (int/string values).
+            "pref_galaxywatch7_display_brightness",
+            "pref_galaxywatch7_display_font_size",
+            "pref_galaxywatch7_sound_volume_media",
+            "pref_galaxywatch7_sound_volume_notifications",
+            "pref_galaxywatch7_sound_volume_ringtone",
+            "pref_galaxywatch7_sound_volume_system",
+            "pref_galaxywatch7_sound_mode",
+            "pref_galaxywatch7_sound_vibration_intensity",
+            // Dynamic lists (options pushed by the watch).
+            "pref_galaxywatch7_display_screen_timeout",
+            "pref_galaxywatch7_sound_notification_sound",
+            "pref_galaxywatch7_sound_notification_vibration",
+            "pref_galaxywatch7_sound_ringtone",
+            "pref_galaxywatch7_sound_ringtone_vibration",
+            "pref_galaxywatch7_advanced_press_and_hold",
+            "pref_galaxywatch7_advanced_double_press",
+            "pref_galaxywatch7_advanced_labs_quicklaunch_app",
+            "pref_galaxywatch7_advanced_status_indicator",
+    };
+
+    @Override
+    public void onPreferenceChange(final Preference preference, final DeviceSpecificSettingsHandler handler) {
+    }
+
+    @Override
+    public void customizeSettings(final DeviceSpecificSettingsHandler handler, final Prefs prefs, final String rootKey) {
+        for (final String prefKey : SENT_PREFERENCES) {
+            handler.addPreferenceHandlerFor(prefKey);
+        }
+        // Populate the dynamic ListPreferences from the option labels the watch last pushed
+        // (cached in the device prefs by GalaxyWatch7DeviceSupport). Entry values are the index
+        // strings the watch expects back as "selected_item".
+        for (final String prefKey : GalaxyWatch7DeviceSupport.dynamicListPrefKeys()) {
+            final ListPreference lp = handler.findPreference(prefKey);
+            if (lp == null) {
+                continue;
+            }
+            final String cached = prefs.getString(prefKey + GalaxyWatch7DeviceSupport.DYNLIST_ENTRIES_SUFFIX, "");
+            if (cached == null || cached.isEmpty()) {
+                lp.setEnabled(false); // no options received from the watch yet
+                continue;
+            }
+            final String[] entries = cached.split("\n");
+            final CharSequence[] entryValues = new CharSequence[entries.length];
+            for (int i = 0; i < entries.length; i++) {
+                entryValues[i] = String.valueOf(i);
+            }
+            lp.setEntries(entries);
+            lp.setEntryValues(entryValues);
+            lp.setEnabled(true);
+        }
+        // Same as above, but for STRING_LIST_DYNAMIC settings (double_press): entries are cached as
+        // "value\tlabel" pairs, entry values are the value strings themselves (not indices). A
+        // package entry's label is resolved here via PackageManager (the watch does not push app
+        // labels); a feature entry already carries a best-effort derived label from the device
+        // support layer, which doesn't have a Context to do this resolution itself.
+        for (final String prefKey : GalaxyWatch7DeviceSupport.stringDynamicListPrefKeys()) {
+            final ListPreference lp = handler.findPreference(prefKey);
+            if (lp == null) {
+                continue;
+            }
+            final String cached = prefs.getString(prefKey + GalaxyWatch7DeviceSupport.DYNLIST_ENTRIES_SUFFIX, "");
+            if (cached == null || cached.isEmpty()) {
+                lp.setEnabled(false); // no options received from the watch yet
+                continue;
+            }
+            final android.content.pm.PackageManager pm = lp.getContext().getPackageManager();
+            final String[] lines = cached.split("\n");
+            final java.util.List<CharSequence> entries = new java.util.ArrayList<>(lines.length);
+            final java.util.List<CharSequence> entryValues = new java.util.ArrayList<>(lines.length);
+            for (final String line : lines) {
+                final int tab = line.indexOf('\t');
+                if (tab < 0) {
+                    continue;
+                }
+                final String value = line.substring(0, tab);
+                String label = line.substring(tab + 1);
+                if (label.isEmpty()) {
+                    // Package entry: "<package>/<activity>" - resolve the app's own launcher label.
+                    final int slash = value.indexOf('/');
+                    final String pkg = slash > 0 ? value.substring(0, slash) : value;
+                    try {
+                        label = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString();
+                    } catch (final android.content.pm.PackageManager.NameNotFoundException e) {
+                        label = pkg; // not installed on the phone - show the raw package id
+                    }
+                }
+                entries.add(label);
+                entryValues.add(value);
+            }
+            lp.setEntries(entries.toArray(new CharSequence[0]));
+            lp.setEntryValues(entryValues.toArray(new CharSequence[0]));
+            lp.setEnabled(!entries.isEmpty());
+        }
+    }
+
+    @Override
+    public Set<String> getPreferenceKeysWithSummary() {
+        return Collections.emptySet();
+    }
+
+    public static final Creator<GalaxyWatch7SettingsCustomizer> CREATOR = new Creator<GalaxyWatch7SettingsCustomizer>() {
+        @Override
+        public GalaxyWatch7SettingsCustomizer createFromParcel(final Parcel in) {
+            return new GalaxyWatch7SettingsCustomizer();
+        }
+
+        @Override
+        public GalaxyWatch7SettingsCustomizer[] newArray(final int size) {
+            return new GalaxyWatch7SettingsCustomizer[size];
+        }
+    };
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(final Parcel dest, final int flags) {
+    }
+}

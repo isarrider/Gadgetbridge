@@ -335,6 +335,7 @@
     <string name="pref_summary_notification_wake_on_open">Wake and unlock the Android device when the gadget sends a OPEN response back. Needs to be in a trusted state.</string>
     <string name="pref_summary_receive_calls_watch">Perform and receive calls directly on the watch</string>
     <string name="phone_calls">Phone calls</string>
+    <string name="incoming_call">Incoming call</string>
     <string name="bluetooth_calls">Bluetooth calls</string>
     <string name="bluetooth_calls_pairing">Bluetooth calls pairing</string>
     <string name="bluetooth_calls_settings">Bluetooth calls settings</string>
@@ -1409,6 +1410,10 @@
     <string name="prefs_always_on_display_follow_watchface">Style follows Watchface</string>
     <string name="prefs_always_on_display_style">Style</string>
     <string name="prefs_always_on_display_summary">Keep the band\'s display always on</string>
+    <string name="prefs_galaxywatch7_tilt_to_wake">Tilt to wake</string>
+    <string name="prefs_galaxywatch7_touch_to_wake">Touch to wake</string>
+    <string name="prefs_galaxywatch7_show_unread_dot">Unread notifications dot</string>
+    <string name="prefs_galaxywatch7_use_mode_ringer">Ringer sound mode</string>
     <string name="prefs_device_id">Device ID</string>
     <string name="prefs_device_name">Device name</string>
     <string name="prefs_device_alias">Device alias</string>
@@ -3886,6 +3891,7 @@
     <string name="devicetype_realme_buds_t300" translatable="false">Realme Buds T300</string>
     <string name="devicetype_realme_buds_air_5_pro" translatable="false">Realme Buds Air 5 Pro</string>
     <string name="devicetype_realme_buds_air_6_pro" translatable="false">Realme Buds Air 6 Pro</string>
+    <string name="devicetype_galaxy_watch7" translatable="false">Galaxy Watch7</string>
     <string name="devicetype_galaxybuds" translatable="false">Galaxy Buds</string>
     <string name="devicetype_galaxybuds_live" translatable="false">Galaxy Buds Live</string>
     <string name="devicetype_galaxybuds_pro" translatable="false">Galaxy Buds Pro</string>
@@ -6780,4 +6786,103 @@
     <string name="magic_touch_head_init_title">Massage head init</string>
     <string name="magic_touch_unplug_charger">Unplug the charger to control the massager</string>
     <string name="magic_touch_turn_on_first">Turn the massager on first</string>
+    <!-- Galaxy Watch7 settings -->
+    <string name="prefs_gw7_cat_pairing">Pairing</string>
+    <string name="prefs_gw7_cat_buttons">Buttons and gestures</string>
+    <string name="prefs_gw7_cat_volume">Volume</string>
+    <string name="prefs_gw7_cat_system_sounds">System sounds and vibration</string>
+    <string name="prefs_gw7_cat_media">Media control</string>
+    <string name="prefs_gw7_cat_labs">Labs</string>
+    <string name="prefs_gw7_companion_node_id">Companion node ID</string>
+    <string name="prefs_gw7_companion_node_id_summary">The 8-character ID this watch expects from its paired phone. Without it the watch drops the connection immediately. Read it off the watch once — see the Galaxy Watch7 setup guide.</string>
+    <string name="prefs_gw7_cat_display">Display</string>
+    <string name="prefs_gw7_cat_general">General</string>
+    <string name="prefs_gw7_cat_sound">System sounds &amp; vibration</string>
+    <string name="prefs_gw7_display_always_on_display">Always On Display</string>
+    <string name="prefs_gw7_display_auto_low_brightness">Auto low brightness</string>
+    <string name="prefs_gw7_display_bold_font">Bold font</string>
+    <string name="prefs_gw7_display_show_charging_info">Show charging info</string>
+    <string name="prefs_gw7_display_touch_sensitivity">Touch sensitivity (gloves)</string>
+    <string name="prefs_gw7_display_wake_on_touch_screen">Wake on touch</string>
+    <string name="prefs_gw7_display_wake_on_turning_bezel">Wake on bezel turn</string>
+    <string name="prefs_gw7_display_wake_on_wrist_raised">Wake on wrist raise</string>
+    <string name="prefs_gw7_advanced_action_button_siren_enabled">Action button: siren</string>
+    <string name="prefs_gw7_advanced_gestures_dismiss_alerts_and_reject_calls">Gesture: dismiss alerts / reject calls</string>
+    <string name="prefs_gw7_advanced_gestures_quick_action">Gesture: quick action (double pinch)</string>
+    <string name="prefs_gw7_advanced_gestures_quick_action_watchface_second_action_enabled">Quick action: second action</string>
+    <string name="prefs_gw7_advanced_gestures_raise_to_talk_enabled">Raise to talk</string>
+    <string name="prefs_gw7_advanced_labs_quicklaunch_enabled">Quick launch (labs)</string>
+    <string name="prefs_gw7_advanced_media_control_auto_launch_media_controls">Auto-launch media controls</string>
+    <string name="prefs_gw7_advanced_media_control_show_ongoing_icon">Media: show ongoing icon</string>
+    <string name="prefs_gw7_general_touch_bezel">Touch bezel</string>
+    <string name="prefs_gw7_general_touch_bezel_feedback">Touch bezel feedback</string>
+    <string name="prefs_gw7_bedtime_turn_on_scheduled">Bedtime mode: scheduled</string>
+    <string name="prefs_gw7_sound_settings_system_sounds_charging_sound">Sound: charging</string>
+    <string name="prefs_gw7_sound_settings_system_sounds_dialing_keypad_tone">Sound: dialing keypad</string>
+    <string name="prefs_gw7_sound_settings_system_sounds_hourly_chime">Sound: hourly chime</string>
+    <string name="prefs_gw7_sound_settings_system_sounds_samsung_keyboard">Sound: Samsung keyboard</string>
+    <string name="prefs_gw7_sound_settings_system_sounds_ticking_sound">Sound: ticking</string>
+    <string name="prefs_gw7_sound_settings_system_sounds_touch_sound">Sound: touch</string>
+    <string name="prefs_gw7_sound_settings_system_sounds_unlock_sound">Sound: unlock</string>
+    <string name="prefs_gw7_sound_settings_system_vibration_charging">Vibration: charging</string>
+    <string name="prefs_gw7_sound_settings_system_vibration_dialing_keypad">Vibration: dialing keypad</string>
+    <string name="prefs_gw7_sound_settings_system_vibration_samsung_keyboard">Vibration: Samsung keyboard</string>
+    <string name="prefs_gw7_display_brightness">Brightness</string>
+    <string name="prefs_gw7_display_font_size">Font size</string>
+    <string name="prefs_gw7_sound_mode">Sound mode</string>
+    <string name="prefs_gw7_sound_vibration_intensity">Vibration intensity</string>
+    <string name="prefs_gw7_display_screen_timeout">Screen timeout</string>
+    <string name="prefs_gw7_sound_notification_sound">Notification sound</string>
+    <string name="prefs_gw7_sound_notification_vibration">Notification vibration</string>
+    <string name="prefs_gw7_sound_ringtone">Ringtone</string>
+    <string name="prefs_gw7_sound_ringtone_vibration">Ringtone vibration</string>
+    <string name="prefs_gw7_advanced_press_and_hold">Press and hold Home key</string>
+    <string name="prefs_gw7_advanced_double_press">Double press Home key</string>
+    <string name="prefs_gw7_advanced_labs_quicklaunch_app">Quicklaunch app</string>
+    <string-array name="prefs_gw7_quicklaunch_app_names">
+        <item>My Exercises</item>
+        <item>Recent apps</item>
+    </string-array>
+    <string-array name="prefs_gw7_quicklaunch_app_values">
+        <item>fixed/open_exercise_list</item>
+        <item>fixed/open_recent</item>
+    </string-array>
+    <string name="prefs_gw7_advanced_status_indicator">Status indicators</string>
+    <string-array name="prefs_gw7_status_indicator_names">
+        <item>Always show</item>
+        <item>Hide after 2 seconds</item>
+    </string-array>
+    <string-array name="prefs_gw7_status_indicator_values">
+        <item>show</item>
+        <item>hide2</item>
+    </string-array>
+    <string name="prefs_gw7_advanced_bixby_enabled">Bixby enabled</string>
+    <string name="prefs_gw7_display_outdoor_mode">Outdoor mode</string>
+    <string name="prefs_gw7_sound_vibration_feedback">Vibration feedback</string>
+    <string name="prefs_gw7_sound_vibration_with_sound">Vibrate with sound</string>
+    <string name="prefs_gw7_phone_dnd_sync">Sync Do Not Disturb with phone</string>
+    <string name="prefs_gw7_sound_volume_accessibility">Volume: Accessibility</string>
+    <string name="prefs_gw7_sound_volume_bixby">Volume: Bixby</string>
+    <string name="prefs_gw7_sound_volume_media">Volume: media</string>
+    <string name="prefs_gw7_sound_volume_ringtone">Volume: ringtone</string>
+    <string name="prefs_gw7_sound_volume_notifications">Volume: notifications</string>
+    <string name="prefs_gw7_sound_volume_system">Volume: system</string>
+    <string-array name="prefs_gw7_sound_mode_names">
+        <item>Sound</item>
+        <item>Vibrate</item>
+        <item>Mute</item>
+    </string-array>
+    <string-array name="prefs_gw7_sound_mode_values">
+        <item>sound</item>
+        <item>vibrate</item>
+        <item>mute</item>
+    </string-array>
+    <string-array name="prefs_gw7_vibration_intensity_names">
+        <item>Light</item>
+        <item>Strong</item>
+    </string-array>
+    <string-array name="prefs_gw7_vibration_intensity_values">
+        <item>0</item>
+        <item>1</item>
+    </string-array>
 </resources>

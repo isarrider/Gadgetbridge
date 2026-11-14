@@ -61,6 +61,29 @@ public final class BtBRQueue {
     private final Context mContext;
     private final int mBufferSize;
     private final int mConnectDelayMillis;
+    /// When true, the primary socket is created via {@link BluetoothDevice#createInsecureRfcommSocketToServiceRecord}
+    /// instead of the secure variant. Some devices/Android BT stacks fail the secure socket's
+    /// connect() handshake (observed as a spurious "read failed ... ret -1" IOException) even
+    /// though the underlying link is already bonded/authenticated; the insecure variant skips
+    /// that extra socket-level handshake. Has no effect when connecting via an explicit
+    /// {@link #mRfcommChannel} (the reflective {@code createRfcommSocket} path has no
+    /// secure/insecure distinction).
+    private boolean mInsecure = false;
+    /// Extra socket-connect attempts to make (immediately, recreating the socket each time)
+    /// before giving up and surfacing the failure normally. 0 preserves the previous,
+    /// single-attempt behaviour.
+    private int mExtraConnectRetries = 0;
+    private int mRetryDelayMillis = 300;
+    /// If the socket connects but the read thread exits again within
+    /// {@link #mFastReconnectWindowMillis}, immediately (re)post a connect attempt instead of
+    /// falling back to the external, multi-second auto-reconnect backoff — some devices/
+    /// sessions need several quick back-to-back connect cycles before "settling" into a
+    /// stable session. Budget is consumed per quick cycle, not reset on repeated fast
+    /// failures (so this can't loop forever), and restored after a stable session.
+    private int mFastReconnectBudget = 0;
+    private int mFastReconnectInitialBudget = 0;
+    private int mFastReconnectWindowMillis = 1000;
+    private volatile long mConnectedAtMillis = 0;
 
     private final int mRfcommChannel;
     /// When true this queue drives a secondary ("aux") socket: it shares the device's
@@ -118,10 +141,25 @@ public final class BtBRQueue {
 
                 // An aux socket dropping must not tear down the primary device connection.
                 if (!mIsAux) {
+                    final boolean quickDrop = mConnectedAtMillis > 0
+                            && (System.currentTimeMillis() - mConnectedAtMillis) < mFastReconnectWindowMillis;
                     if (mDisposed.get() || !GBApplication.getPrefs().getAutoReconnect(mGbDevice)) {
                         LOG.debug("Exited read thread loop, disconnecting");
                         mGbDevice.setUpdateState(GBDevice.State.NOT_CONNECTED, mContext);
+                    } else if (quickDrop && mFastReconnectBudget > 0) {
+                        mFastReconnectBudget--;
+                        LOG.debug("Exited read thread loop quickly ({}ms after connect) - fast-reconnecting immediately, {} attempt(s) left",
+                                System.currentTimeMillis() - mConnectedAtMillis, mFastReconnectBudget);
+                        mGbDevice.setUpdateState(GBDevice.State.WAITING_FOR_RECONNECT, mContext);
+                        // connect() (re)creates mBtSocket (cleanup() above nulled it) and then
+                        // posts HANDLER_SUBJECT_CONNECT itself - just sending the message here
+                        // would hit the "socket is null" guard in the handler.
+                        connect();
                     } else {
+                        if (!quickDrop) {
+                            // The session was stable, so the next quick-drop streak gets a full budget again.
+                            mFastReconnectBudget = mFastReconnectInitialBudget;
+                        }
                         LOG.debug("Exited read thread loop, will wait for reconnect");
                         mGbDevice.setUpdateState(GBDevice.State.WAITING_FOR_RECONNECT, mContext);
                     }
@@ -202,11 +240,41 @@ public final class BtBRQueue {
                         }
 
                         try {
-                            LOG.debug("Connecting to RFCOMM socket for {}", mGbDevice.getName());
+                            IOException lastException = null;
+                            boolean connected = false;
+                            for (int attempt = 0; attempt <= mExtraConnectRetries; attempt++) {
+                                if (attempt > 0) {
+                                    // A failed connect() leaves the socket unusable; a fresh one
+                                    // must be created for each retry.
+                                    try {
+                                        mBtSocket.close();
+                                    } catch (final IOException ignored) {
+                                    }
+                                    LOG.debug("Retry {}/{}: recreating RFCOMM socket for {}", attempt, mExtraConnectRetries, mGbDevice.getName());
+                                    try {
+                                        Thread.sleep(mRetryDelayMillis);
+                                    } catch (final InterruptedException ignored) {
+                                    }
+                                    mBtSocket = createSocket(mBtAdapter.getRemoteDevice(mGbDevice.getAddress()));
+                                }
 
-                            mBtSocket.connect();
+                                LOG.debug("Connecting to RFCOMM socket for {} (attempt {}/{})", mGbDevice.getName(), attempt + 1, mExtraConnectRetries + 1);
+                                try {
+                                    mBtSocket.connect();
+                                    connected = true;
+                                    break;
+                                } catch (final IOException e) {
+                                    lastException = e;
+                                    LOG.warn("Attempt {}/{} failed to connect RFCOMM socket for {}: {}", attempt + 1, mExtraConnectRetries + 1, mGbDevice.getName(), e.getMessage());
+                                }
+                            }
+
+                            if (!connected) {
+                                throw lastException;
+                            }
 
                             LOG.info("Connected to RFCOMM socket for {}{}", mGbDevice.getName(), mIsAux ? " (aux channel " + mRfcommChannel + ")" : "");
+                            mConnectedAtMillis = System.currentTimeMillis();
 
                             if (readThread == null || !readThread.isAlive()) {
                                 readThread = createReadThread();
@@ -292,6 +360,49 @@ public final class BtBRQueue {
     }
 
     /**
+     * Must be called before {@link #connect()} to take effect. See {@link #mInsecure}.
+     */
+    public void setInsecure(final boolean insecure) {
+        mInsecure = insecure;
+    }
+
+    /**
+     * Must be called before {@link #connect()} to take effect. See {@link #mExtraConnectRetries}.
+     */
+    public void setExtraConnectRetries(final int extraRetries, final int retryDelayMillis) {
+        mExtraConnectRetries = extraRetries;
+        mRetryDelayMillis = retryDelayMillis;
+    }
+
+    /**
+     * Must be called before {@link #connect()} to take effect. See {@link #mFastReconnectBudget}.
+     */
+    public void setFastReconnect(final int budget, final int windowMillis) {
+        mFastReconnectBudget = budget;
+        mFastReconnectInitialBudget = budget;
+        mFastReconnectWindowMillis = windowMillis;
+    }
+
+    /**
+     * Creates a fresh, unconnected socket honouring the explicit RFCOMM channel (reflective path),
+     * the insecure flag, or the plain service-record variant, in that order.
+     */
+    @SuppressLint("MissingPermission")
+    private BluetoothSocket createSocket(final BluetoothDevice btDevice) throws IOException {
+        if (mRfcommChannel >= 0) {
+            try {
+                final Method createMethod = BluetoothDevice.class.getMethod("createRfcommSocket", int.class);
+                return (BluetoothSocket) createMethod.invoke(btDevice, mRfcommChannel);
+            } catch (final Exception e) {
+                throw new IOException("Unable to create RFCOMM socket on channel " + mRfcommChannel, e);
+            }
+        }
+        return mInsecure
+                ? btDevice.createInsecureRfcommSocketToServiceRecord(mService)
+                : btDevice.createRfcommSocketToServiceRecord(mService);
+    }
+
+    /**
      * Connects to the given remote device. Note that this does not perform any device
      * specific initialization. This should be done in the specific {@link DeviceSupport}
      * class.
@@ -326,20 +437,7 @@ public final class BtBRQueue {
 
         try {
             BluetoothDevice btDevice = mBtAdapter.getRemoteDevice(mGbDevice.getAddress());
-            if (mRfcommChannel >= 0) {
-                try {
-                    final Method createMethod = BluetoothDevice.class.getMethod("createRfcommSocket", int.class);
-                    mBtSocket = (BluetoothSocket) createMethod.invoke(btDevice, mRfcommChannel);
-                } catch (final Exception e) {
-                    LOG.error("Unable to create RFCOMM socket on channel " + mRfcommChannel + ": ", e);
-                    if (!mIsAux)
-                        setDeviceConnectionState(originalState);
-                    cleanup();
-                    return false;
-                }
-            } else {
-                mBtSocket = btDevice.createRfcommSocketToServiceRecord(mService);
-            }
+            mBtSocket = createSocket(btDevice);
         } catch (IOException e) {
             LOG.error("Unable to connect to RFCOMM endpoint: ", e);
             if (!mIsAux)
