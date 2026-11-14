@@ -61,7 +61,7 @@ Developer
 
 | # | Item | Effort | What is known / needed |
 |---|---|---|---|
-| 1 | **Phone calls** (show caller on the watch; reject, silence or answer from the watch) | M | Not captured yet. The OHealth app contains call-related protocol definitions (telecom and dialer packages) that have not been read; Gadgetbridge has standard hooks (`onSetCallState`, call-control events). Needs one capture of an incoming call, with the diagnostic toggle on, to confirm services and commands. |
+| 1 | **Phone calls** (show caller on the watch; reject, silence or answer from the watch) | M | Tried and not working. Sending a `PhoneCallChange` frame on service 6, command 1 (`{1 status, 2 number, 3 slot, 9 isContact, 10 name}`) when the phone rings, is answered and ends reached the watch socket, but the watch did nothing and sent no reply on service 6. The vendor app only uses these messages when the watch reports an HFP-extend capability, so the watch most likely handles calls over classic Bluetooth HFP instead. Not implemented. |
 | – | **Find my watch** (ring the watch from the device card) | S, once known | **Tried, does not work yet.** See section 4 for exactly what was sent. Needs a capture of the official app doing it. |
 
 ### 2b. After that
@@ -193,7 +193,7 @@ Activity items (`5.10`): `{1: minute offset, 2: calories (kcal), 3: distance (m)
 ## 7. Open questions
 - What do sleep codes 0 and 3 mean, and is 4 really awake? (1 = light and 2 = deep are confirmed.) Can this model report REM at all, and is it switched on by the setting the vendor app calls "sleep REM"?
 - Does the watch report charging state, and in which field?
-- Which messages does the watch send and expect for incoming calls (high priority) and for music?
+- Does the watch show calls through Bluetooth HFP only, or is there a capability bit that enables the service 6 call messages? Which messages does it expect for music?
 - What do the unmapped services (4, 11, 15, 28) carry beyond setup and workouts?
 - Can the watch answer the weather request in a different format than the phone sends to other OnePlus devices?
 - What does the watch expect for find my watch (`1.40` with status 1 was ignored, see section 4)? Does it expect a reply to find-phone messages (`1.15`)?
