@@ -524,6 +524,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.nothing.EarACoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.nothing.EarStickCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.nut.NutCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.nxwear.NxWearB8Coordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.oneplus.OnePlusWatchCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.ollee.OlleeDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.onemoresonoflow.OneMoreSonoFlowCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.onemoresonoflow.OneMoreSonoFlowSECoordinator;
@@ -882,6 +883,7 @@ public enum DeviceType {
     IKEA_IDASEN(IdasenCoordinator::new),
     NUTMINI(NutCoordinator::new),
     NX_WEAR_B8(NxWearB8Coordinator::new),
+    ONEPLUS_WATCH_GEN1(OnePlusWatchCoordinator::new),
     VIVOMOVE_HR(GarminVivomoveHrCoordinator::new),
     GARMIN_HRM_PRO_PLUS(GarminHrmProPlusCoordinator::new),
     GARMIN_HRM_200(GarminHrm200Coordinator::new),

@@ -88,6 +88,7 @@ public class BluetoothNameTest extends TestBase {
             put("BT103(ID-AB01)", DeviceType.OUKITEL_BT103);
             put("P66D(ID-AB01)", DeviceType.DOTN_P66D);
             put("B8-SW", DeviceType.NX_WEAR_B8); // #6920
+            put("OnePlus Watch 0A22", DeviceType.ONEPLUS_WATCH_GEN1);
             put("R1(ID-10B5)", DeviceType.R1); // #5621
             put("IMIKI FRAME 2", DeviceType.IMIKI_FRAME_2);
             put("Watch Kr Pro-4DBC", DeviceType.KIESLECT_CALLING_SMARTWATCH_KR_PRO);
