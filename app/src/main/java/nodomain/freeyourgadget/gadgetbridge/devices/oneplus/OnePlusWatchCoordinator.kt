@@ -17,8 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.oneplus
 
 import nodomain.freeyourgadget.gadgetbridge.R
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.DeviceSettingsSpec
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.ListEntry
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.deviceSettings
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLClassicDeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
+import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider
+import nodomain.freeyourgadget.gadgetbridge.devices.generic_hr.GenericHeartRateActivitySampleProvider
+import nodomain.freeyourgadget.gadgetbridge.entities.AbstractActivitySample
+import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus.OnePlusWatchSupport
@@ -42,4 +49,41 @@ class OnePlusWatchCoordinator : AbstractBLClassicDeviceCoordinator() {
 
     // Standard Bluetooth bond (SSP numeric comparison) is all the watch needs; no app-level key.
     override fun getBondingStyle(): Int = BONDING_STYLE_BOND
+
+    override fun supportsHeartRateMeasurement(device: GBDevice): Boolean = true
+
+    override fun supportsDataFetching(device: GBDevice): Boolean = true
+
+    override fun supportsCharts(device: GBDevice): Boolean = true
+
+    override fun getSampleProvider(device: GBDevice, session: DaoSession): SampleProvider<out AbstractActivitySample>? =
+        GenericHeartRateActivitySampleProvider(device, session)
+
+    override fun getDeviceSettings(device: GBDevice): DeviceSettingsSpec = deviceSettings {
+        screen(
+            key = "oneplus_health",
+            title = R.string.pref_header_health,
+            icon = R.drawable.ic_heartrate,
+        ) {
+            list(
+                key = PREF_HR_MONITORING,
+                title = R.string.oneplus_hr_monitoring_title,
+                icon = R.drawable.ic_heartrate,
+                entries = listOf(
+                    ListEntry.Res(HR_MODE_OFF, R.string.oneplus_hr_monitoring_off),
+                    ListEntry.Res(HR_MODE_SMART, R.string.oneplus_hr_monitoring_smart),
+                    ListEntry.Res(HR_MODE_REALTIME, R.string.oneplus_hr_monitoring_realtime),
+                ),
+                defaultValue = HR_MODE_OFF,
+            )
+        }
+    }
+
+    companion object {
+        /** Heart-rate monitoring mode: how the watch measures and how often Gadgetbridge pulls the history. */
+        const val PREF_HR_MONITORING = "oneplus_hr_monitoring"
+        const val HR_MODE_OFF = "off"
+        const val HR_MODE_SMART = "smart"
+        const val HR_MODE_REALTIME = "realtime"
+    }
 }

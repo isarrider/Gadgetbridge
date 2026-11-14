@@ -10,10 +10,29 @@ class OnePlusProtocolTest {
 
     // Frames captured from a real OHealth <-> OnePlus Watch session.
     private val helloCaptured = hex("aa0e00000101080510b42e18de0728032385")
+    private val hrQueryCaptured = hex("aa100000050b08e8e3dbd70610c6caddd706ea9c")
 
     @Test
     fun helloMatchesCapture() {
         assertArrayEquals(helloCaptured, OnePlusProtocol.HELLO)
+    }
+
+    @Test
+    fun heartRateQueryMatchesCapture() {
+        val built = OnePlusProtocol.frame(
+            OnePlusProtocol.SERVICE_FITNESS, OnePlusProtocol.CMD_HR_QUERY,
+            Proto.encode(1 to 1794569192L, 2 to 1794599238L)
+        )
+        // timestamps differ from the capture only in value; layout and CRC must be self-consistent
+        val parsed = OnePlusProtocol.Deframer().feed(built).single()
+        assertEquals(5, parsed.service)
+        assertEquals(11, parsed.command)
+        val f = Proto.decode(parsed.body)
+        assertEquals(1794569192L, Proto.long(f, 1))
+        assertEquals(1794599238L, Proto.long(f, 2))
+        // and the captured frame parses with a valid CRC
+        val cap = OnePlusProtocol.Deframer().feed(hrQueryCaptured).single()
+        assertEquals(11, cap.command)
     }
 
     @Test

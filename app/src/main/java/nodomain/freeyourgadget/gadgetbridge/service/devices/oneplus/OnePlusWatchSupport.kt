@@ -16,15 +16,23 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus
 
+import android.os.Handler
+import android.os.Looper
+import nodomain.freeyourgadget.gadgetbridge.GBApplication
+import nodomain.freeyourgadget.gadgetbridge.database.DBHelper
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInfo
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventNotificationControl
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo
+import nodomain.freeyourgadget.gadgetbridge.devices.GenericHeartRateSampleProvider
+import nodomain.freeyourgadget.gadgetbridge.devices.oneplus.OnePlusWatchCoordinator
+import nodomain.freeyourgadget.gadgetbridge.entities.GenericHeartRateSample
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.AbstractBTBRDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder
 import nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus.OnePlusProtocol.Proto
+import nodomain.freeyourgadget.gadgetbridge.util.GB
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.TimeZone
@@ -34,7 +42,7 @@ import java.util.UUID
  * OnePlus Watch (2021, W301GB): Bluetooth Classic / RFCOMM, plain protobuf, no app-level authentication
  * (the only requirement is a normal Bluetooth bond). See PROTOCOL.md in the reverse-engineering notes.
  *
- * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, notifications (+ quick reply, dismiss).
+ * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode.
  */
 class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     private val deframer = OnePlusProtocol.Deframer()
@@ -44,12 +52,19 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, NotificationSpec>?) = size > 64
     }
 
+    // state of the heart-rate fetch in progress
+    private var hrStart = 0L
+    private var hrPacketsTotal = 0
+    private var hrPacketsReceived = 0
+    private var hrSamples = ArrayList<GenericHeartRateSample>()
+
     override fun getSupportedService(): UUID = SERVICE_UUID
 
     override fun useAutoConnect(): Boolean = true
 
     override fun initializeDevice(builder: TransactionBuilder): TransactionBuilder {
         deframer.reset()
+        hrPacketsTotal = 0
         oobeStarted = false
         builder.write(*OnePlusProtocol.HELLO)
         builder.setDeviceState(GBDevice.State.INITIALIZED)
@@ -76,6 +91,10 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
             }
             OnePlusProtocol.SERVICE_NOTIFICATION -> handleNotification(msg)
             OnePlusProtocol.SERVICE_OOBE -> handleOobe(msg)
+            OnePlusProtocol.SERVICE_FITNESS -> when (msg.command) {
+                OnePlusProtocol.CMD_HR_QUERY -> onHeartRateIndex(msg.body)
+                OnePlusProtocol.CMD_HR_DETAIL -> onHeartRatePacket(msg.body)
+            }
         }
     }
 
@@ -121,6 +140,8 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         requestDeviceInfo()
         requestBattery()
         syncTime()
+        requestHeartRate()
+        applyHeartRateMonitoring()
     }
 
     // ---------------------------------------------------------------- time sync
@@ -251,6 +272,132 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         }
     }
 
+    // ---------------------------------------------------------------- heart rate history
+
+    override fun onFetchRecordedData(dataTypes: Int) {
+        requestBattery()
+        requestHeartRate()
+    }
+
+    /** 5.11: ask which packets exist for the time range; the watch answers with the packet count. */
+    private fun requestHeartRate() {
+        val now = System.currentTimeMillis() / 1000
+        val lastSync = getDevicePrefs().getLong(PREF_LAST_HR_SYNC, 0L)
+        val from = if (lastSync > 0) lastSync - 60 else now - 24 * 3600
+        hrSamples = ArrayList()
+        hrPacketsReceived = 0
+        hrPacketsTotal = 0
+        send("heart rate query", OnePlusProtocol.SERVICE_FITNESS, OnePlusProtocol.CMD_HR_QUERY, Proto.encode(1 to from, 2 to now))
+    }
+
+    /** 5.11 reply: 1 = packet count, 2 = start timestamp, 3 = max days. Then fetch each packet with 5.12. */
+    private fun onHeartRateIndex(body: ByteArray) {
+        val f = Proto.decode(body)
+        hrPacketsTotal = Proto.long(f, 1)?.toInt() ?: 0
+        hrStart = Proto.long(f, 2) ?: 0
+        LOG.info("Heart rate: {} packets from {}", hrPacketsTotal, hrStart)
+        if (hrPacketsTotal == 0) {
+            finishHeartRate()
+            return
+        }
+        for (i in 1..hrPacketsTotal) {
+            send("heart rate packet $i", OnePlusProtocol.SERVICE_FITNESS, OnePlusProtocol.CMD_HR_DETAIL, Proto.encode(1 to i.toLong(), 2 to hrStart))
+        }
+    }
+
+    /** 5.12: 1 = index, 2 = start time (s), 3 = repeated items {1 = minutes since start, 2 = bpm, 3 = reliability}. */
+    private fun onHeartRatePacket(body: ByteArray) {
+        val f = Proto.decode(body)
+        val start = Proto.long(f, 2) ?: return
+        val db = GBApplication.acquireDB()
+        try {
+            val session = db.daoSession
+            val userId = DBHelper.getUser(session).id!!
+            val deviceId = DBHelper.getDevice(gbDevice, session).id!!
+            for (item in Proto.repeated(f, 3)) {
+                val it = Proto.decode(item)
+                val bpm = Proto.long(it, 2)?.toInt() ?: continue
+                if (bpm !in 30..250) continue
+                val ts = (start + 60 * (Proto.long(it, 1) ?: 0L)) * 1000
+                hrSamples.add(GenericHeartRateSample(ts, deviceId, userId, bpm))
+            }
+        } finally {
+            db.close()
+        }
+        hrPacketsReceived++
+        if (hrPacketsReceived >= hrPacketsTotal) finishHeartRate()
+    }
+
+    private fun finishHeartRate() {
+        if (hrSamples.isNotEmpty()) {
+            try {
+                GBApplication.acquireDB().use { db ->
+                    GenericHeartRateSampleProvider(gbDevice, db.daoSession).addSamples(hrSamples)
+                }
+                LOG.info("Stored {} heart rate samples", hrSamples.size)
+                getDevicePrefs().preferences.edit().putLong(PREF_LAST_HR_SYNC, System.currentTimeMillis() / 1000).apply()
+                GB.signalActivityDataFinish(gbDevice)
+            } catch (e: Exception) {
+                LOG.error("Failed to store heart rate samples", e)
+            }
+        }
+        hrSamples = ArrayList()
+        GB.updateTransferNotification(null, "", false, 100, context)
+    }
+
+    // ---------------------------------------------------------------- heart-rate monitoring mode + polling
+
+    private val handler = Handler(Looper.getMainLooper())
+
+    private val hrPollTask = object : Runnable {
+        override fun run() {
+            requestHeartRate()
+            handler.postDelayed(this, hrPollIntervalMs)
+        }
+    }
+    private var hrPollIntervalMs = 0L
+
+    override fun onSendConfiguration(config: String) {
+        super.onSendConfiguration(config)
+        when (config) {
+            OnePlusWatchCoordinator.PREF_HR_MONITORING -> applyHeartRateMonitoring()
+        }
+    }
+
+    /**
+     * Off / Smart / Continuous. The watch is told to measure automatically
+     * (HeartRateMeasure{sw, interval}: interval 3 = AI smart monitoring, 4 = real-time monitoring),
+     * and Gadgetbridge pulls the heart-rate history every 10 min / every minute.
+     */
+    private fun applyHeartRateMonitoring() {
+        val prefs = getDevicePrefs()
+        val mode = prefs.getString(OnePlusWatchCoordinator.PREF_HR_MONITORING, OnePlusWatchCoordinator.HR_MODE_OFF)
+        val applied = prefs.getString(PREF_HR_APPLIED, "")
+        val (type, pollMs) = when (mode) {
+            OnePlusWatchCoordinator.HR_MODE_SMART -> 3L to 10 * 60_000L
+            OnePlusWatchCoordinator.HR_MODE_REALTIME -> 4L to 60_000L
+            else -> 3L to 0L
+        }
+        LOG.info("Heart-rate monitoring: {} (applied before: '{}', type={}, poll={} ms)", mode, applied, type, pollMs)
+
+        handler.removeCallbacks(hrPollTask)
+        hrPollIntervalMs = pollMs
+        if (pollMs > 0) handler.postDelayed(hrPollTask, pollMs)
+
+        // "Off" leaves the watch's own setting alone, unless we changed it earlier: then restore smart mode.
+        val touchWatch = mode != OnePlusWatchCoordinator.HR_MODE_OFF || applied.isNotEmpty()
+        if (!touchWatch || applied == mode) return
+
+        // The watch acknowledges 5.4 with {1: 100000}; the "MCU" variant 5.180 is not used by this model.
+        send("heart rate monitoring", OnePlusProtocol.SERVICE_FITNESS, OnePlusProtocol.CMD_HR_AUTO_MEASURE, Proto.encode(1 to 1L, 2 to type))
+        prefs.preferences.edit().putString(PREF_HR_APPLIED, if (mode == OnePlusWatchCoordinator.HR_MODE_OFF) "" else mode).apply()
+    }
+
+    override fun dispose() {
+        handler.removeCallbacksAndMessages(null)
+        super.dispose()
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private fun send(task: String, service: Int, command: Int, body: ByteArray) {
@@ -263,6 +410,8 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         /** SDP service "SPP SERVER2" (RFCOMM channel 4 on the W301GB). */
         val SERVICE_UUID: UUID = UUID.fromString("db764ac8-4b08-7f25-aafe-59d03c27bae3")
         private const val BUFFER_SIZE = 8192
+        private const val PREF_LAST_HR_SYNC = "oneplus_last_hr_sync"
+        private const val PREF_HR_APPLIED = "oneplus_hr_monitoring_applied"
         private const val PREF_LAST_TIME_SYNC = "oneplus_last_time_sync"
         private const val PREF_LAST_TZ_OFFSET = "oneplus_last_tz_offset"
     }

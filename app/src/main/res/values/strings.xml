@@ -2512,6 +2512,10 @@
     <string name="devicetype_fitpro" translatable="false">FitPro</string>
     <string name="devicetype_nx_wear_b8" translatable="false">Nx Wear B8</string>
     <string name="devicetype_oneplus_watch_gen1" translatable="false">OnePlus Watch (2021)</string>
+    <string name="oneplus_hr_monitoring_title">Heart rate monitoring</string>
+    <string name="oneplus_hr_monitoring_off">Off (watch default, no extra syncing)</string>
+    <string name="oneplus_hr_monitoring_smart">Smart: sync every 10 minutes</string>
+    <string name="oneplus_hr_monitoring_realtime">Continuous: sync every minute (more battery use)</string>
     <string name="devicetype_colacao21" translatable="false">ColaCao 2021</string>
     <string name="devicetype_colacao23" translatable="false">ColaCao 2023</string>
     <string name="devicetype_ak102" translatable="false">AK102</string>

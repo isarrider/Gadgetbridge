@@ -29,6 +29,7 @@ import java.io.ByteArrayOutputStream
 object OnePlusProtocol {
     const val SERVICE_DEVICE = 1
     const val SERVICE_NOTIFICATION = 2
+    const val SERVICE_FITNESS = 5
     const val SERVICE_OOBE = 11   // out-of-box setup ("pairing" screen) handshake
 
     const val CMD_BIND_REQUEST = 26      // service 1: phone asks the watch to allow binding -> reply {1: bind_result (0 = ok)}
@@ -50,6 +51,9 @@ object OnePlusProtocol {
     const val CMD_NOTIFICATION_REMOVE = 3
     const val CMD_NOTIFICATION_DISMISSED = 4
     const val CMD_NOTIFICATION_REPLY = 7
+    const val CMD_HR_QUERY = 11
+    const val CMD_HR_DETAIL = 12
+    const val CMD_HR_AUTO_MEASURE = 4        // {1: switch, 2: type (3 = smart, 4 = real-time)}; watch acks {1: 100000}
 
     /** Constant "hello" the phone sends first (service 1, command 1); the watch answers with its limits. */
     val HELLO: ByteArray = frame(SERVICE_DEVICE, CMD_HELLO, Proto.encode(1 to 5L, 2 to 5940L, 3 to 990L, 5 to 3L))
