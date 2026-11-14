@@ -44,11 +44,13 @@ class OnePlusSleepSessionProvider(
         private const val LOOK_BACK_SECONDS: Int = 12 * 60 * 60
         private const val LOOK_AHEAD_SECONDS: Int = 12 * 60 * 60
 
-        /** Watch sleep-state codes. 1 = light and 2 = deep are confirmed against real nights; 3 = REM and 4 = awake are unverified guesses. */
+        /**
+         * Watch sleep-state codes. 1 = light and 2 = deep are confirmed against real nights. 4 has been seen once, as a
+         * 4-minute run between light sleep, and is taken as awake (unconfirmed). REM has never been seen, so it is not mapped.
+         */
         fun stageToActivityKind(stage: Int): ActivityKind = when (stage) {
             1 -> ActivityKind.LIGHT_SLEEP
             2 -> ActivityKind.DEEP_SLEEP
-            3 -> ActivityKind.REM_SLEEP
             4 -> ActivityKind.AWAKE_SLEEP
             else -> ActivityKind.UNKNOWN
         }

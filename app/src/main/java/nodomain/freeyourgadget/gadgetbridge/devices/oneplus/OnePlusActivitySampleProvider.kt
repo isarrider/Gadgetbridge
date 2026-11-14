@@ -18,6 +18,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.oneplus
 
 import nodomain.freeyourgadget.gadgetbridge.database.DBHelper
 import nodomain.freeyourgadget.gadgetbridge.devices.GenericHeartRateSampleProvider
+import nodomain.freeyourgadget.gadgetbridge.devices.GenericSleepStageSampleProvider
 import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericActivitySample
@@ -29,13 +30,15 @@ import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind
 import java.util.TreeMap
 
 /**
- * Read-only provider that merges the per-minute steps, distance and calories ([OnePlusActivitySample]) with the
- * heart-rate samples ([GenericHeartRateSampleProvider]) into one activity sample per minute.
+ * Read-only provider that merges the per-minute steps, distance and calories ([OnePlusActivitySample]), the
+ * heart-rate samples ([GenericHeartRateSampleProvider]) and the sleep stages ([GenericSleepStageSampleProvider])
+ * into one activity sample per minute. Charts and the dashboard sleep widgets read sleep from the activity kind.
  */
 class OnePlusActivitySampleProvider(private val device: GBDevice, private val session: DaoSession) :
     SampleProvider<GenericActivitySample> {
 
     private val heartRateProvider = GenericHeartRateSampleProvider(device, session)
+    private val sleepStageProvider = GenericSleepStageSampleProvider(device, session)
 
     override fun normalizeType(rawType: Int): ActivityKind = ActivityKind.fromCode(rawType)
 
@@ -62,6 +65,16 @@ class OnePlusActivitySampleProvider(private val device: GBDevice, private val se
         }
         for (hr in heartRateProvider.getAllSamples(timestampFrom * 1000L, timestampTo * 1000L)) {
             sampleAt(hr.timestamp / 1000L).heartRate = hr.heartRate
+        }
+        // Sleep stages are runs of whole minutes. A run can start before the range, so look back and clip.
+        for (stage in sleepStageProvider.getAllSamples((timestampFrom - SLEEP_LOOK_BACK_SECONDS) * 1000L, timestampTo * 1000L)) {
+            val rawKind = toRawActivityKind(OnePlusSleepSessionProvider.stageToActivityKind(stage.stage))
+            val start = stage.timestamp / 1000L
+            for (minute in 0 until stage.duration) {
+                val seconds = start + minute * 60L
+                if (seconds < timestampFrom || seconds > timestampTo) continue
+                sampleAt(seconds).rawKind = rawKind
+            }
         }
         return ArrayList(byMinute.values)
     }
@@ -131,5 +144,6 @@ class OnePlusActivitySampleProvider(private val device: GBDevice, private val se
 
     companion object {
         private const val MAX_STEPS_PER_MINUTE = 120f
+        private const val SLEEP_LOOK_BACK_SECONDS = 6 * 60 * 60
     }
 }

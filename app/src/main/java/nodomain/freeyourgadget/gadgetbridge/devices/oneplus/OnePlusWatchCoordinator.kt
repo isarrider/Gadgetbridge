@@ -72,6 +72,8 @@ class OnePlusWatchCoordinator : AbstractBLClassicDeviceCoordinator() {
 
     override fun supportsSleepMeasurement(device: GBDevice): Boolean = true
 
+    override fun supportsAwakeSleep(device: GBDevice): Boolean = true
+
     override fun getSpo2SampleProvider(device: GBDevice, session: DaoSession): TimeSampleProvider<out Spo2Sample> =
         GenericSpo2SampleProvider(device, session)
 
