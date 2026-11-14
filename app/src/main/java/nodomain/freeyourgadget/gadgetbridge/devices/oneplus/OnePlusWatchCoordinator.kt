@@ -91,11 +91,25 @@ class OnePlusWatchCoordinator : AbstractBLClassicDeviceCoordinator() {
                 defaultValue = HR_MODE_OFF,
             )
         }
+        screen(
+            key = "oneplus_developer",
+            title = R.string.action_debug,
+            icon = R.drawable.ic_developer_mode,
+        ) {
+            switchSetting(
+                key = PREF_DIAGNOSTICS,
+                title = R.string.oneplus_diagnostics_title,
+                summary = R.string.oneplus_diagnostics_summary,
+                icon = R.drawable.ic_developer_mode,
+                defaultValue = false,
+            )
+        }
     }
 
     companion object {
         /** Heart-rate monitoring mode: how the watch measures and how often Gadgetbridge pulls the history. */
         const val PREF_HR_MONITORING = "oneplus_hr_monitoring"
+        const val PREF_DIAGNOSTICS = "oneplus_diagnostics"
         const val HR_MODE_OFF = "off"
         const val HR_MODE_SMART = "smart"
         const val HR_MODE_REALTIME = "realtime"

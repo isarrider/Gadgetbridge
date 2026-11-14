@@ -46,7 +46,7 @@ import java.util.UUID
  * OnePlus Watch (2021, W301GB): Bluetooth Classic / RFCOMM, plain protobuf, no app-level authentication
  * (the only requirement is a normal Bluetooth bond). See PROTOCOL.md in the reverse-engineering notes.
  *
- * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode, SpO2 and sleep history sync.
+ * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode, SpO2 and sleep history sync, diagnostic logging.
  */
 class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     private val deframer = OnePlusProtocol.Deframer()
@@ -86,7 +86,11 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     }
 
     private fun handle(msg: OnePlusProtocol.Message) {
-        LOG.debug("RX {}.{} ({} bytes)", msg.service, msg.command, msg.body.size)
+        if (diagnostics) {
+            LOG.info("RX {}.{} body={}", msg.service, msg.command, hex(msg.body))
+        } else {
+            LOG.debug("RX {}.{} ({} bytes)", msg.service, msg.command, msg.body.size)
+        }
         when (msg.service) {
             OnePlusProtocol.SERVICE_DEVICE -> when (msg.command) {
                 OnePlusProtocol.CMD_HELLO -> onHelloReply()
@@ -101,6 +105,8 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
                 OnePlusProtocol.CMD_SPO2_QUERY, OnePlusProtocol.CMD_SLEEP_QUERY -> onTypedIndex(msg)
                 OnePlusProtocol.CMD_SPO2_DETAIL -> onSpo2Packet(msg.body)
                 OnePlusProtocol.CMD_SLEEP_DETAIL -> onSleepPacket(msg.body)
+                in PROBE_QUERY_CMDS -> onProbeIndex(msg)
+                in PROBE_DETAIL_CMDS -> LOG.info("PROBE detail 5.{} ({}B) body={}", msg.command, msg.body.size, hex(msg.body))
             }
         }
     }
@@ -150,6 +156,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         requestHeartRate()
         requestSpo2AndSleep()
         applyHeartRateMonitoring()
+        if (diagnostics) probeAll()
     }
 
     // ---------------------------------------------------------------- time sync
@@ -370,6 +377,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         super.onSendConfiguration(config)
         when (config) {
             OnePlusWatchCoordinator.PREF_HR_MONITORING -> applyHeartRateMonitoring()
+            OnePlusWatchCoordinator.PREF_DIAGNOSTICS -> if (diagnostics) probeAll()
         }
     }
 
@@ -523,6 +531,31 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         getDevicePrefs().preferences.edit().putLong(PREF_LAST_SLEEP_SYNC, now).apply()
     }
 
+    // ---------------------------------------------------------------- diagnostics (decoding research)
+
+    private val diagnostics: Boolean
+        get() = getDevicePrefs().getBoolean(OnePlusWatchCoordinator.PREF_DIAGNOSTICS, false)
+
+    private fun hex(b: ByteArray) = b.joinToString("") { "%02x".format(it) }
+
+    /** Ask for 7 days of every other data type and log the raw replies, so their formats can be decoded. */
+    private fun probeAll() {
+        val now = System.currentTimeMillis() / 1000
+        for (cmd in PROBE_QUERY_CMDS) {
+            send("probe $cmd", OnePlusProtocol.SERVICE_FITNESS, cmd, Proto.encode(1 to now - 7 * 86400, 2 to now))
+        }
+    }
+
+    private fun onProbeIndex(msg: OnePlusProtocol.Message) {
+        val f = Proto.decode(msg.body)
+        val total = Proto.long(f, 1)?.toInt() ?: 0
+        val start = Proto.long(f, 2) ?: 0
+        LOG.info("PROBE index 5.{} packets={} start={} body={}", msg.command, total, start, hex(msg.body))
+        for (i in 1..minOf(total, 8)) {
+            send("probe ${msg.command + 1} #$i", OnePlusProtocol.SERVICE_FITNESS, msg.command + 1, Proto.encode(1 to i.toLong(), 2 to start))
+        }
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private fun send(task: String, service: Int, command: Int, body: ByteArray) {
@@ -535,6 +568,10 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         /** SDP service "SPP SERVER2" (RFCOMM channel 4 on the W301GB). */
         val SERVICE_UUID: UUID = UUID.fromString("db764ac8-4b08-7f25-aafe-59d03c27bae3")
         private const val BUFFER_SIZE = 8192
+
+        // research probe: activity, sleep, resting HR, SpO2, stress  (query cmd; detail cmd = query + 1)
+        private val PROBE_QUERY_CMDS = setOf(9, 17, 34)
+        private val PROBE_DETAIL_CMDS = PROBE_QUERY_CMDS.map { it + 1 }.toSet()
         private const val PREF_LAST_HR_SYNC = "oneplus_last_hr_sync"
         private const val PREF_LAST_SPO2_SYNC = "oneplus_last_spo2_sync"
         private const val PREF_LAST_SLEEP_SYNC = "oneplus_last_sleep_sync"
