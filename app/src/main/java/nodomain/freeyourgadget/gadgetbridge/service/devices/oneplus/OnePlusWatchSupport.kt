@@ -22,13 +22,14 @@ import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder
 import nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus.OnePlusProtocol.Proto
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.TimeZone
 import java.util.UUID
 
 /**
  * OnePlus Watch (2021, W301GB): Bluetooth Classic / RFCOMM, plain protobuf, no app-level authentication
  * (the only requirement is a normal Bluetooth bond). See PROTOCOL.md in the reverse-engineering notes.
  *
- * Implemented: connect, first-time setup.
+ * Implemented: connect, first-time setup, time and timezone sync.
  */
 class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     private val deframer = OnePlusProtocol.Deframer()
@@ -104,6 +105,38 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
 
     private fun onHelloReply() {
         LOG.info("Watch is ready")
+        syncTime()
+    }
+
+    // ---------------------------------------------------------------- time sync
+
+    private val mac: String get() = gbDevice.address.uppercase()
+
+    override fun onSetTime() {
+        syncTime()
+    }
+
+    /**
+     * 1.5 in two steps, as OHealth does: first the clock, then the timezone.
+     * The timezone offset goes on the wire in half-minute units (UTC+2 = 120 min is sent as 240).
+     */
+    private fun syncTime() {
+        val prefs = getDevicePrefs().preferences
+        val now = System.currentTimeMillis() / 1000
+        val oldTime = prefs.getLong(PREF_LAST_TIME_SYNC, now)
+        val tz = TimeZone.getDefault()
+        val offset = tz.getOffset(System.currentTimeMillis()) / 60_000 * 2
+        val oldOffset = prefs.getInt(PREF_LAST_TZ_OFFSET, offset)
+
+        val gmt = Proto.encode(1 to Proto.encode(1 to now, 2 to oldTime))
+        val sys = Proto.encode(2 to Proto.encode(1 to now, 2 to oldTime, 3 to offset.toLong(), 4 to oldOffset.toLong(), 6 to tz.id))
+        val b = createTransactionBuilder("time sync")
+        b.write(*OnePlusProtocol.frame(OnePlusProtocol.SERVICE_DEVICE, OnePlusProtocol.CMD_TIME_SYNC, Proto.encode(1 to 4L, 5 to gmt)))
+        b.sleep(400)
+        b.write(*OnePlusProtocol.frame(OnePlusProtocol.SERVICE_DEVICE, OnePlusProtocol.CMD_TIME_SYNC, Proto.encode(1 to 4L, 5 to sys)))
+        b.queue()
+        prefs.edit().putLong(PREF_LAST_TIME_SYNC, now).putInt(PREF_LAST_TZ_OFFSET, offset).apply()
+        LOG.info("Time sync sent: {} offset={} half-minutes", tz.id, offset)
     }
 
     // ---------------------------------------------------------------- helpers
@@ -118,5 +151,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         /** SDP service "SPP SERVER2" (RFCOMM channel 4 on the W301GB). */
         val SERVICE_UUID: UUID = UUID.fromString("db764ac8-4b08-7f25-aafe-59d03c27bae3")
         private const val BUFFER_SIZE = 8192
+        private const val PREF_LAST_TIME_SYNC = "oneplus_last_time_sync"
+        private const val PREF_LAST_TZ_OFFSET = "oneplus_last_tz_offset"
     }
 }
