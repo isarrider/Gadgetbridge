@@ -28,6 +28,18 @@ import java.io.ByteArrayOutputStream
  */
 object OnePlusProtocol {
     const val SERVICE_DEVICE = 1
+    const val SERVICE_OOBE = 11   // out-of-box setup ("pairing" screen) handshake
+
+    const val CMD_BIND_REQUEST = 26      // service 1: phone asks the watch to allow binding -> reply {1: bind_result (0 = ok)}
+    const val CMD_OOBE_HAND = 1          // service 11: wrist side {1: hand, 2: result}
+    const val CMD_OOBE_SYNC_START = 2
+    const val CMD_OOBE_SYNC_END = 3
+    const val CMD_OOBE_CONNECT_RESULT = 6  // {1: connect_result, 2: connect_result_sync, 3: ssoid}
+    const val CMD_OOBE_START_SETTING = 7   // {1: start_setting, 2: start_setting_result}
+    const val CMD_OOBE_SYNC_FINISH = 9
+    const val CMD_OOBE_GET_STATUS = 11
+    const val CMD_OOBE_WAITING = 12        // watch -> phone, empty body, repeated every ~6.5 s while the watch waits for setup
+    const val CMD_OOBE_TRANSFER_STATE = 26 // {1: state}
 
     const val CMD_HELLO = 1
 
