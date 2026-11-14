@@ -260,6 +260,18 @@ public class ActivitySummaryEntries {
     public static final String MOVEMENT_SPEED_DECAY = "movementSpeedDecay";
 
     public static final String SETS = "workoutSets";
+    public static final String CLIMBS = "workoutClimbs";
+    public static final String CLIMB_GRADES = "climb_grades";
+    public static final String CLIMBS_COMPLETED = "climbs_completed";
+    public static final String CLIMBS_ATTEMPTED = "climbs_attempted";
+    public static final String CLIMB_MAX_GRADE = "climb_max_grade";
+    public static final String CLIMB_TIME_ON_WALL = "climb_time_on_wall";
+    public static final String CLIMB_REST_MEDIAN = "climb_rest_median";
+    public static final String CLIMB_REST_TOTAL = "climb_rest_total";
+    public static final String CLIMB_REST_AVG = "climb_rest_avg";
+    public static final String CLIMB_AVG_DURATION = "climb_avg_duration";
+    public static final String CLIMB_WALL_SHARE = "climb_wall_share";
+    public static final String CLIMB_FALLS = "climb_falls_total";
     public static final String REPETITIONS = "workout_repetitions";
     public static final String REVOLUTIONS = "workout_revolutions";
 
@@ -425,6 +437,8 @@ public class ActivitySummaryEntries {
     public static final String GROUP_PERFORMANCE_CONDITION = "performance_condition";
     public static final String GROUP_INTERVALS = "workout_intervals";
     public static final String GROUP_DIVING = "activity_type_diving";
+    public static final String GROUP_CLIMBING = "activity_type_climbing";
+    public static final String GROUP_CLIMBING_TIMES = "climbing_times";
     public static final String GROUP_RECOVERY_HEART_RATE = "recovery_heart_rate";
     public static final String GROUP_MOVEMENT_EVALUATION = "movement_evaluation";
     public static final String GROUP_DISTANCE = "Distance";

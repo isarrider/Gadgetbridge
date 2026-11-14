@@ -78,6 +78,8 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitRecord;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitSession;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitSet;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitSplit;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitSplitSummary;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitSport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitTankSummary;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitTimeInZone;
@@ -123,6 +125,8 @@ public class GarminWorkoutParser implements ActivitySummaryParser {
     private final List<FitTankSummary> diveTanks = new ArrayList<>();
     private final List<FitDiveGas> diveGases = new ArrayList<>();
     private final List<FitSet> sets = new ArrayList<>();
+    private final List<FitSplit> splits = new ArrayList<>();
+    private final List<FitSplitSummary> splitSummaries = new ArrayList<>();
     private final List<FitLap> laps = new ArrayList<>();
     private final List<FitWorkoutStep> workoutSteps = new ArrayList<>();
     private final Map<Integer, FitDeviceInfo> deviceInfos = new TreeMap<>();
@@ -241,6 +245,8 @@ public class GarminWorkoutParser implements ActivitySummaryParser {
         diveGases.clear();
         diveTanks.clear();
         sets.clear();
+        splits.clear();
+        splitSummaries.clear();
         laps.clear();
         workoutSteps.clear();
         deviceInfos.clear();
@@ -295,6 +301,12 @@ public class GarminWorkoutParser implements ActivitySummaryParser {
         } else if (record instanceof FitSet fitSet) {
             LOG.trace("Set: {}", fitSet);
             sets.add(fitSet);
+        } else if (record instanceof FitSplit fitSplit) {
+            LOG.trace("Split: {}", fitSplit);
+            splits.add(fitSplit);
+        } else if (record instanceof FitSplitSummary fitSplitSummary) {
+            LOG.trace("Split summary: {}", fitSplitSummary);
+            splitSummaries.add(fitSplitSummary);
         } else if (record instanceof FitLap fitLap) {
             LOG.trace("Lap: {}", fitLap);
             laps.add(fitLap);
@@ -1148,6 +1160,8 @@ public class GarminWorkoutParser implements ActivitySummaryParser {
 
             tableBuilder.addToSummaryData(summaryData);
         }
+
+        GarminClimbingSummary.addToSummary(splits, splitSummaries, summaryData);
 
         final boolean anyValidLaps = laps.stream()
                 .filter(lap -> (lap.getTotalTimerTime() != null && lap.getTotalTimerTime() != 0))

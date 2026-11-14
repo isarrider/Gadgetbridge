@@ -120,6 +120,18 @@ class WorkoutTabOverviewFragment : Fragment(), WorkoutTabScreenshotProvider {
             addGroupHeader(ActivitySummaryEntries.SETS)
             addGroupContent(setsEntries)
         }
+        val climbingEntries = groups[ActivitySummaryEntries.GROUP_CLIMBING]
+        if (!climbingEntries.isNullOrEmpty()) {
+            addGroupHeader(ActivitySummaryEntries.GROUP_CLIMBING)
+            addActivityStatTiles(climbingEntries)
+        }
+        for (tableGroup in listOf(ActivitySummaryEntries.CLIMB_GRADES, ActivitySummaryEntries.CLIMBS)) {
+            val tableEntries = groups[tableGroup]
+            if (!tableEntries.isNullOrEmpty()) {
+                addGroupHeader(tableGroup)
+                addGroupContent(tableEntries)
+            }
+        }
         updateGpsMap(workout)
     }
 

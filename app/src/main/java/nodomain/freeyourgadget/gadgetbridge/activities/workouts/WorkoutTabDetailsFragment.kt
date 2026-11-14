@@ -77,6 +77,9 @@ class WorkoutTabDetailsFragment : Fragment(), WorkoutTabScreenshotProvider {
                 groupKey == ActivitySummaryEntries.GROUP_LAPS ||
                 groupKey == ActivitySummaryEntries.GROUP_INTERVALS ||
                 groupKey == ActivitySummaryEntries.SETS ||
+                groupKey == ActivitySummaryEntries.GROUP_CLIMBING ||
+                groupKey == ActivitySummaryEntries.CLIMB_GRADES ||
+                groupKey == ActivitySummaryEntries.CLIMBS ||
                 groupKey == ActivitySummaryEntries.GROUP_HEART_RATE_ZONES
             ) {
                 // Shown on the Overview, Laps or Charts tabs instead.

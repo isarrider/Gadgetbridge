@@ -96,6 +96,27 @@ object ActivitySummaryGroup {
             // Sets
             put(ActivitySummaryEntries.SETS, listOf<String>())
 
+            put(
+                ActivitySummaryEntries.GROUP_CLIMBING, listOf<String>(
+                    ActivitySummaryEntries.CLIMBS_COMPLETED,
+                    ActivitySummaryEntries.CLIMBS_ATTEMPTED,
+                    ActivitySummaryEntries.CLIMB_MAX_GRADE,
+                    ActivitySummaryEntries.CLIMB_TIME_ON_WALL,
+                    ActivitySummaryEntries.CLIMB_REST_MEDIAN,
+                )
+            )
+            put(ActivitySummaryEntries.CLIMB_GRADES, listOf<String>())
+            put(ActivitySummaryEntries.CLIMBS, listOf<String>())
+            put(
+                ActivitySummaryEntries.GROUP_CLIMBING_TIMES, listOf<String>(
+                    ActivitySummaryEntries.CLIMB_AVG_DURATION,
+                    ActivitySummaryEntries.CLIMB_REST_TOTAL,
+                    ActivitySummaryEntries.CLIMB_REST_AVG,
+                    ActivitySummaryEntries.CLIMB_WALL_SHARE,
+                    ActivitySummaryEntries.CLIMB_FALLS,
+                )
+            )
+
             // Intervals
             put(ActivitySummaryEntries.GROUP_INTERVALS, listOf<String>())
 
