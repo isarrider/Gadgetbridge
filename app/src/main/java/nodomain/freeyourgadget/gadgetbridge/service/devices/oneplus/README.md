@@ -33,7 +33,9 @@ Notifications
 Health data (stored in Gadgetbridge's own database, shown in its charts)
 - **Heart rate history** (about one reading per minute in Continuous mode).
 - **Blood oxygen (SpO2) history**, with unreliable and empty readings dropped.
-- **Sleep history** as stages per minute, grouped into sleep sessions.
+- **Sleep history** as stages per minute (light, deep and awake), grouped into sleep sessions. The activity samples also carry the sleep stages, because the dashboard sleep graph and the sleep charts read sleep from there.
+- **Steps, distance and calories** per minute (`5.9`/`5.10`), shown in the activity charts, the dashboard widgets and the daily totals on the device card. They are stored in their own table (`OnePlusActivitySample`, database schema 161); a read-only sample provider merges them with the heart-rate samples and the sleep stages.
+  - Distance is in metres (about 0.6 m per step). Calories: the **watch sends** a kcal value for every active minute; Gadgetbridge does not estimate it from steps or heart rate. It is stored in 1/1000 kcal, the unit Gadgetbridge sums and divides by 1000. The "Calories" total on the dashboard adds Gadgetbridge's own resting-metabolism estimate (from the user profile, for the part of the day passed). The watch's own daily totals (`5.21`, including a "static" calorie value) are not used.
 - **Heart-rate monitoring mode** setting: Off / Smart / Continuous. It changes the watch's automatic measurement and the polling interval (none / 10 min / 1 min).
 - First sync asks for 14 days; later syncs ask from one day before the last sync.
 
@@ -42,7 +44,7 @@ Developer
 - **Tests**: 5 protocol tests using real captured frames, plus the device-name test.
 
 ### Known caveats in what exists
-- **Sleep stage codes**: 1 = light and 2 = deep are **confirmed** (light is the longest stage of a night, as expected). Codes 3 = REM and 4 = awake have never been seen and are still guesses.
+- **Sleep stage codes**: 1 = light and 2 = deep are **confirmed** (light is the longest stage of a night, as expected). Code 4 has appeared once, as a 4-minute run between light sleep, and is taken as awake (unconfirmed). **REM (3) has never been seen**, so it is not mapped and the REM stage is not declared as supported; the vendor app has a "sleep REM" setting for the watch (`FitnessProto` command 51), so some models can report it, but whether this one can is unknown.
 - **Timezone unit**: sent in half-minutes (UTC+2 = 240), copied from one captured example.
 - **Charging state**: handled in code but never observed on a real charging watch.
 - **Heart-rate data timing**: the watch hands over data in batches every 4-5 minutes, so the chart runs 2-5 minutes behind.
@@ -59,20 +61,19 @@ Developer
 
 | # | Item | Effort | What is known / needed |
 |---|---|---|---|
-| 1 | **Steps, calories and distance** (daily totals and per-minute activity, shown in Gadgetbridge's activity charts) | M | Per-minute data `5.9/5.10` and daily totals `5.21` are mapped and real replies were captured. Example daily total decoded: 961 steps, 610 m distance, 3 floors at 21:30 (calorie field also present). The main work is a Gadgetbridge activity-sample provider: today only heart rate feeds the main chart, so a steps/calories table and provider must be added. Also set the daily goal. |
-| 2 | **Phone calls** (show caller on the watch; reject, silence or answer from the watch) | M | Not captured yet. The OHealth app contains call-related protocol definitions (telecom and dialer packages) that have not been read; Gadgetbridge has standard hooks (`onSetCallState`, call-control events). Needs one capture of an incoming call, with the diagnostic toggle on, to confirm services and commands. |
+| 1 | **Phone calls** (show caller on the watch; reject, silence or answer from the watch) | M | Not captured yet. The OHealth app contains call-related protocol definitions (telecom and dialer packages) that have not been read; Gadgetbridge has standard hooks (`onSetCallState`, call-control events). Needs one capture of an incoming call, with the diagnostic toggle on, to confirm services and commands. |
 | – | **Find my watch** (ring the watch from the device card) | S, once known | **Tried, does not work yet.** See section 4 for exactly what was sent. Needs a capture of the official app doing it. |
 
 ### 2b. After that
 
 | # | Item | Effort | What is known / needed |
 |---|---|---|---|
-| 3 | **Stress and resting heart rate storage** | S | Replies `5.34/5.35` and `5.17/5.18` already arrive in the diagnostic log; formats decoded. Store in the generic stress and resting-HR tables. |
-| 4 | **Tidy-up**: run setup only once, remove unused code, replace deprecated calls, add unit tests for the SpO2 and sleep decoders | S-M | Straightforward. |
-| 5 | **Music and media control** | M | The watch sends media messages (service 8); formats not decoded. Needs a capture while playing music. |
-| 6 | **Alarms and other watch settings** (do-not-disturb, raise-to-wake, goals) | M | Many settings messages are defined in the app's code (service 5, commands 172-249 and others). Needs a capture per setting. |
-| 7 | **REM and awake sleep stages** | S | Add as soon as codes other than 1 and 2 show up in real data; mapping then verified against a night. |
-| 8 | **Prepare for upstream**: translations, a device page, cleanup, a pull request to Gadgetbridge | M | Not started. |
+| 2 | **Stress and resting heart rate storage** | S | Replies `5.34/5.35` and `5.17/5.18` already arrive in the diagnostic log; formats decoded. Store in the generic stress and resting-HR tables. |
+| 3 | **Tidy-up**: run setup only once, remove unused code, replace deprecated calls, add unit tests for the SpO2 and sleep decoders | S-M | Straightforward. |
+| 4 | **Music and media control** | M | The watch sends media messages (service 8); formats not decoded. Needs a capture while playing music. |
+| 5 | **Alarms and other watch settings** (do-not-disturb, raise-to-wake, goals) | M | Many settings messages are defined in the app's code (service 5, commands 172-249 and others). Needs a capture per setting. |
+| 6 | **REM sleep stage** | S | Add (mapping and the coordinator's REM support flag) as soon as a code other than 1, 2 and 4 shows up in real data, and verify it against a night. |
+| 7 | **Prepare for upstream**: translations, a device page, cleanup, a pull request to Gadgetbridge | M | Not started. |
 
 ---
 
@@ -144,6 +145,14 @@ Not tried (ideas for later):
 - Checking whether the watch advertises a find-device capability in its device info / feature set (`1.7`, `1.33`).
 - **Best next step:** capture the official app doing "Find watch" (OHealth connected to the watch, HCI snoop log) and compare the frame.
 
+### Chart on the device card (2026-11-14): not implemented
+Wanted: active calories, calories and steps charts reachable from the watch's card in the device list.
+- Gadgetbridge's device card has three fixed gauges (steps, distance, sleep). Two calorie gauges in a second row were built and
+  then removed again as not wanted.
+- Tapping a connected card only shows a "long-press" hint. A small opt-in hook (a coordinator method naming a chart tab to open on tap)
+  was tried; the charts screen opened but no new chart appeared, so the hook was removed.
+- Today the calories and steps charts are reached through the dashboard widgets and the charts screen (the calories and steps tabs).
+
 ## 5. Protocol summary (what is needed to continue)
 
 Transport: Bluetooth Classic RFCOMM, SDP service UUID `db764ac8-4b08-7f25-aafe-59d03c27bae3` (channel 4 on the W301GB), plain
@@ -164,7 +173,8 @@ Frame: `AA | len (varint) | 00 00 | service | command | protobuf body | CRC16 (L
 | 26, 28 | file transfer, log kit | not mapped |
 
 Timestamps are Unix seconds. The timezone offset in `1.5` is in half-minute units (UTC+2 = 240).
-Sleep stage codes: 1 = light and 2 = deep are confirmed; 3 and 4 are guesses.
+Sleep stage codes: 1 = light and 2 = deep are confirmed; 4 is taken as awake (seen once, 4 minutes); 3 (REM) has never been seen.
+Activity items (`5.10`): `{1: minute offset, 2: calories (kcal), 3: distance (m), 5: sport type, 7: steps}`; only minutes with data are present and replies only come for packets that hold data.
 
 ## 6. Notes and findings
 
@@ -181,7 +191,7 @@ Sleep stage codes: 1 = light and 2 = deep are confirmed; 3 and 4 are guesses.
   heart rate, SpO2 and sleep, diagnostics, find phone), so each feature can be reviewed on its own.
 
 ## 7. Open questions
-- What do sleep codes 0, 3, 4 and above mean? (1 = light and 2 = deep are confirmed.)
+- What do sleep codes 0 and 3 mean, and is 4 really awake? (1 = light and 2 = deep are confirmed.) Can this model report REM at all, and is it switched on by the setting the vendor app calls "sleep REM"?
 - Does the watch report charging state, and in which field?
 - Which messages does the watch send and expect for incoming calls (high priority) and for music?
 - What do the unmapped services (4, 11, 15, 28) carry beyond setup and workouts?
