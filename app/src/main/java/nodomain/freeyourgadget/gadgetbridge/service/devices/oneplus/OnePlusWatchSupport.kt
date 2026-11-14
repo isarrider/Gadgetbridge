@@ -21,6 +21,7 @@ import android.os.Looper
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.database.DBHelper
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInfo
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventFindPhone
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventNotificationControl
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo
 import nodomain.freeyourgadget.gadgetbridge.devices.GenericHeartRateSampleProvider
@@ -46,7 +47,7 @@ import java.util.UUID
  * OnePlus Watch (2021, W301GB): Bluetooth Classic / RFCOMM, plain protobuf, no app-level authentication
  * (the only requirement is a normal Bluetooth bond). See PROTOCOL.md in the reverse-engineering notes.
  *
- * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode, SpO2 and sleep history sync, diagnostic logging.
+ * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, find my phone, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode, SpO2 and sleep history sync, diagnostic logging.
  */
 class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     private val deframer = OnePlusProtocol.Deframer()
@@ -96,6 +97,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
                 OnePlusProtocol.CMD_HELLO -> onHelloReply()
                 OnePlusProtocol.CMD_BATTERY -> onBattery(msg.body)
                 OnePlusProtocol.CMD_DEVICE_INFO -> onDeviceInfo(msg.body)
+                OnePlusProtocol.CMD_FIND_PHONE -> onFindPhone()
             }
             OnePlusProtocol.SERVICE_NOTIFICATION -> handleNotification(msg)
             OnePlusProtocol.SERVICE_OOBE -> handleOobe(msg)
@@ -222,6 +224,28 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         event.fwVersion = Proto.string(f, 21) ?: Proto.string(f, 7) ?: return
         event.hwVersion = Proto.string(f, 20) ?: Proto.string(f, 10)
         evaluateGBDeviceEvent(event)
+    }
+
+    // ---------------------------------------------------------------- find my phone
+
+    private var findPhoneActive = false
+    private val findPhoneStop = Runnable {
+        findPhoneActive = false
+        evaluateGBDeviceEvent(GBDeviceEventFindPhone().also { it.event = GBDeviceEventFindPhone.Event.STOP })
+    }
+
+    /**
+     * While the watch's find-phone screen is open it sends an empty 1.15 about once a second (captured on a real
+     * watch). The first one starts the phone ringing; the ringing stops when the messages stop arriving.
+     */
+    private fun onFindPhone() {
+        if (!findPhoneActive) {
+            findPhoneActive = true
+            LOG.info("Find phone requested by watch")
+            evaluateGBDeviceEvent(GBDeviceEventFindPhone().also { it.event = GBDeviceEventFindPhone.Event.START })
+        }
+        handler.removeCallbacks(findPhoneStop)
+        handler.postDelayed(findPhoneStop, FIND_PHONE_TIMEOUT_MS)
     }
 
     // ---------------------------------------------------------------- notifications
@@ -568,6 +592,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         /** SDP service "SPP SERVER2" (RFCOMM channel 4 on the W301GB). */
         val SERVICE_UUID: UUID = UUID.fromString("db764ac8-4b08-7f25-aafe-59d03c27bae3")
         private const val BUFFER_SIZE = 8192
+        private const val FIND_PHONE_TIMEOUT_MS = 3500L
 
         // research probe: activity, sleep, resting HR, SpO2, stress  (query cmd; detail cmd = query + 1)
         private val PROBE_QUERY_CMDS = setOf(9, 17, 34)

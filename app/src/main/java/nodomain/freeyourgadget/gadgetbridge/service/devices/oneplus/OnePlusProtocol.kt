@@ -46,6 +46,7 @@ object OnePlusProtocol {
     const val CMD_HELLO = 1
     const val CMD_TIME_SYNC = 5          // service 1: {1: 4 (time profile), 5: {1: {time, old_time}} | {2: {time, old_time, tz, old_tz, id}}}
     const val CMD_DEVICE_INFO = 7        // service 1: request {1: mac, 13: mac}; reply has versions, serial, model name
+    const val CMD_FIND_PHONE = 15        // service 1, watch -> phone, empty body, repeated about once a second while the watch's find-phone screen is active
     const val CMD_BATTERY = 8            // service 1: request {1: mac}; reply/push {1: percent, 2: mac, 3: charging}
     const val CMD_NOTIFICATION_POST = 1
     const val CMD_NOTIFICATION_REMOVE = 3
