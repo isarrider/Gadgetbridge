@@ -93,6 +93,7 @@ public final class JblProtocol {
     public static final byte FEATURE_SPATIAL_SOUND           = 0x0c;
     public static final byte FEATURE_VOICE_AWARE_SIDE_TONE   = 0x0d;
     public static final byte FEATURE_CALL_SOUND_EFFECT       = 0x14;
+    public static final byte FEATURE_MIC_VOICE_EFFECT        = 0x16;
     public static final byte FEATURE_BATTERY_LEFT             = 0x1a;
     public static final byte FEATURE_BATTERY_RIGHT            = 0x1b;
     public static final byte FEATURE_BATTERY_CASE             = 0x1c;
@@ -117,6 +118,11 @@ public final class JblProtocol {
     public static final int CALL_SOUND_EFFECT_NATURAL        = 0;
     public static final int CALL_SOUND_EFFECT_TREBLE_BOOST    = 1;
     public static final int CALL_SOUND_EFFECT_BASS_BOOST      = 2;
+
+    // Outgoing call voice effects (microphone)
+    public static final int MIC_VOICE_EFFECT_NATURAL          = 0;
+    public static final int MIC_VOICE_EFFECT_POWERFUL         = 1;
+    public static final int MIC_VOICE_EFFECT_BRIGHT           = 2;
 
     // Custom Parametric Equalizer Parameters
     public static final int CUSTOM_EQ_BAND_COUNT             = 10;

@@ -88,6 +88,7 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     public static final String PREF_SPATIAL_AUDIO         = "pref_jbl_tune_buds_2_spatial_audio";
     public static final String PREF_LATENCY_MODE          = "pref_jbl_tune_buds_2_latency_mode";
     public static final String PREF_CALL_SOUND_EFFECT     = "pref_jbl_tune_buds_2_call_sound_effect";
+    public static final String PREF_CALL_VOICE_EFFECT     = "pref_jbl_tune_buds_2_call_voice_effect";
     public static final String PREF_CALL_VOLUME_OPTIMIZER = "pref_jbl_tune_buds_2_call_volume_optimizer";
     public static final String PREF_SIDETONE              = "pref_jbl_tune_buds_2_sidetone";
     public static final String PREF_AUTO_POWER_OFF        = "pref_jbl_tune_buds_2_auto_power_off";
@@ -121,6 +122,7 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             FEATURE_SPATIAL_SOUND,
             FEATURE_VOICE_AWARE_SIDE_TONE,
             FEATURE_CALL_SOUND_EFFECT,
+            FEATURE_MIC_VOICE_EFFECT,
             FEATURE_SAFE_SOUND,
             FEATURE_CALL_VOLUME_OPTIMIZER
     );
@@ -573,6 +575,9 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             } else if (PREF_CALL_SOUND_EFFECT.equals(config)) {
                 final int callEffect = Integer.parseInt(prefs.getString(PREF_CALL_SOUND_EFFECT, "0"));
                 write(buildCallSoundEffectCommand(callEffect));
+            } else if (PREF_CALL_VOICE_EFFECT.equals(config)) {
+                final int voiceEffect = Integer.parseInt(prefs.getString(PREF_CALL_VOICE_EFFECT, "0"));
+                write(buildCallVoiceEffectCommand(voiceEffect));
             } else if (PREF_CALL_VOLUME_OPTIMIZER.equals(config)) {
                 final boolean opt = prefs.getBoolean(PREF_CALL_VOLUME_OPTIMIZER, false);
                 write(buildCallVolumeOptimizerCommand(opt));
@@ -761,6 +766,13 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     private byte[] buildCallSoundEffectCommand(final int effectType) {
         LOG.info("JBL TWS: Setting Call Sound Effect: {}", effectType);
         return buildDeviceInfoSet(FEATURE_CALL_SOUND_EFFECT, (byte) 0x01, (byte) effectType);
+    }
+
+    private byte[] buildCallVoiceEffectCommand(final int effectType) {
+        LOG.info("JBL TWS: Setting outgoing call voice effect: {}", effectType);
+        // isOn=1, gain untouched (0), then the effect ordinal.
+        return buildDeviceInfoSet(FEATURE_MIC_VOICE_EFFECT,
+                (byte) 0x01, (byte) 0x00, (byte) effectType);
     }
 
     private byte[] buildCallVolumeOptimizerCommand(final boolean enabled) {
@@ -1228,6 +1240,15 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
                 final String typeStr = String.valueOf(type);
                 if (!typeStr.equals(prefs.getString(PREF_CALL_SOUND_EFFECT, null))) {
                     editor.putString(PREF_CALL_SOUND_EFFECT, typeStr);
+                    modified = true;
+                }
+            } else if (featureId == (FEATURE_MIC_VOICE_EFFECT & 0xff) && len >= 3) {
+                final int rawEffect = value[dataOffset + 2] & 0xff;
+                final int effect = rawEffect <= MIC_VOICE_EFFECT_BRIGHT ? rawEffect : MIC_VOICE_EFFECT_NATURAL;
+                LOG.info("JBL: outgoing voice effect from device = {} (raw={})", effect, rawEffect);
+                final String effectStr = String.valueOf(effect);
+                if (!effectStr.equals(prefs.getString(PREF_CALL_VOICE_EFFECT, null))) {
+                    editor.putString(PREF_CALL_VOICE_EFFECT, effectStr);
                     modified = true;
                 }
             } else if (featureId == (FEATURE_CALL_VOLUME_OPTIMIZER & 0xff) && len >= 1) {

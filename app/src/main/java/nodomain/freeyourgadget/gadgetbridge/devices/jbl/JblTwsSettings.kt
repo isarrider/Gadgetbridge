@@ -210,6 +210,15 @@ private fun jblTwsSettings(
             entryValuesRes = R.array.jbl_tune_buds_2_call_sound_effect_values,
             defaultValue = "0",
         )
+        list(
+            key = JblTwsSupport.PREF_CALL_VOICE_EFFECT,
+            title = R.string.pref_call_voice_effect,
+            summary = R.string.pref_call_voice_effect_summary,
+            icon = R.drawable.ic_hearing,
+            entriesRes = R.array.jbl_tune_buds_2_call_voice_effect_entries,
+            entryValuesRes = R.array.jbl_tune_buds_2_call_voice_effect_values,
+            defaultValue = "0",
+        )
         switchSetting(
             key = JblTwsSupport.PREF_CALL_VOLUME_OPTIMIZER,
             title = R.string.pref_call_volume_optimizer,

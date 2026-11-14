@@ -4086,6 +4086,10 @@
     <string name="pref_call_sound_effect">Call Sound Effect</string>
     <string name="pref_call_sound_effect_treble">Increased Treble</string>
     <string name="pref_call_sound_effect_bass">Increased Bass</string>
+    <string name="pref_call_voice_effect">Outgoing Voice Effect</string>
+    <string name="pref_call_voice_effect_summary">Adjusts how your voice sounds to the person you are calling</string>
+    <string name="pref_jbl_call_voice_effect_powerful">Powerful</string>
+    <string name="pref_jbl_call_voice_effect_bright">Bright</string>
     <string name="pref_call_volume_optimizer">Sound Level Optimizer</string>
     <string name="pref_call_volume_optimizer_summary">Normalizes sudden volume fluctuations during phone calls</string>
     <string name="pref_touch_ambient_sound_control">Ambient Sound Control</string>

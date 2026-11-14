@@ -59,6 +59,17 @@
         <item>2</item>
     </string-array>
 
+    <string-array name="jbl_tune_buds_2_call_voice_effect_entries">
+        <item>@string/pref_title_equalizer_natural</item>
+        <item>@string/pref_jbl_call_voice_effect_powerful</item>
+        <item>@string/pref_jbl_call_voice_effect_bright</item>
+    </string-array>
+    <string-array name="jbl_tune_buds_2_call_voice_effect_values">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
     <string-array name="jbl_tune_buds_2_spatial_audio_entries">
         <item>@string/off</item>
         <item>@string/pref_spatial_audio_music</item>
