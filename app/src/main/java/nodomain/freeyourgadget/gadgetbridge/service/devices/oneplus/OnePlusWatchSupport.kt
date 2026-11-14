@@ -16,7 +16,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus
 
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInfo
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.AbstractBTBRDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder
 import nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus.OnePlusProtocol.Proto
@@ -29,7 +32,7 @@ import java.util.UUID
  * OnePlus Watch (2021, W301GB): Bluetooth Classic / RFCOMM, plain protobuf, no app-level authentication
  * (the only requirement is a normal Bluetooth bond). See PROTOCOL.md in the reverse-engineering notes.
  *
- * Implemented: connect, first-time setup, time and timezone sync.
+ * Implemented: connect, first-time setup, time and timezone sync, battery level and device info.
  */
 class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     private val deframer = OnePlusProtocol.Deframer()
@@ -61,6 +64,8 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         when (msg.service) {
             OnePlusProtocol.SERVICE_DEVICE -> when (msg.command) {
                 OnePlusProtocol.CMD_HELLO -> onHelloReply()
+                OnePlusProtocol.CMD_BATTERY -> onBattery(msg.body)
+                OnePlusProtocol.CMD_DEVICE_INFO -> onDeviceInfo(msg.body)
             }
             OnePlusProtocol.SERVICE_OOBE -> handleOobe(msg)
         }
@@ -105,6 +110,8 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
 
     private fun onHelloReply() {
         LOG.info("Watch is ready")
+        requestDeviceInfo()
+        requestBattery()
         syncTime()
     }
 
@@ -137,6 +144,40 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         b.queue()
         prefs.edit().putLong(PREF_LAST_TIME_SYNC, now).putInt(PREF_LAST_TZ_OFFSET, offset).apply()
         LOG.info("Time sync sent: {} offset={} half-minutes", tz.id, offset)
+    }
+
+    // ---------------------------------------------------------------- battery and device info
+
+    private fun requestBattery() {
+        send("battery", OnePlusProtocol.SERVICE_DEVICE, OnePlusProtocol.CMD_BATTERY, Proto.encode(1 to mac))
+    }
+
+    /** 1.8: {1: percent, 2: mac, 3: charging}; also pushed by the watch when the level changes. */
+    private fun onBattery(body: ByteArray) {
+        val f = Proto.decode(body)
+        val level = Proto.long(f, 1)?.toInt() ?: return
+        val charging = (Proto.long(f, 3) ?: 0L) != 0L
+        val event = GBDeviceEventBatteryInfo()
+        event.level = level.coerceIn(0, 100)
+        event.state = when {
+            charging -> BatteryState.BATTERY_CHARGING
+            level <= 15 -> BatteryState.BATTERY_LOW
+            else -> BatteryState.BATTERY_NORMAL
+        }
+        evaluateGBDeviceEvent(event)
+    }
+
+    private fun requestDeviceInfo() {
+        send("device info", OnePlusProtocol.SERVICE_DEVICE, OnePlusProtocol.CMD_DEVICE_INFO, Proto.encode(1 to mac, 13 to mac))
+    }
+
+    /** 1.7 reply: 7 = firmware, 21 = full firmware build, 10 = model, 20 = hardware version. */
+    private fun onDeviceInfo(body: ByteArray) {
+        val f = Proto.decode(body)
+        val event = GBDeviceEventVersionInfo()
+        event.fwVersion = Proto.string(f, 21) ?: Proto.string(f, 7) ?: return
+        event.hwVersion = Proto.string(f, 20) ?: Proto.string(f, 10)
+        evaluateGBDeviceEvent(event)
     }
 
     // ---------------------------------------------------------------- helpers

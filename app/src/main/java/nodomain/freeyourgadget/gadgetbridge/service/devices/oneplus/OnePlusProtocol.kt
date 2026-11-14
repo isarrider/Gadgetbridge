@@ -43,6 +43,8 @@ object OnePlusProtocol {
 
     const val CMD_HELLO = 1
     const val CMD_TIME_SYNC = 5          // service 1: {1: 4 (time profile), 5: {1: {time, old_time}} | {2: {time, old_time, tz, old_tz, id}}}
+    const val CMD_DEVICE_INFO = 7        // service 1: request {1: mac, 13: mac}; reply has versions, serial, model name
+    const val CMD_BATTERY = 8            // service 1: request {1: mac}; reply/push {1: percent, 2: mac, 3: charging}
 
     /** Constant "hello" the phone sends first (service 1, command 1); the watch answers with its limits. */
     val HELLO: ByteArray = frame(SERVICE_DEVICE, CMD_HELLO, Proto.encode(1 to 5L, 2 to 5940L, 3 to 990L, 5 to 3L))
