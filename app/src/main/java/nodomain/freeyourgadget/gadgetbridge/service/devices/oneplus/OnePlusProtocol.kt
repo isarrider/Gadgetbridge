@@ -54,6 +54,10 @@ object OnePlusProtocol {
     const val CMD_HR_QUERY = 11
     const val CMD_HR_DETAIL = 12
     const val CMD_HR_AUTO_MEASURE = 4        // {1: switch, 2: type (3 = smart, 4 = real-time)}; watch acks {1: 100000}
+    const val CMD_SLEEP_QUERY = 13
+    const val CMD_SLEEP_DETAIL = 14
+    const val CMD_SPO2_QUERY = 23
+    const val CMD_SPO2_DETAIL = 24
 
     /** Constant "hello" the phone sends first (service 1, command 1); the watch answers with its limits. */
     val HELLO: ByteArray = frame(SERVICE_DEVICE, CMD_HELLO, Proto.encode(1 to 5L, 2 to 5940L, 3 to 990L, 5 to 3L))

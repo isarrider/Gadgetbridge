@@ -22,11 +22,15 @@ import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.ListEn
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.deviceSettings
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLClassicDeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
+import nodomain.freeyourgadget.gadgetbridge.devices.GenericSpo2SampleProvider
 import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider
+import nodomain.freeyourgadget.gadgetbridge.devices.SleepSessionProvider
+import nodomain.freeyourgadget.gadgetbridge.devices.TimeSampleProvider
 import nodomain.freeyourgadget.gadgetbridge.devices.generic_hr.GenericHeartRateActivitySampleProvider
 import nodomain.freeyourgadget.gadgetbridge.entities.AbstractActivitySample
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
+import nodomain.freeyourgadget.gadgetbridge.model.Spo2Sample
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus.OnePlusWatchSupport
 import java.util.regex.Pattern
@@ -58,6 +62,16 @@ class OnePlusWatchCoordinator : AbstractBLClassicDeviceCoordinator() {
 
     override fun getSampleProvider(device: GBDevice, session: DaoSession): SampleProvider<out AbstractActivitySample>? =
         GenericHeartRateActivitySampleProvider(device, session)
+
+    override fun supportsSpo2(device: GBDevice): Boolean = true
+
+    override fun supportsSleepMeasurement(device: GBDevice): Boolean = true
+
+    override fun getSpo2SampleProvider(device: GBDevice, session: DaoSession): TimeSampleProvider<out Spo2Sample> =
+        GenericSpo2SampleProvider(device, session)
+
+    override fun getSleepSessionProvider(device: GBDevice, session: DaoSession): SleepSessionProvider =
+        OnePlusSleepSessionProvider(device, session)
 
     override fun getDeviceSettings(device: GBDevice): DeviceSettingsSpec = deviceSettings {
         screen(

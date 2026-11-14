@@ -24,8 +24,12 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInf
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventNotificationControl
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo
 import nodomain.freeyourgadget.gadgetbridge.devices.GenericHeartRateSampleProvider
+import nodomain.freeyourgadget.gadgetbridge.devices.GenericSleepStageSampleProvider
+import nodomain.freeyourgadget.gadgetbridge.devices.GenericSpo2SampleProvider
 import nodomain.freeyourgadget.gadgetbridge.devices.oneplus.OnePlusWatchCoordinator
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericHeartRateSample
+import nodomain.freeyourgadget.gadgetbridge.entities.GenericSleepStageSample
+import nodomain.freeyourgadget.gadgetbridge.entities.GenericSpo2Sample
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec
@@ -42,7 +46,7 @@ import java.util.UUID
  * OnePlus Watch (2021, W301GB): Bluetooth Classic / RFCOMM, plain protobuf, no app-level authentication
  * (the only requirement is a normal Bluetooth bond). See PROTOCOL.md in the reverse-engineering notes.
  *
- * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode.
+ * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode, SpO2 and sleep history sync.
  */
 class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     private val deframer = OnePlusProtocol.Deframer()
@@ -94,6 +98,9 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
             OnePlusProtocol.SERVICE_FITNESS -> when (msg.command) {
                 OnePlusProtocol.CMD_HR_QUERY -> onHeartRateIndex(msg.body)
                 OnePlusProtocol.CMD_HR_DETAIL -> onHeartRatePacket(msg.body)
+                OnePlusProtocol.CMD_SPO2_QUERY, OnePlusProtocol.CMD_SLEEP_QUERY -> onTypedIndex(msg)
+                OnePlusProtocol.CMD_SPO2_DETAIL -> onSpo2Packet(msg.body)
+                OnePlusProtocol.CMD_SLEEP_DETAIL -> onSleepPacket(msg.body)
             }
         }
     }
@@ -141,6 +148,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         requestBattery()
         syncTime()
         requestHeartRate()
+        requestSpo2AndSleep()
         applyHeartRateMonitoring()
     }
 
@@ -277,6 +285,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     override fun onFetchRecordedData(dataTypes: Int) {
         requestBattery()
         requestHeartRate()
+        requestSpo2AndSleep()
     }
 
     /** 5.11: ask which packets exist for the time range; the watch answers with the packet count. */
@@ -398,6 +407,122 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         super.dispose()
     }
 
+    // ---------------------------------------------------------------- SpO2 and sleep history
+
+    private val spo2Samples = ArrayList<GenericSpo2Sample>()
+    private val sleepSamples = ArrayList<GenericSleepStageSample>()
+    private val storeSpo2 = Runnable { storeSpo2Now() }
+    private val storeSleep = Runnable { storeSleepNow() }
+
+    private fun requestSpo2AndSleep() {
+        requestRange(OnePlusProtocol.CMD_SPO2_QUERY, PREF_LAST_SPO2_SYNC)
+        requestRange(OnePlusProtocol.CMD_SLEEP_QUERY, PREF_LAST_SLEEP_SYNC)
+    }
+
+    /** First sync asks for 14 days; later syncs re-ask from one day before the last sync (sleep spans midnight). */
+    private fun requestRange(queryCmd: Int, prefKey: String) {
+        val now = System.currentTimeMillis() / 1000
+        val last = getDevicePrefs().getLong(prefKey, 0L)
+        val from = if (last > 0) last - 86400 else now - 14 * 86400
+        send("fetch ${queryCmd}", OnePlusProtocol.SERVICE_FITNESS, queryCmd, Proto.encode(1 to from, 2 to now))
+    }
+
+    /** Index reply: {1: packet count, 2: start}. The watch only answers packets that hold data, so flush after a quiet period. */
+    private fun onTypedIndex(msg: OnePlusProtocol.Message) {
+        val f = Proto.decode(msg.body)
+        val total = Proto.long(f, 1)?.toInt() ?: 0
+        val start = Proto.long(f, 2) ?: return
+        LOG.info("Fetch 5.{}: {} packets from {}", msg.command, total, start)
+        val flush = if (msg.command == OnePlusProtocol.CMD_SPO2_QUERY) storeSpo2 else storeSleep
+        for (i in 1..minOf(total, MAX_PACKETS)) {
+            send("fetch ${msg.command + 1} #$i", OnePlusProtocol.SERVICE_FITNESS, msg.command + 1, Proto.encode(1 to i.toLong(), 2 to start))
+        }
+        handler.removeCallbacks(flush)
+        handler.postDelayed(flush, 4000)
+    }
+
+    /**
+     * 5.24: {2: start, 3: {1: second offsets, 2: SpO2 %, 3: reliability}} with packed arrays.
+     * SpO2 of 0 means no reading at that second.
+     */
+    private fun onSpo2Packet(body: ByteArray) {
+        val f = Proto.decode(body)
+        val start = Proto.long(f, 2) ?: return
+        val ids = idsOrNull() ?: return
+        for (block in Proto.repeated(f, 3)) {
+            val b = Proto.decode(block)
+            val offsets = Proto.packed(Proto.bytes(b, 1) ?: continue)
+            val values = Proto.packed(Proto.bytes(b, 2) ?: continue)
+            for (i in 0 until minOf(offsets.size, values.size)) {
+                val v = values[i].toInt()
+                if (v !in 50..100) continue
+                spo2Samples.add(GenericSpo2Sample((start + offsets[i]) * 1000, ids.second, ids.first, v))
+            }
+        }
+        handler.removeCallbacks(storeSpo2)
+        handler.postDelayed(storeSpo2, 1500)
+    }
+
+    /** 5.14: {1: index, 2: start, 3: one state byte per minute}. Collapsed into stage runs. */
+    private fun onSleepPacket(body: ByteArray) {
+        val f = Proto.decode(body)
+        val start = Proto.long(f, 2) ?: return
+        val states = Proto.bytes(f, 3) ?: return
+        val ids = idsOrNull() ?: return
+        var i = 0
+        while (i < states.size) {
+            val stage = states[i].toInt() and 0xFF
+            var j = i
+            while (j < states.size && (states[j].toInt() and 0xFF) == stage) j++
+            if (stage != 0) {
+                sleepSamples.add(GenericSleepStageSample((start + i * 60L) * 1000, ids.second, ids.first, j - i, stage))
+            }
+            i = j
+        }
+        handler.removeCallbacks(storeSleep)
+        handler.postDelayed(storeSleep, 1500)
+    }
+
+    /** (userId, deviceId) */
+    private fun idsOrNull(): Pair<Long, Long>? = try {
+        GBApplication.acquireDB().use { db ->
+            Pair(DBHelper.getUser(db.daoSession).id!!, DBHelper.getDevice(gbDevice, db.daoSession).id!!)
+        }
+    } catch (e: Exception) {
+        LOG.error("Cannot resolve user/device ids", e)
+        null
+    }
+
+    private fun storeSpo2Now() {
+        val now = System.currentTimeMillis() / 1000
+        if (spo2Samples.isNotEmpty()) {
+            try {
+                GBApplication.acquireDB().use { db -> GenericSpo2SampleProvider(gbDevice, db.daoSession).addSamples(ArrayList(spo2Samples)) }
+                LOG.info("Stored {} SpO2 samples", spo2Samples.size)
+                GB.signalActivityDataFinish(gbDevice)
+            } catch (e: Exception) {
+                LOG.error("Failed to store SpO2 samples", e)
+            }
+            spo2Samples.clear()
+        }
+        getDevicePrefs().preferences.edit().putLong(PREF_LAST_SPO2_SYNC, now).apply()
+    }
+
+    private fun storeSleepNow() {
+        val now = System.currentTimeMillis() / 1000
+        if (sleepSamples.isNotEmpty()) {
+            try {
+                GBApplication.acquireDB().use { db -> GenericSleepStageSampleProvider(gbDevice, db.daoSession).addSamples(ArrayList(sleepSamples)) }
+                LOG.info("Stored {} sleep stage runs", sleepSamples.size)
+                GB.signalActivityDataFinish(gbDevice)
+            } catch (e: Exception) {
+                LOG.error("Failed to store sleep samples", e)
+            }
+            sleepSamples.clear()
+        }
+        getDevicePrefs().preferences.edit().putLong(PREF_LAST_SLEEP_SYNC, now).apply()
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private fun send(task: String, service: Int, command: Int, body: ByteArray) {
@@ -411,6 +536,9 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         val SERVICE_UUID: UUID = UUID.fromString("db764ac8-4b08-7f25-aafe-59d03c27bae3")
         private const val BUFFER_SIZE = 8192
         private const val PREF_LAST_HR_SYNC = "oneplus_last_hr_sync"
+        private const val PREF_LAST_SPO2_SYNC = "oneplus_last_spo2_sync"
+        private const val PREF_LAST_SLEEP_SYNC = "oneplus_last_sleep_sync"
+        private const val MAX_PACKETS = 60
         private const val PREF_HR_APPLIED = "oneplus_hr_monitoring_applied"
         private const val PREF_LAST_TIME_SYNC = "oneplus_last_time_sync"
         private const val PREF_LAST_TZ_OFFSET = "oneplus_last_tz_offset"
