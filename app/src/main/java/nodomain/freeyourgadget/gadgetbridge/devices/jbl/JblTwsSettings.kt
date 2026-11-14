@@ -127,6 +127,16 @@ private fun jblTwsSettings(
             entryValuesRes = R.array.jbl_tune_buds_2_latency_mode_values,
             defaultValue = "0",
         )
+        if (capabilities.isEarTipsSupported) {
+            list(
+                key = JblTwsSupport.PREF_EAR_TIPS,
+                title = R.string.pref_ear_tips,
+                icon = R.drawable.ic_hearing,
+                entriesRes = R.array.jbl_tune_flex_2_ear_tips_entries,
+                entryValuesRes = R.array.jbl_tune_flex_2_ear_tips_values,
+                defaultValue = "0",
+            )
+        }
         switchSetting(
             key = JblTwsSupport.PREF_SAFE_SOUND,
             title = R.string.pref_safe_sound,

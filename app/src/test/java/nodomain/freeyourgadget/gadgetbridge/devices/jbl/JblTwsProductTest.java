@@ -40,9 +40,11 @@ public class JblTwsProductTest {
     public void testProductCapabilities() {
         assertTrue(JblTwsProduct.TUNE_BUDS_2.getCapabilities().isAmbientLevelSupported());
         assertFalse(JblTwsProduct.TUNE_BUDS_2.getCapabilities().supportsAccidentalTouch());
+        assertFalse(JblTwsProduct.TUNE_BUDS_2.getCapabilities().isEarTipsSupported());
 
         assertFalse(JblTwsProduct.TUNE_FLEX_2.getCapabilities().isAmbientLevelSupported());
         assertTrue(JblTwsProduct.TUNE_FLEX_2.getCapabilities().supportsAccidentalTouch());
+        assertTrue(JblTwsProduct.TUNE_FLEX_2.getCapabilities().isEarTipsSupported());
     }
 
     @Test

@@ -29,6 +29,7 @@ public enum JblTwsProduct {
             .ambientLevelSupported()
             .build()),
     TUNE_FLEX_2(TUNE_FLEX_2_PRODUCT_ID, JblTwsCapabilities.builder()
+            .earTipsSupported()
             .accidentalTouchSupportedSince("2.8.0")
             .build());
 

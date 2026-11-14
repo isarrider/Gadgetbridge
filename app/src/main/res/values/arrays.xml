@@ -70,6 +70,15 @@
         <item>2</item>
     </string-array>
 
+    <string-array name="jbl_tune_flex_2_ear_tips_entries">
+        <item>@string/pref_ear_tips_open</item>
+        <item>@string/pref_ear_tips_sealing</item>
+    </string-array>
+    <string-array name="jbl_tune_flex_2_ear_tips_values">
+        <item>0</item>
+        <item>1</item>
+    </string-array>
+
     <string-array name="jbl_tune_buds_2_spatial_audio_entries">
         <item>@string/off</item>
         <item>@string/pref_spatial_audio_music</item>

@@ -55,6 +55,7 @@ public final class JblProtocol {
     public static final byte CMD_NOISE_CONTROL          = (byte) 0x91;
     public static final byte CMD_VOICE_PROMPTS          = (byte) 0x93;
     public static final byte CMD_SIDETONE               = (byte) 0x98;
+    public static final byte CMD_EAR_TIPS_TYPE          = (byte) 0x9C;
     public static final byte CMD_SPATIAL_AUDIO          = (byte) 0x9D;
     public static final byte CMD_SAFE_SOUND             = (byte) 0xA5;
     public static final byte CMD_STEREO_BALANCE         = (byte) 0xA8;
@@ -123,6 +124,10 @@ public final class JblProtocol {
     public static final int MIC_VOICE_EFFECT_NATURAL          = 0;
     public static final int MIC_VOICE_EFFECT_POWERFUL         = 1;
     public static final int MIC_VOICE_EFFECT_BRIGHT           = 2;
+
+    // Ear tip types (Tune Flex 2)
+    public static final int EAR_TIPS_TYPE_OPEN                = 0;
+    public static final int EAR_TIPS_TYPE_SEALING             = 1;
 
     // Custom Parametric Equalizer Parameters
     public static final int CUSTOM_EQ_BAND_COUNT             = 10;

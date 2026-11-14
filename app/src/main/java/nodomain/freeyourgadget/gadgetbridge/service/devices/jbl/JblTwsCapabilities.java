@@ -41,11 +41,13 @@ public final class JblTwsCapabilities {
     }
 
     private final boolean ambientLevelSupported;
+    private final boolean earTipsSupported;
     @Nullable
     private final String accidentalTouchMinFirmware;
 
     private JblTwsCapabilities(final Builder builder) {
         this.ambientLevelSupported = builder.ambientLevelSupported;
+        this.earTipsSupported = builder.earTipsSupported;
         this.accidentalTouchMinFirmware = builder.accidentalTouchMinFirmware;
     }
 
@@ -55,6 +57,13 @@ public final class JblTwsCapabilities {
 
     public boolean isAmbientLevelSupported() {
         return ambientLevelSupported;
+    }
+
+    /**
+     * Whether the product has selectable ear tip types (open / sealing).
+     */
+    public boolean isEarTipsSupported() {
+        return earTipsSupported;
     }
 
     /**
@@ -145,6 +154,7 @@ public final class JblTwsCapabilities {
 
     public static final class Builder {
         private boolean ambientLevelSupported;
+        private boolean earTipsSupported;
         @Nullable
         private String accidentalTouchMinFirmware;
 
@@ -153,6 +163,11 @@ public final class JblTwsCapabilities {
 
         public Builder ambientLevelSupported() {
             this.ambientLevelSupported = true;
+            return this;
+        }
+
+        public Builder earTipsSupported() {
+            this.earTipsSupported = true;
             return this;
         }
 

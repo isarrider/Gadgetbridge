@@ -91,6 +91,7 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     public static final String PREF_CALL_VOICE_EFFECT     = "pref_jbl_tune_buds_2_call_voice_effect";
     public static final String PREF_CALL_VOLUME_OPTIMIZER = "pref_jbl_tune_buds_2_call_volume_optimizer";
     public static final String PREF_SIDETONE              = "pref_jbl_tune_buds_2_sidetone";
+    public static final String PREF_EAR_TIPS              = "pref_jbl_tune_buds_2_ear_tips";
     public static final String PREF_AUTO_POWER_OFF        = "pref_jbl_tune_buds_2_auto_power_off";
     public static final String PREF_SAFE_SOUND            = "pref_jbl_tune_buds_2_safe_sound";
     public static final String PREF_CHANNEL_BALANCE       = "pref_jbl_tune_buds_2_channel_balance";
@@ -108,6 +109,7 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     private static final byte[] GET_VOICE_PROMPTS = buildPacket(CMD_VOICE_PROMPTS, (byte) 0x04);
     private static final byte[] GET_EQ = buildPacket(CMD_EQ_SETTINGS_2, SUB_CMD_GET, (byte) 0xff);
     private static final byte[] GET_GESTURES = buildPacket(CMD_GESTURE_CONFIG, SUB_CMD_GET, (byte) 0xff);
+    private static final byte[] GET_EAR_TIPS = buildPacket(CMD_EAR_TIPS_TYPE, SUB_CMD_GET);
     private static final byte[] GET_ACCIDENTAL_TOUCH =
             buildPacket(CMD_FEATURE_CONFIG, FEATURE_CMD_GET,
                     FEATURE_KEY_ACCIDENTAL_TOUCH_PREVENTION, (byte) 0x00);
@@ -300,6 +302,9 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
         write(GET_VOICE_PROMPTS);
         write(GET_EQ);
         write(GET_GESTURES);
+        if (product.getCapabilities().isEarTipsSupported()) {
+            write(GET_EAR_TIPS);
+        }
         // Accidental touch prevention is requested from parseDeviceConfigResponse()
         // once the earbuds report their firmware version on this connection. The
         // database copy of the version may be stale. See
@@ -461,6 +466,9 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             case CMD_GESTURE_CONFIG:
                 parseGestureResponse(value);
                 break;
+            case CMD_EAR_TIPS_TYPE:
+                parseEarTipsResponse(value);
+                break;
             case CMD_DEVICE_CONFIG:
                 parseDeviceConfigResponse(value);
                 break;
@@ -578,6 +586,11 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             } else if (PREF_CALL_VOICE_EFFECT.equals(config)) {
                 final int voiceEffect = Integer.parseInt(prefs.getString(PREF_CALL_VOICE_EFFECT, "0"));
                 write(buildCallVoiceEffectCommand(voiceEffect));
+            } else if (PREF_EAR_TIPS.equals(config)) {
+                final int earTips = Integer.parseInt(prefs.getString(PREF_EAR_TIPS, "0"));
+                if (product.getCapabilities().isEarTipsSupported()) {
+                    write(buildEarTipsCommand(earTips));
+                }
             } else if (PREF_CALL_VOLUME_OPTIMIZER.equals(config)) {
                 final boolean opt = prefs.getBoolean(PREF_CALL_VOLUME_OPTIMIZER, false);
                 write(buildCallVolumeOptimizerCommand(opt));
@@ -773,6 +786,11 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
         // isOn=1, gain untouched (0), then the effect ordinal.
         return buildDeviceInfoSet(FEATURE_MIC_VOICE_EFFECT,
                 (byte) 0x01, (byte) 0x00, (byte) effectType);
+    }
+
+    private byte[] buildEarTipsCommand(final int earTips) {
+        LOG.info("JBL TWS: Setting ear tips type: {}", earTips);
+        return buildPacket(CMD_EAR_TIPS_TYPE, SUB_CMD_SET, (byte) earTips);
     }
 
     private byte[] buildCallVolumeOptimizerCommand(final boolean enabled) {
@@ -1439,6 +1457,24 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
         }
         if (requested != balance) {
             prefs.edit().putInt(PREF_CHANNEL_BALANCE, balance).apply();
+            getDevice().sendDeviceUpdateIntent(getContext());
+        }
+    }
+
+    private void parseEarTipsResponse(final byte[] value) {
+        // Frame: AA 9C <len> 02 <type>, where the length covers the payload only.
+        if (value.length < 5 || (value[2] & 0xff) != value.length - 3 || value[3] != SUB_CMD_RET) {
+            return;
+        }
+        final int earTips = value[4] & 0xff;
+        if (earTips != EAR_TIPS_TYPE_OPEN && earTips != EAR_TIPS_TYPE_SEALING) {
+            return;
+        }
+        LOG.info("JBL: ear tips type from device = {}", earTips);
+        final SharedPreferences prefs = GBApplication.getDeviceSpecificSharedPrefs(getDevice().getAddress());
+        final String earTipsStr = String.valueOf(earTips);
+        if (!earTipsStr.equals(prefs.getString(PREF_EAR_TIPS, null))) {
+            prefs.edit().putString(PREF_EAR_TIPS, earTipsStr).apply();
             getDevice().sendDeviceUpdateIntent(getContext());
         }
     }
