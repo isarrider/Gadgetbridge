@@ -4083,7 +4083,8 @@
     <string name="pref_voice_prompts_tone">Tone Feedback (Beeps)</string>
     <string name="pref_leakage_compensation">Leakage Compensation</string>
     <string name="pref_leakage_compensation_summary">Automatically compensates for sound leakage caused by earbud fit</string>
-    <string name="pref_call_sound_effect">Call Sound Effect</string>
+    <string name="pref_call_sound_effect">Incoming Voice Effect</string>
+    <string name="pref_call_sound_effect_summary">Adjusts how the other person\'s voice sounds during calls</string>
     <string name="pref_call_sound_effect_treble">Increased Treble</string>
     <string name="pref_call_sound_effect_bass">Increased Bass</string>
     <string name="pref_call_voice_effect">Outgoing Voice Effect</string>

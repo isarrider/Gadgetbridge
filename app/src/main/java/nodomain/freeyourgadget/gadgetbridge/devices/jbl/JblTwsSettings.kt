@@ -215,6 +215,7 @@ private fun jblTwsSettings(
         list(
             key = JblTwsSupport.PREF_CALL_SOUND_EFFECT,
             title = R.string.pref_call_sound_effect,
+            summary = R.string.pref_call_sound_effect_summary,
             icon = R.drawable.ic_equalizer,
             entriesRes = R.array.jbl_tune_buds_2_call_sound_effect_entries,
             entryValuesRes = R.array.jbl_tune_buds_2_call_sound_effect_values,
