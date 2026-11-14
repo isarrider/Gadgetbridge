@@ -17,9 +17,11 @@
 package nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus
 
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInfo
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventNotificationControl
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
+import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.AbstractBTBRDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder
 import nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus.OnePlusProtocol.Proto
@@ -32,10 +34,15 @@ import java.util.UUID
  * OnePlus Watch (2021, W301GB): Bluetooth Classic / RFCOMM, plain protobuf, no app-level authentication
  * (the only requirement is a normal Bluetooth bond). See PROTOCOL.md in the reverse-engineering notes.
  *
- * Implemented: connect, first-time setup, time and timezone sync, battery level and device info.
+ * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, notifications (+ quick reply, dismiss).
  */
 class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     private val deframer = OnePlusProtocol.Deframer()
+
+    // notification id -> spec, so a quick reply from the watch can be routed back to the phone app
+    private val sentNotifications = object : LinkedHashMap<Int, NotificationSpec>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, NotificationSpec>?) = size > 64
+    }
 
     override fun getSupportedService(): UUID = SERVICE_UUID
 
@@ -67,6 +74,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
                 OnePlusProtocol.CMD_BATTERY -> onBattery(msg.body)
                 OnePlusProtocol.CMD_DEVICE_INFO -> onDeviceInfo(msg.body)
             }
+            OnePlusProtocol.SERVICE_NOTIFICATION -> handleNotification(msg)
             OnePlusProtocol.SERVICE_OOBE -> handleOobe(msg)
         }
     }
@@ -178,6 +186,69 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         event.fwVersion = Proto.string(f, 21) ?: Proto.string(f, 7) ?: return
         event.hwVersion = Proto.string(f, 20) ?: Proto.string(f, 10)
         evaluateGBDeviceEvent(event)
+    }
+
+    // ---------------------------------------------------------------- notifications
+
+    override fun onNotification(notificationSpec: NotificationSpec) {
+        val pkg = notificationSpec.sourceAppId ?: "nodomain.freeyourgadget.gadgetbridge"
+        val title = notificationSpec.title ?: notificationSpec.sender ?: notificationSpec.sourceName ?: ""
+        val text = notificationSpec.body ?: notificationSpec.subject ?: ""
+        sentNotifications[notificationSpec.id] = notificationSpec
+
+        val body = Proto.encode(
+            1 to notificationSpec.id.toLong(),
+            3 to pkg,
+            5 to title,
+            6 to text,
+            7 to (notificationSpec.`when` / 1000),
+            9 to (notificationSpec.sourceName ?: pkg),
+            11 to 1L,
+            12 to "0|$pkg|${notificationSpec.id}|null|10000",
+        )
+        send("notification", OnePlusProtocol.SERVICE_NOTIFICATION, OnePlusProtocol.CMD_NOTIFICATION_POST, body)
+    }
+
+    override fun onDeleteNotification(id: Int) {
+        val spec = sentNotifications.remove(id) ?: return
+        val pkg = spec.sourceAppId ?: return
+        val body = Proto.encode(
+            1 to id.toLong(),
+            3 to pkg,
+            6 to "0|$pkg|$id|null|10000",
+        )
+        send("remove notification", OnePlusProtocol.SERVICE_NOTIFICATION, OnePlusProtocol.CMD_NOTIFICATION_REMOVE, body)
+    }
+
+    private fun handleNotification(msg: OnePlusProtocol.Message) {
+        val fields = Proto.decode(msg.body)
+        val id = Proto.long(fields, 1)?.toInt() ?: return
+        when (msg.command) {
+            OnePlusProtocol.CMD_NOTIFICATION_REPLY -> {
+                val text = Proto.string(fields, 5) ?: return
+                LOG.info("Quick reply from watch for notification {}", id)
+                val event = GBDeviceEventNotificationControl()
+                event.handle = id.toLong()
+                event.event = GBDeviceEventNotificationControl.Event.REPLY
+                event.reply = text
+                val spec = sentNotifications[id]
+                if (spec != null) {
+                    val replyAction = spec.attachedActions?.firstOrNull { it?.isReply == true }
+                    if (replyAction != null) {
+                        event.handle = replyAction.handle
+                    } else {
+                        event.phoneNumber = spec.phoneNumber
+                    }
+                }
+                evaluateGBDeviceEvent(event)
+            }
+            OnePlusProtocol.CMD_NOTIFICATION_DISMISSED -> {
+                val event = GBDeviceEventNotificationControl()
+                event.handle = id.toLong()
+                event.event = GBDeviceEventNotificationControl.Event.DISMISS
+                evaluateGBDeviceEvent(event)
+            }
+        }
     }
 
     // ---------------------------------------------------------------- helpers
