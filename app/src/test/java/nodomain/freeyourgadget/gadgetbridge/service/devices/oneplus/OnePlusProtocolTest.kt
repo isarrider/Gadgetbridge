@@ -36,6 +36,21 @@ class OnePlusProtocolTest {
     }
 
     @Test
+    fun activityPacketMatchesCapture() {
+        // 5.10 reply captured from a real watch: 4 minutes of walking, 140 steps in total
+        val body = hex("0806108ccee0d7061a08100218272802383c1a0a080110021808280238241a0808021805280238091a0a08081003181828023823")
+        val minutes = OnePlusProtocol.parseActivity(body)
+        assertEquals(4, minutes.size)
+        assertEquals(140, minutes.sumOf { it.steps })
+        assertEquals(76, minutes.sumOf { it.distanceMeters })
+        assertEquals(7, minutes.sumOf { it.calories })
+        val start = Proto.long(Proto.decode(body), 2)!!
+        assertEquals(start, minutes[0].timestamp)
+        assertEquals(start + 8 * 60, minutes[3].timestamp)
+        assertEquals(35, minutes[3].steps)
+    }
+
+    @Test
     fun deframerHandlesFragmentsAndGarbage() {
         val a = OnePlusProtocol.HELLO
         val d = OnePlusProtocol.Deframer()

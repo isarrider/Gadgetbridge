@@ -112,7 +112,7 @@ public class GBDaoGenerator {
             outputDir.mkdirs();
         }
 
-        final Schema schema = new Schema(160, MAIN_PACKAGE + ".entities");
+        final Schema schema = new Schema(161, MAIN_PACKAGE + ".entities");
 
         final List<Entity> sampleProvidersToGenerate = new LinkedList<>();
         final List<Entity> batterySampleProvidersToGenerate = new LinkedList<>();
@@ -188,6 +188,7 @@ public class GBDaoGenerator {
         addFitProActivitySample(schema, user, device);
         addLaxasFitActivitySample(schema, user, device);
         addPineTimeActivitySample(schema, user, device);
+        addOnePlusActivitySample(schema, user, device);
         addPolarH10ActivitySample(schema, user, device);
         addWithingsSteelHRActivitySample(schema, user, device);
         addGenericBloodPressureSample(schema, user, device);
@@ -2237,6 +2238,24 @@ public class GBDaoGenerator {
         activitySample.addIntProperty(SAMPLE_STEPS).notNull().codeBeforeGetterAndSetter(OVERRIDE);
         addHeartRateProperties(activitySample);
         return activitySample;
+    }
+
+    /**
+     * Per-minute steps, distance and calories of the OnePlus Watch. Heart rate is stored separately in
+     * {@code GenericHeartRateSample}; both are merged by the device's sample provider.
+     */
+    private static Entity addOnePlusActivitySample(Schema schema, Entity user, Entity device) {
+        Entity sample = addEntity(schema, "OnePlusActivitySample");
+        sample.implementsSerializable();
+        sample.addIntProperty("timestamp").notNull().primaryKey();
+        Property deviceId = sample.addLongProperty("deviceId").primaryKey().notNull().getProperty();
+        sample.addToOne(device, deviceId);
+        Property userId = sample.addLongProperty("userId").notNull().getProperty();
+        sample.addToOne(user, userId);
+        sample.addIntProperty("steps").notNull();
+        sample.addIntProperty("distanceCm").notNull();
+        sample.addIntProperty("activeCalories").notNull();
+        return sample;
     }
 
     private static Entity addPolarH10ActivitySample(Schema schema, Entity user, Entity device) {

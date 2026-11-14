@@ -31,6 +31,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.oneplus.OnePlusWatchCoordina
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericHeartRateSample
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericSleepStageSample
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericSpo2Sample
+import nodomain.freeyourgadget.gadgetbridge.entities.OnePlusActivitySample
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec
@@ -47,7 +48,7 @@ import java.util.UUID
  * OnePlus Watch (2021, W301GB): Bluetooth Classic / RFCOMM, plain protobuf, no app-level authentication
  * (the only requirement is a normal Bluetooth bond). See PROTOCOL.md in the reverse-engineering notes.
  *
- * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, find my phone, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode, SpO2 and sleep history sync, diagnostic logging.
+ * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, find my phone, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode, SpO2 and sleep history sync, steps/distance/calories history, diagnostic logging.
  */
 class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     private val deframer = OnePlusProtocol.Deframer()
@@ -104,7 +105,8 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
             OnePlusProtocol.SERVICE_FITNESS -> when (msg.command) {
                 OnePlusProtocol.CMD_HR_QUERY -> onHeartRateIndex(msg.body)
                 OnePlusProtocol.CMD_HR_DETAIL -> onHeartRatePacket(msg.body)
-                OnePlusProtocol.CMD_SPO2_QUERY, OnePlusProtocol.CMD_SLEEP_QUERY -> onTypedIndex(msg)
+                OnePlusProtocol.CMD_ACTIVITY_QUERY, OnePlusProtocol.CMD_SPO2_QUERY, OnePlusProtocol.CMD_SLEEP_QUERY -> onTypedIndex(msg)
+                OnePlusProtocol.CMD_ACTIVITY_DETAIL -> onActivityPacket(msg.body)
                 OnePlusProtocol.CMD_SPO2_DETAIL -> onSpo2Packet(msg.body)
                 OnePlusProtocol.CMD_SLEEP_DETAIL -> onSleepPacket(msg.body)
                 in PROBE_QUERY_CMDS -> onProbeIndex(msg)
@@ -157,6 +159,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         syncTime()
         requestHeartRate()
         requestSpo2AndSleep()
+        requestActivity()
         applyHeartRateMonitoring()
         if (diagnostics) probeAll()
     }
@@ -317,6 +320,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         requestBattery()
         requestHeartRate()
         requestSpo2AndSleep()
+        requestActivity()
     }
 
     /** 5.11: ask which packets exist for the time range; the watch answers with the packet count. */
@@ -465,7 +469,11 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         val total = Proto.long(f, 1)?.toInt() ?: 0
         val start = Proto.long(f, 2) ?: return
         LOG.info("Fetch 5.{}: {} packets from {}", msg.command, total, start)
-        val flush = if (msg.command == OnePlusProtocol.CMD_SPO2_QUERY) storeSpo2 else storeSleep
+        val flush = when (msg.command) {
+            OnePlusProtocol.CMD_SPO2_QUERY -> storeSpo2
+            OnePlusProtocol.CMD_ACTIVITY_QUERY -> storeActivity
+            else -> storeSleep
+        }
         for (i in 1..minOf(total, MAX_PACKETS)) {
             send("fetch ${msg.command + 1} #$i", OnePlusProtocol.SERVICE_FITNESS, msg.command + 1, Proto.encode(1 to i.toLong(), 2 to start))
         }
@@ -555,6 +563,43 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         getDevicePrefs().preferences.edit().putLong(PREF_LAST_SLEEP_SYNC, now).apply()
     }
 
+    // ---------------------------------------------------------------- activity history (steps, distance, calories)
+
+    private val activitySamples = ArrayList<OnePlusActivitySample>()
+    private val storeActivity = Runnable { storeActivityNow() }
+
+    private fun requestActivity() {
+        requestRange(OnePlusProtocol.CMD_ACTIVITY_QUERY, PREF_LAST_ACTIVITY_SYNC)
+    }
+
+    /**
+     * 5.10 reply: per-minute items, see [OnePlusProtocol.parseActivity]. Stored once the packets stop arriving.
+     * The watch reports kcal; Gadgetbridge counts active calories in 1/1000 kcal (its charts divide by 1000).
+     */
+    private fun onActivityPacket(body: ByteArray) {
+        val ids = idsOrNull() ?: return
+        for (m in OnePlusProtocol.parseActivity(body)) {
+            activitySamples.add(OnePlusActivitySample(m.timestamp.toInt(), ids.second, ids.first, m.steps, m.distanceMeters * 100, m.calories * 1000))
+        }
+        handler.removeCallbacks(storeActivity)
+        handler.postDelayed(storeActivity, 1500)
+    }
+
+    private fun storeActivityNow() {
+        val now = System.currentTimeMillis() / 1000
+        if (activitySamples.isNotEmpty()) {
+            try {
+                GBApplication.acquireDB().use { db -> db.daoSession.onePlusActivitySampleDao.insertOrReplaceInTx(ArrayList(activitySamples)) }
+                LOG.info("Stored {} activity minutes", activitySamples.size)
+                GB.signalActivityDataFinish(gbDevice)
+            } catch (e: Exception) {
+                LOG.error("Failed to store activity samples", e)
+            }
+            activitySamples.clear()
+        }
+        getDevicePrefs().preferences.edit().putLong(PREF_LAST_ACTIVITY_SYNC, now).apply()
+    }
+
     // ---------------------------------------------------------------- diagnostics (decoding research)
 
     private val diagnostics: Boolean
@@ -594,12 +639,13 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         private const val BUFFER_SIZE = 8192
         private const val FIND_PHONE_TIMEOUT_MS = 3500L
 
-        // research probe: activity, sleep, resting HR, SpO2, stress  (query cmd; detail cmd = query + 1)
-        private val PROBE_QUERY_CMDS = setOf(9, 17, 34)
+        // research probe: resting HR, stress  (query cmd; detail cmd = query + 1)
+        private val PROBE_QUERY_CMDS = setOf(17, 34)
         private val PROBE_DETAIL_CMDS = PROBE_QUERY_CMDS.map { it + 1 }.toSet()
         private const val PREF_LAST_HR_SYNC = "oneplus_last_hr_sync"
         private const val PREF_LAST_SPO2_SYNC = "oneplus_last_spo2_sync"
         private const val PREF_LAST_SLEEP_SYNC = "oneplus_last_sleep_sync"
+        private const val PREF_LAST_ACTIVITY_SYNC = "oneplus_last_activity_sync"
         private const val MAX_PACKETS = 60
         private const val PREF_HR_APPLIED = "oneplus_hr_monitoring_applied"
         private const val PREF_LAST_TIME_SYNC = "oneplus_last_time_sync"

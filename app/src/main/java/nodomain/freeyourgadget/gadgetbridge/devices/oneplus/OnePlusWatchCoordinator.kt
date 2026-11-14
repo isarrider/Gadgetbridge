@@ -26,7 +26,6 @@ import nodomain.freeyourgadget.gadgetbridge.devices.GenericSpo2SampleProvider
 import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider
 import nodomain.freeyourgadget.gadgetbridge.devices.SleepSessionProvider
 import nodomain.freeyourgadget.gadgetbridge.devices.TimeSampleProvider
-import nodomain.freeyourgadget.gadgetbridge.devices.generic_hr.GenericHeartRateActivitySampleProvider
 import nodomain.freeyourgadget.gadgetbridge.entities.AbstractActivitySample
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
@@ -60,8 +59,14 @@ class OnePlusWatchCoordinator : AbstractBLClassicDeviceCoordinator() {
 
     override fun supportsCharts(device: GBDevice): Boolean = true
 
+    override fun supportsActivityTracking(device: GBDevice): Boolean = true
+
+    override fun supportsStepCounter(device: GBDevice): Boolean = true
+
+    override fun supportsActiveCalories(device: GBDevice): Boolean = true
+
     override fun getSampleProvider(device: GBDevice, session: DaoSession): SampleProvider<out AbstractActivitySample>? =
-        GenericHeartRateActivitySampleProvider(device, session)
+        OnePlusActivitySampleProvider(device, session)
 
     override fun supportsSpo2(device: GBDevice): Boolean = true
 

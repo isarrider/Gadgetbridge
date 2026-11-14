@@ -55,6 +55,8 @@ object OnePlusProtocol {
     const val CMD_HR_QUERY = 11
     const val CMD_HR_DETAIL = 12
     const val CMD_HR_AUTO_MEASURE = 4        // {1: switch, 2: type (3 = smart, 4 = real-time)}; watch acks {1: 100000}
+    const val CMD_ACTIVITY_QUERY = 9
+    const val CMD_ACTIVITY_DETAIL = 10
     const val CMD_SLEEP_QUERY = 13
     const val CMD_SLEEP_DETAIL = 14
     const val CMD_SPO2_QUERY = 23
@@ -62,6 +64,27 @@ object OnePlusProtocol {
 
     /** Constant "hello" the phone sends first (service 1, command 1); the watch answers with its limits. */
     val HELLO: ByteArray = frame(SERVICE_DEVICE, CMD_HELLO, Proto.encode(1 to 5L, 2 to 5940L, 3 to 990L, 5 to 3L))
+
+    /** One minute of activity: steps, distance in metres, calories in kcal. */
+    class ActivityMinute(val timestamp: Long, val steps: Int, val distanceMeters: Int, val calories: Int)
+
+    /**
+     * 5.10: `{1: index, 2: start (s), 3: repeated item}`, item = `{1: minute offset (absent = 0), 2: calories,
+     * 3: distance (m), 5: sport type, 7: steps}`. Only minutes with data are present. Minutes without steps,
+     * distance or calories are dropped.
+     */
+    fun parseActivity(body: ByteArray): List<ActivityMinute> {
+        val f = Proto.decode(body)
+        val start = Proto.long(f, 2) ?: return emptyList()
+        return Proto.repeated(f, 3).mapNotNull {
+            val item = Proto.decode(it)
+            val steps = Proto.long(item, 7)?.toInt() ?: 0
+            val distance = Proto.long(item, 3)?.toInt() ?: 0
+            val calories = Proto.long(item, 2)?.toInt() ?: 0
+            if (steps == 0 && distance == 0 && calories == 0) null
+            else ActivityMinute(start + 60 * (Proto.long(item, 1) ?: 0L), steps, distance, calories)
+        }
+    }
 
     fun crc16Xmodem(data: ByteArray, length: Int = data.size): Int {
         var crc = 0
