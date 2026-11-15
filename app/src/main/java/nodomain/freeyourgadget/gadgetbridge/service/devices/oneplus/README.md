@@ -89,13 +89,13 @@ Developer
 - **Goal**: GPS routes from workouts shown and exportable (GPX).
 - **Effort**: **L** (shares most of its work with workout import)
 - **Known**: workout records contain GPS items (`GpsDataItem`, `SportRecordGpsData`).
-- **Also (GPS assist)**: the watch asks the phone for satellite assist data (service 25, command 5), the phone answers with file info (command 6) and sends the file; file types cover GPS, GLONASS, BeiDou, Galileo and ionosphere. This speeds up satellite lock. Needs the download source (the app gets it from a server) and the file transfer from the item above.
+- **Also (GPS assist)**: the watch asks the phone for satellite assist data (service 25, command 5). The vendor app downloads the files from its own cloud and sends them over the file-transfer channel. The driver does neither: it answers `25.5` with `25.6` result 100001 (failed, no files) so the watch falls back to a normal GPS fix, which is slower. No `25.5` was seen during an outdoor workout, so how often the watch asks is unknown. File types cover GPS, GLONASS, BeiDou, Galileo and ionosphere data.
 
 ### Weather
 - **Goal**: show weather on the watch from Gadgetbridge's weather provider.
 - **Effort**: **M**
-- **Known**: the watch asks for weather on service 9 (commands `9.1` and `9.2`, with a location code) about every 5 seconds; it is not answered today.
-- **Needs**: the weather message layout. It is defined in the OHealth app's weather code and has not been read yet; then a capture of a real reply to verify. Gadgetbridge already has weather data for other watches to reuse.
+- **Implemented**: the driver answers `9.1` (city list: one city, the weather location), `9.2` (current conditions, 24 hourly and 7 daily entries) and `9.5` (phone location: latitude and longitude from the weather data) from Gadgetbridge's weather data, and pushes `9.1`/`9.2` when new weather arrives. The watch showed correct weather with Breezy Weather as the source. Not verified: the weather icon ids (OpenWeatherMap codes are mapped to what looks like the AccuWeather icon set, with no night variants), the units of sunrise/sunset, and whether the watch ever sends `9.5`. Not implemented: `9.3`, `9.4`, `9.6`, `9.7` (city list editing and the band weather), `9.9` (units) and `9.13` (UV).
+- **Needs**: a capture of the watch asking for `9.5`, and a check of the icon ids against the weather screen on a few different conditions.
 
 ### Watch face changing
 - **Goal**: switch between installed watch faces and upload new ones.
@@ -112,7 +112,7 @@ Developer
 ### Barometer / altitude
 - **Goal**: pressure and altitude data.
 - **Effort**: **M** (after workout import)
-- **Known**: the watch asks the phone for a reference air pressure about every 4 minutes (`4.14`). It does not report its own pressure as a separate message; elevation appears inside workout records.
+- **Implemented**: `4.14` is answered with the sea-level pressure (hPa) from Gadgetbridge's weather data (`{1: 100000, 2: pressure}`, as the vendor app does with server data). Without weather data it is not answered. The watch's body for this request (`{1: varint, 2: fixed32}`) does not match the vendor's request layout and is only logged. Whether the watch uses the value is unverified. It does not report its own pressure as a separate message; elevation appears inside workout records.
 - **Needs**: workout import; optionally answer the watch's pressure request (units not yet known).
 
 ### Live heart rate
@@ -167,9 +167,9 @@ Frame: `AA | len (varint) | 00 00 | service | command | protobuf body | CRC16 (L
 | 4 | watch and app misc | `14` air-pressure request (watch asks the phone, about every 4 min), `15` workout state, `39` new sport data; not mapped |
 | 5 | fitness / health | `9/10` per-minute activity, `11/12` heart rate, `13/14` sleep, `17/18` resting HR, `21` daily totals, `23/24` SpO2, `34/35` stress, `4` automatic HR measurement mode |
 | 8 | media | `8` seen; now-playing, not decoded |
-| 9 | weather | `1`, `2` requests from the watch about every 5 s, not answered |
+| 9 | weather | `1` city list, `2` weather of a city, `5` location: answered from Gadgetbridge's weather data |
 | 11 | first-time setup (OOBE) | see the driver; the watch repeats an empty `12` while it waits |
-| 25 | GPS assist | `5` request for satellite assist data, `6` reply with file info (not implemented) |
+| 25 | GPS assist | `5` request for satellite assist data, `6` reply with file info (answered with "failed": no files are sent) |
 | 26, 28 | file transfer, log kit | not mapped |
 
 Timestamps are Unix seconds. The timezone offset in `1.5` is in half-minute units (UTC+2 = 240).

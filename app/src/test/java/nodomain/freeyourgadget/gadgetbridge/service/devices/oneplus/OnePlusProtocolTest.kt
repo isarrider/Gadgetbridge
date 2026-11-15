@@ -85,6 +85,16 @@ class OnePlusProtocolTest {
     }
 
     @Test
+    fun airPressureAndAgpsReplies() {
+        val p = Proto.decode(OnePlusWeather.airPressure(1013.25f))
+        assertEquals(100000L, Proto.long(p, 1))
+        assertEquals(java.lang.Float.floatToIntBits(1013.25f).toLong(), Proto.long(p, 2))
+        val a = Proto.decode(OnePlusWeather.agpsUnavailable(3))
+        assertEquals(100001L, Proto.long(a, 1))
+        assertEquals(3L, Proto.long(a, 6))
+    }
+
+    @Test
     fun deframerHandlesFragmentsAndGarbage() {
         val a = OnePlusProtocol.HELLO
         val d = OnePlusProtocol.Deframer()

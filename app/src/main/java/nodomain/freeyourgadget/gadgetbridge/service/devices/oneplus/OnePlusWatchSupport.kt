@@ -105,6 +105,8 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
             OnePlusProtocol.SERVICE_NOTIFICATION -> handleNotification(msg)
             OnePlusProtocol.SERVICE_CALL -> handleCall(msg)
             OnePlusProtocol.SERVICE_WEATHER -> handleWeather(msg)
+            OnePlusProtocol.SERVICE_WORKOUT -> if (msg.command == OnePlusWeather.CMD_AIR_PRESSURE) onAirPressureRequest(msg)
+            OnePlusProtocol.SERVICE_LOCATION -> handleAgps(msg)
             OnePlusProtocol.SERVICE_OOBE -> handleOobe(msg)
             OnePlusProtocol.SERVICE_FITNESS -> when (msg.command) {
                 OnePlusProtocol.CMD_HR_QUERY -> onHeartRateIndex(msg.body)
@@ -344,6 +346,29 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
             OnePlusWeather.CMD_LOCATION ->
                 send("weather location", OnePlusProtocol.SERVICE_WEATHER, OnePlusWeather.CMD_LOCATION, OnePlusWeather.location(spec))
         }
+    }
+
+    /**
+     * 4.14: the watch wants the sea-level air pressure to calibrate its altitude. The vendor app looks it up on its
+     * server for the phone's position; here it comes from the weather data (hPa), and is not answered without it.
+     */
+    private fun onAirPressureRequest(msg: OnePlusProtocol.Message) {
+        val spec = Weather.getWeatherSpec()
+        LOG.info("Air pressure request from watch: body={}, weather pressure={}", hex(msg.body), spec?.pressure)
+        if (spec == null || spec.pressure <= 0f) return
+        send("air pressure", OnePlusProtocol.SERVICE_WORKOUT, OnePlusWeather.CMD_AIR_PRESSURE, OnePlusWeather.airPressure(spec.pressure))
+    }
+
+    /**
+     * 25.5: the watch asks for satellite assist (AGPS) files. The vendor app downloads them from its own cloud and sends
+     * them over the file-transfer channel; neither is available here, so the request is answered with "failed" (25.6,
+     * error 100001) and the watch falls back to a normal, slower, GPS fix.
+     */
+    private fun handleAgps(msg: OnePlusProtocol.Message) {
+        LOG.info("AGPS message from watch: 25.{} body={}", msg.command, hex(msg.body))
+        if (msg.command != OnePlusWeather.CMD_AGPS_REQUEST) return
+        val combo = Proto.long(Proto.decode(msg.body), 3) ?: 0L
+        send("agps unavailable", OnePlusProtocol.SERVICE_LOCATION, OnePlusWeather.CMD_AGPS_INFO, OnePlusWeather.agpsUnavailable(combo))
     }
 
     // ---------------------------------------------------------------- notifications

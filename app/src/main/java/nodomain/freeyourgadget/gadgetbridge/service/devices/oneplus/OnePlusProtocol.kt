@@ -30,8 +30,10 @@ object OnePlusProtocol {
     const val SERVICE_DEVICE = 1
     const val SERVICE_NOTIFICATION = 2
     const val SERVICE_CALL = 6           // "HFP extend" in the vendor app: call state both ways
+    const val SERVICE_WORKOUT = 4         // workout state, reference air pressure for the altimeter
     const val SERVICE_FITNESS = 5
     const val SERVICE_WEATHER = 9
+    const val SERVICE_LOCATION = 25       // AGPS (satellite assist data) requests
     const val SERVICE_OOBE = 11   // out-of-box setup ("pairing" screen) handshake
 
     const val CMD_BIND_REQUEST = 26      // service 1: phone asks the watch to allow binding -> reply {1: bind_result (0 = ok)}
@@ -196,7 +198,7 @@ object OnePlusProtocol {
             }
         }
 
-        /** Values: Long/Int = varint, String/ByteArray = length-delimited, Double = fixed64. */
+        /** Values: Long/Int = varint, String/ByteArray = length-delimited, Float = fixed32, Double = fixed64. */
         fun encode(vararg fields: Pair<Int, Any>): ByteArray {
             val out = ByteArrayOutputStream()
             for ((number, value) in fields) {
@@ -205,6 +207,11 @@ object OnePlusProtocol {
                     is Int -> { writeVarint(out, (number shl 3).toLong()); writeVarint(out, value.toLong()) }
                     is String -> bytes(out, number, value.toByteArray(Charsets.UTF_8))
                     is ByteArray -> bytes(out, number, value)
+                    is Float -> {
+                        writeVarint(out, ((number shl 3) or 5).toLong())
+                        val bits = java.lang.Float.floatToIntBits(value)
+                        for (i in 0 until 4) out.write((bits ushr (8 * i)) and 0xff)
+                    }
                     is Double -> {
                         writeVarint(out, ((number shl 3) or 1).toLong())
                         val bits = java.lang.Double.doubleToLongBits(value)

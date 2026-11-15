@@ -31,6 +31,11 @@ object OnePlusWeather {
     const val CMD_CITY_LIST = 1
     const val CMD_DETAIL = 2
     const val CMD_LOCATION = 5
+    const val CMD_AIR_PRESSURE = 14   // service 4
+    const val CMD_AGPS_REQUEST = 5    // service 25, watch -> phone: AGPSRequest {1 model, 2 format, 3 combo, ...}
+    const val CMD_AGPS_INFO = 6       // service 25, phone -> watch: AGPSFileInfo
+    private const val RESULT_OK = 100000
+    private const val RESULT_FAILED = 100001
 
     /** Location key used for the one city Gadgetbridge offers. */
     const val CITY_KEY = "gadgetbridge"
@@ -142,4 +147,10 @@ object OnePlusWeather {
             7 to 1,
         )
     }
+
+    /** 4.14 reply: AltitudeResponse {1 result (100000 = ok), 2 sea-level pressure in hPa}. */
+    fun airPressure(hpa: Float): ByteArray = Proto.encode(1 to RESULT_OK, 2 to hpa)
+
+    /** 25.6 reply without files: AGPSFileInfo {1 result, 6 combo}. */
+    fun agpsUnavailable(combo: Long): ByteArray = Proto.encode(1 to RESULT_FAILED, 6 to combo)
 }
