@@ -51,6 +51,20 @@ class OnePlusProtocolTest {
     }
 
     @Test
+    fun callStateFrame() {
+        val body = Proto.encode(1 to 1L, 2 to "+40712345678", 3 to 0L, 9 to 1L, 10 to "Test")
+        val msg = OnePlusProtocol.Deframer().feed(
+            OnePlusProtocol.frame(OnePlusProtocol.SERVICE_CALL, OnePlusProtocol.CMD_CALL_STATE, body)
+        ).single()
+        assertEquals(6, msg.service)
+        assertEquals(1, msg.command)
+        val f = Proto.decode(msg.body)
+        assertEquals(1L, Proto.long(f, 1))
+        assertEquals("+40712345678", Proto.string(f, 2))
+        assertEquals("Test", Proto.string(f, 10))
+    }
+
+    @Test
     fun deframerHandlesFragmentsAndGarbage() {
         val a = OnePlusProtocol.HELLO
         val d = OnePlusProtocol.Deframer()

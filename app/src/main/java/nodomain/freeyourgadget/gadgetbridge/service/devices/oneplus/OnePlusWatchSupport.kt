@@ -34,6 +34,7 @@ import nodomain.freeyourgadget.gadgetbridge.entities.GenericSpo2Sample
 import nodomain.freeyourgadget.gadgetbridge.entities.OnePlusActivitySample
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
+import nodomain.freeyourgadget.gadgetbridge.model.CallSpec
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.AbstractBTBRDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder
@@ -48,7 +49,7 @@ import java.util.UUID
  * OnePlus Watch (2021, W301GB): Bluetooth Classic / RFCOMM, plain protobuf, no app-level authentication
  * (the only requirement is a normal Bluetooth bond). See PROTOCOL.md in the reverse-engineering notes.
  *
- * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, find my phone, notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode, SpO2 and sleep history sync, steps/distance/calories history, diagnostic logging.
+ * Implemented: connect, first-time setup, time and timezone sync, battery level and device info, find my phone, call state (experimental), notifications (+ quick reply, dismiss), heart-rate history sync and monitoring mode, SpO2 and sleep history sync, steps/distance/calories history, diagnostic logging.
  */
 class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
     private val deframer = OnePlusProtocol.Deframer()
@@ -101,6 +102,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
                 OnePlusProtocol.CMD_FIND_PHONE -> onFindPhone()
             }
             OnePlusProtocol.SERVICE_NOTIFICATION -> handleNotification(msg)
+            OnePlusProtocol.SERVICE_CALL -> handleCall(msg)
             OnePlusProtocol.SERVICE_OOBE -> handleOobe(msg)
             OnePlusProtocol.SERVICE_FITNESS -> when (msg.command) {
                 OnePlusProtocol.CMD_HR_QUERY -> onHeartRateIndex(msg.body)
@@ -157,6 +159,8 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         requestDeviceInfo()
         requestBattery()
         syncTime()
+        sendCallState(CALL_STATUS_ENDED, "", null)
+        sendSimState()
         requestHeartRate()
         requestSpo2AndSleep()
         requestActivity()
@@ -249,6 +253,70 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         }
         handler.removeCallbacks(findPhoneStop)
         handler.postDelayed(findPhoneStop, FIND_PHONE_TIMEOUT_MS)
+    }
+
+    // ---------------------------------------------------------------- phone calls (experimental)
+
+    /**
+     * Tells the watch about the state of a phone call with the vendor app's 6.1 message. The status values follow the
+     * app's mapping of the Android call state (ringing 1, off-hook 2, idle 3); they have not been verified on a watch,
+     * which may also handle calls through the Bluetooth hands-free profile on its own.
+     */
+    override fun onSetCallState(callSpec: CallSpec) {
+        val status = when (callSpec.command) {
+            CallSpec.CALL_INCOMING -> CALL_STATUS_RINGING
+            CallSpec.CALL_OUTGOING, CallSpec.CALL_START, CallSpec.CALL_ACCEPT -> CALL_STATUS_ACTIVE
+            CallSpec.CALL_END, CallSpec.CALL_REJECT -> CALL_STATUS_ENDED
+            else -> return
+        }
+        LOG.info("Call state to watch: command={} status={}", callSpec.command, status)
+        sendCallState(status, callSpec.number ?: "", callSpec.name)
+    }
+
+    /**
+     * PhoneCallChange as the vendor app sends it: {1 status, 2 number, 4 subscription id, 9 is contact, 10 name,
+     * 13 primary}. The "primary" flag is set in the one capture of the vendor app that contains a 6.1 message
+     * (an "ended" status sent right after the time sync).
+     */
+    private fun sendCallState(status: Int, number: String, name: String?) {
+        val fields = ArrayList<Pair<Int, Any>>()
+        fields.add(1 to status.toLong())
+        if (number.isNotEmpty()) fields.add(2 to number)
+        fields.add(4 to voiceSubscriptionId().toLong())
+        if (!name.isNullOrEmpty()) {
+            fields.add(9 to 1L)
+            fields.add(10 to name)
+        }
+        fields.add(13 to 1L)
+        send("call state", OnePlusProtocol.SERVICE_CALL, OnePlusProtocol.CMD_CALL_STATE, Proto.encode(*fields.toTypedArray()))
+    }
+
+    /** 6.6: the SIM slots of the phone: list {1 slot, 2 subscription id, 5 SIM state, 6 default voice card}, 2 primary. */
+    private fun sendSimState() {
+        val tm = context.getSystemService(android.telephony.TelephonyManager::class.java) ?: return
+        val voiceId = voiceSubscriptionId()
+        val entries = ArrayList<Pair<Int, Any>>()
+        for (slot in 0 until tm.phoneCount) {
+            val subId = try {
+                context.getSystemService(android.telephony.SubscriptionManager::class.java)
+                    ?.getSubscriptionIds(slot)?.firstOrNull() ?: -1
+            } catch (e: SecurityException) { -1 }
+            if (subId == -1) continue
+            val state = tm.createForSubscriptionId(subId).simState
+            entries.add(1 to Proto.encode(1 to slot.toLong(), 2 to subId.toLong(), 5 to state.toLong(), 6 to if (subId == voiceId) 1L else 0L))
+        }
+        entries.add(2 to 1L)
+        LOG.info("SIM state to watch: {} slot(s)", entries.size - 1)
+        send("sim state", OnePlusProtocol.SERVICE_CALL, OnePlusProtocol.CMD_SIM_STATE, Proto.encode(*entries.toTypedArray()))
+    }
+
+    private fun voiceSubscriptionId(): Int = android.telephony.SubscriptionManager.getDefaultVoiceSubscriptionId().let { if (it < 0) 0 else it }
+
+    /** 6.2 from the watch (answer / reject / hang up / mute in the vendor app): only logged until the values are known. */
+    private fun handleCall(msg: OnePlusProtocol.Message) {
+        val f = Proto.decode(msg.body)
+        LOG.info("Call message from watch: 6.{} status={} mute={}", msg.command, Proto.long(f, 1), Proto.long(f, 3))
+        if (msg.command == OnePlusProtocol.CMD_SIM_STATE) sendSimState()
     }
 
     // ---------------------------------------------------------------- notifications
@@ -638,6 +706,9 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         val SERVICE_UUID: UUID = UUID.fromString("db764ac8-4b08-7f25-aafe-59d03c27bae3")
         private const val BUFFER_SIZE = 8192
         private const val FIND_PHONE_TIMEOUT_MS = 3500L
+        private const val CALL_STATUS_RINGING = 1
+        private const val CALL_STATUS_ACTIVE = 2
+        private const val CALL_STATUS_ENDED = 3
 
         // research probe: resting HR, stress  (query cmd; detail cmd = query + 1)
         private val PROBE_QUERY_CMDS = setOf(17, 34)

@@ -29,6 +29,7 @@ import java.io.ByteArrayOutputStream
 object OnePlusProtocol {
     const val SERVICE_DEVICE = 1
     const val SERVICE_NOTIFICATION = 2
+    const val SERVICE_CALL = 6           // "HFP extend" in the vendor app: call state both ways
     const val SERVICE_FITNESS = 5
     const val SERVICE_OOBE = 11   // out-of-box setup ("pairing" screen) handshake
 
@@ -48,6 +49,9 @@ object OnePlusProtocol {
     const val CMD_DEVICE_INFO = 7        // service 1: request {1: mac, 13: mac}; reply has versions, serial, model name
     const val CMD_FIND_PHONE = 15        // service 1, watch -> phone, empty body, repeated about once a second while the watch's find-phone screen is active
     const val CMD_BATTERY = 8            // service 1: request {1: mac}; reply/push {1: percent, 2: mac, 3: charging}
+    const val CMD_CALL_STATE = 1         // service 6, phone -> watch: PhoneCallChange {1: status, 2: number, 4: subscription id, 9: is contact, 10: display name, 13: primary}
+    const val CMD_SIM_STATE = 6          // service 6, phone -> watch: SIM slots; the watch also sends it empty to ask for them
+    const val CMD_CALL_WATCH_EVENT = 2   // service 6, watch -> phone: WatchCallChange {1: status, 2: number, 3: mute}
     const val CMD_NOTIFICATION_POST = 1
     const val CMD_NOTIFICATION_REMOVE = 3
     const val CMD_NOTIFICATION_DISMISSED = 4

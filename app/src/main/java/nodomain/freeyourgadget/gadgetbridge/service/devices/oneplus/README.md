@@ -61,7 +61,7 @@ Developer
 
 | # | Item | Effort | What is known / needed |
 |---|---|---|---|
-| 1 | **Phone calls** (show caller on the watch; reject, silence or answer from the watch) | M | Tried and not working. Sending a `PhoneCallChange` frame on service 6, command 1 (`{1 status, 2 number, 3 slot, 9 isContact, 10 name}`) when the phone rings, is answered and ends reached the watch socket, but the watch did nothing and sent no reply on service 6. The vendor app only uses these messages when the watch reports an HFP-extend capability, so the watch most likely handles calls over classic Bluetooth HFP instead. Not implemented. |
+| 1 | **Phone calls** (show caller on the watch; reject, silence or answer from the watch) | M | Experimental, not working yet. The driver sends the vendor's `PhoneCallChange` (service 6, command 1: `{1 status, 2 number, 4 subscription id, 9 is contact, 10 name, 13 primary}`) when the phone rings, is answered and ends, plus the SIM list (6.6) on connect. The first attempt, without the `primary` flag and the SIM list, made the watch do nothing and send no reply on service 6. The second attempt (vendor layout, `primary`, SIM list) is untested. Watch to phone messages (6.2 answer/reject/mute, 6.3 place call) are only logged. |
 | – | **Find my watch** (ring the watch from the device card) | S, once known | **Tried, does not work yet.** See section 4 for exactly what was sent. Needs a capture of the official app doing it. |
 
 ### 2b. After that
