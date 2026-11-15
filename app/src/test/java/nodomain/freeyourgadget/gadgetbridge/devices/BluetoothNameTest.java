@@ -341,6 +341,7 @@ public class BluetoothNameTest extends TestBase {
             put("Soundcore Life Tune", DeviceType.SOUNDCORE_LIFE_TUNE); // #6396
             put("Soundcore Life Tune XR", DeviceType.SOUNDCORE_LIFE_TUNE_XR); // #6396
             put("OsmoAction4-ABCD", DeviceType.DJI_OSMO_ACTION_4);
+            put("D3400_1234567", DeviceType.NIKON_D3400);
             put("Jabra Evolve 65", DeviceType.JABRA_EVOLVE_65); // #6665
             put("Jabra EVOLVE 65", DeviceType.JABRA_EVOLVE_65); // #6665
             put("Jabra Evolve2 55", DeviceType.JABRA_EVOLVE2_55); // #6644

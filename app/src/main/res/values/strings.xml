@@ -5881,6 +5881,7 @@ The result is the average of all the measurements.</string>
     <string name="devicetype_battery_monitor" translatable="false">Battery Monitor</string>
     <string name="devicetype_victron_smartshunt" translatable="false">Victron SmartShunt</string>
     <string name="devicetype_dji_osmo_action_4" translatable="false">DJI Osmo Action 4</string>
+    <string name="devicetype_nikon_d3400" translatable="false">Nikon D3400</string>
     <string name="devicetype_sinilink" translatable="false">Sinilink</string>
     <string name="devicetype_eightbitdo_micro" translatable="false">8BitDo Micro</string>
     <string name="devicetype_teufel_mynd" translatable="false">Teufel Mynd</string>

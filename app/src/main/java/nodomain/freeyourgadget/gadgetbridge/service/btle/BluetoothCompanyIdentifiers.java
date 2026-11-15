@@ -16,4 +16,7 @@ public final class BluetoothCompanyIdentifiers {
 
     /// Sony Corporation
     public static final int SONY_CORPORATION = 0x012D;
+
+    /// Nikon Corporation
+    public static final int NIKON_CORPORATION = 0x0399;
 }

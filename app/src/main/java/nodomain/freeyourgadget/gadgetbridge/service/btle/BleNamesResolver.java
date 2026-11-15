@@ -540,6 +540,7 @@ public class BleNamesResolver {
         mServices.put("000055ff-0000-1000-8000-00805f9b34fb", "(Propr: GloryFit Command");
         mServices.put("000056ff-0000-1000-8000-00805f9b34fb", "(Propr: GloryFit Data");
         mServices.put("af9df7a1-e595-11e3-96b4-0002a5d5c51b", "(Propr: OneTouch");
+        mServices.put("0000de00-3dd4-4255-8d62-6dc7b9bd5561", "(Propr: Nikon");
         mServices.put("9b012401-bc30-ce9a-e111-0f67e491abde", "(Propr: Garmin GFDI V0)");
         mServices.put("6217ff4b-fb31-1140-ad5a-a45545d7ecf3", "(Propr: Polar Settings)");
         mServices.put("00001001-7791-11e2-9452-f23c91aec05e", "(Propr: Garmin ANT)");
@@ -634,6 +635,10 @@ public class BleNamesResolver {
         mCharacteristics.put("000034f2-0000-1000-8000-00805f9b34fb", "(Propr: GloryFit Data Read");
         mCharacteristics.put("af9df7a2-e595-11e3-96b4-0002a5d5c51b", "(Propr: OneTouch Write");
         mCharacteristics.put("af9df7a3-e595-11e3-96b4-0002a5d5c51b", "(Propr: OneTouch Read");
+        mCharacteristics.put("00002000-3dd4-4255-8d62-6dc7b9bd5561", "(Propr: Nikon Authentication");
+        mCharacteristics.put("00002002-3dd4-4255-8d62-6dc7b9bd5561", "(Propr: Nikon Client Name");
+        mCharacteristics.put("00002006-3dd4-4255-8d62-6dc7b9bd5561", "(Propr: Nikon Current Time");
+        mCharacteristics.put("00002008-3dd4-4255-8d62-6dc7b9bd5561", "(Propr: Nikon Control Point");
         mCharacteristics.put("00010203-0405-0607-0809-0a0b0c0d2b12", "(Propr: Telink OTA Write)");
         mCharacteristics.put("ebe0ccb7-7a0a-4b0c-8a1a-6ff2997da3a6", "(Propr: Lywsd TIME)");
         mCharacteristics.put("ebe0ccc4-7a0a-4b0c-8a1a-6ff2997da3a6", "(Propr: Lywsd BATTERY)");

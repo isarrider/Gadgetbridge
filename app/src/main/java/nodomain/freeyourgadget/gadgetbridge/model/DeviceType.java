@@ -482,6 +482,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.mijia_lywsd.MijiaMhoC303Coor
 import nodomain.freeyourgadget.gadgetbridge.devices.mijia_lywsd.MijiaXmwsdj04Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.miscale.MiCompositionScaleCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.miscale.MiSmartScaleCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.nikon.NikonD3400Coordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.ninebot.NinebotScooterCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.moyoung.KW19BCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.onebyone.OneByoneScaleCoordinator;
@@ -1133,6 +1134,7 @@ public enum DeviceType {
     BM6_BATTERY_MONITOR(Bm6Coordinator::new),
     VICTRON_SMARTSHUNT(VictronSmartShuntCoordinator::new),
     DJI_OSMO_ACTION_4(DjiOsmoAction4Coordinator::new),
+    NIKON_D3400(NikonD3400Coordinator::new),
     SINILINK(SinilinkCoordinator::new),
     ONETOUCH(OneTouchCoordinator::new),
     SOUNDBRENNER_CORE(SoundbrennerCoordinator::new),
