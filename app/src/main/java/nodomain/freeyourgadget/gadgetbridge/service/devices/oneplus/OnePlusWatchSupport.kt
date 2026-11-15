@@ -36,6 +36,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec
 import nodomain.freeyourgadget.gadgetbridge.model.NotificationSpec
+import nodomain.freeyourgadget.gadgetbridge.model.weather.Weather
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.AbstractBTBRDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder
 import nodomain.freeyourgadget.gadgetbridge.service.devices.oneplus.OnePlusProtocol.Proto
@@ -103,6 +104,7 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
             }
             OnePlusProtocol.SERVICE_NOTIFICATION -> handleNotification(msg)
             OnePlusProtocol.SERVICE_CALL -> handleCall(msg)
+            OnePlusProtocol.SERVICE_WEATHER -> handleWeather(msg)
             OnePlusProtocol.SERVICE_OOBE -> handleOobe(msg)
             OnePlusProtocol.SERVICE_FITNESS -> when (msg.command) {
                 OnePlusProtocol.CMD_HR_QUERY -> onHeartRateIndex(msg.body)
@@ -317,6 +319,31 @@ class OnePlusWatchSupport : AbstractBTBRDeviceSupport(LOG, BUFFER_SIZE) {
         val f = Proto.decode(msg.body)
         LOG.info("Call message from watch: 6.{} status={} mute={}", msg.command, Proto.long(f, 1), Proto.long(f, 3))
         if (msg.command == OnePlusProtocol.CMD_SIM_STATE) sendSimState()
+    }
+
+    // ---------------------------------------------------------------- weather
+
+    override fun onSendWeather() {
+        val spec = Weather.getWeatherSpec() ?: return
+        LOG.info("Weather from Gadgetbridge: {} {}K code {}", spec.location, spec.currentTemp, spec.currentConditionCode)
+        send("weather city list", OnePlusProtocol.SERVICE_WEATHER, OnePlusWeather.CMD_CITY_LIST, OnePlusWeather.cityList(spec))
+        send("weather detail", OnePlusProtocol.SERVICE_WEATHER, OnePlusWeather.CMD_DETAIL, OnePlusWeather.weatherDetail(OnePlusWeather.CITY_KEY, spec))
+    }
+
+    /** The watch asks for the city list (9.1), a city's weather (9.2) and the phone location (9.5). */
+    private fun handleWeather(msg: OnePlusProtocol.Message) {
+        val spec = Weather.getWeatherSpec()
+        LOG.info("Weather request from watch: 9.{} body={}", msg.command, msg.body.joinToString("") { "%02x".format(it) })
+        when (msg.command) {
+            OnePlusWeather.CMD_CITY_LIST ->
+                if (spec != null) send("weather city list", OnePlusProtocol.SERVICE_WEATHER, OnePlusWeather.CMD_CITY_LIST, OnePlusWeather.cityList(spec))
+            OnePlusWeather.CMD_DETAIL -> {
+                val key = Proto.string(Proto.decode(msg.body), 1) ?: OnePlusWeather.CITY_KEY
+                if (spec != null) send("weather detail", OnePlusProtocol.SERVICE_WEATHER, OnePlusWeather.CMD_DETAIL, OnePlusWeather.weatherDetail(key, spec))
+            }
+            OnePlusWeather.CMD_LOCATION ->
+                send("weather location", OnePlusProtocol.SERVICE_WEATHER, OnePlusWeather.CMD_LOCATION, OnePlusWeather.location(spec))
+        }
     }
 
     // ---------------------------------------------------------------- notifications

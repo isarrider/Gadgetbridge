@@ -31,6 +31,7 @@ object OnePlusProtocol {
     const val SERVICE_NOTIFICATION = 2
     const val SERVICE_CALL = 6           // "HFP extend" in the vendor app: call state both ways
     const val SERVICE_FITNESS = 5
+    const val SERVICE_WEATHER = 9
     const val SERVICE_OOBE = 11   // out-of-box setup ("pairing" screen) handshake
 
     const val CMD_BIND_REQUEST = 26      // service 1: phone asks the watch to allow binding -> reply {1: bind_result (0 = ok)}
@@ -195,7 +196,7 @@ object OnePlusProtocol {
             }
         }
 
-        /** Values: Long/Int = varint, String/ByteArray = length-delimited. */
+        /** Values: Long/Int = varint, String/ByteArray = length-delimited, Double = fixed64. */
         fun encode(vararg fields: Pair<Int, Any>): ByteArray {
             val out = ByteArrayOutputStream()
             for ((number, value) in fields) {
@@ -204,6 +205,11 @@ object OnePlusProtocol {
                     is Int -> { writeVarint(out, (number shl 3).toLong()); writeVarint(out, value.toLong()) }
                     is String -> bytes(out, number, value.toByteArray(Charsets.UTF_8))
                     is ByteArray -> bytes(out, number, value)
+                    is Double -> {
+                        writeVarint(out, ((number shl 3) or 1).toLong())
+                        val bits = java.lang.Double.doubleToLongBits(value)
+                        for (i in 0 until 8) out.write(((bits ushr (8 * i)) and 0xff).toInt())
+                    }
                     else -> throw IllegalArgumentException("unsupported type ${value::class}")
                 }
             }
@@ -242,8 +248,8 @@ object OnePlusProtocol {
                         out.add(number to data.copyOfRange(i, i + len))
                         i += len
                     }
-                    1 -> { if (i + 8 > data.size) throw IllegalArgumentException("truncated"); out.add(number to 0L); i += 8 }
-                    5 -> { if (i + 4 > data.size) throw IllegalArgumentException("truncated"); out.add(number to 0L); i += 4 }
+                    1 -> { if (i + 8 > data.size) throw IllegalArgumentException("truncated"); var v = 0L; for (k in 7 downTo 0) v = (v shl 8) or (data[i + k].toLong() and 0xFF); out.add(number to v); i += 8 }
+                    5 -> { if (i + 4 > data.size) throw IllegalArgumentException("truncated"); var v = 0L; for (k in 3 downTo 0) v = (v shl 8) or (data[i + k].toLong() and 0xFF); out.add(number to v); i += 4 }
                     else -> throw IllegalArgumentException("unsupported wire type")
                 }
             }

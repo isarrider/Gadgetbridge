@@ -65,6 +65,26 @@ class OnePlusProtocolTest {
     }
 
     @Test
+    fun weatherReplies() {
+        val spec = nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec()
+        spec.location = "Cluj"
+        spec.currentTemp = 293 // kelvin
+        spec.currentConditionCode = 800
+        spec.latitude = 46.77f
+        spec.longitude = 23.6f
+        val list = Proto.decode(OnePlusWeather.cityList(spec))
+        val city = Proto.decode(Proto.bytes(list, 2)!!)
+        assertEquals("Cluj", Proto.string(city, 2))
+        assertEquals("1", Proto.string(city, 10))
+        assertEquals("20", Proto.string(city, 11))
+        val detail = Proto.decode(OnePlusWeather.weatherDetail("k", spec))
+        assertEquals("k", Proto.string(detail, 2))
+        assertEquals(20L, Proto.long(Proto.decode(Proto.bytes(detail, 3)!!), 5))
+        val loc = Proto.decode(OnePlusWeather.location(spec))
+        assertEquals(java.lang.Double.doubleToLongBits(46.77f.toDouble()), Proto.long(loc, 1))
+    }
+
+    @Test
     fun deframerHandlesFragmentsAndGarbage() {
         val a = OnePlusProtocol.HELLO
         val d = OnePlusProtocol.Deframer()

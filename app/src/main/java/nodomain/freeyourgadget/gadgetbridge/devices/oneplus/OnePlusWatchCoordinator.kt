@@ -53,6 +53,8 @@ class OnePlusWatchCoordinator : AbstractBLClassicDeviceCoordinator() {
     // Standard Bluetooth bond (SSP numeric comparison) is all the watch needs; no app-level key.
     override fun getBondingStyle(): Int = BONDING_STYLE_BOND
 
+    override fun supportsWeather(device: GBDevice): Boolean = true
+
     override fun supportsPhoneCalls(device: GBDevice): Boolean = true
 
     override fun supportsHeartRateMeasurement(device: GBDevice): Boolean = true
