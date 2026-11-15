@@ -12,6 +12,8 @@ import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.SoundcoreEarbudsCo
 import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.SoundcoreEarbudsCoordinator.AmbientSoundMode;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.SoundcoreEqualizer;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.SoundcoreEqualizerPresets;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.protocol.impl.v1.SoundcoreProtocolImplV1;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 
@@ -33,6 +35,17 @@ public class SoundcoreA30iProtocol extends SoundcoreProtocolImplV1 {
     protected GBDeviceEvent[] decodeDeviceInfo(final byte[] payload) {
         if (payload == null || payload.length < 78) {
             return new GBDeviceEvent[0];
+        }
+
+        final SoundcoreEqualizer equalizer = SoundcoreEqualizer.fromPayload(
+            payload, 32, 34);
+        if (equalizer != null) {
+            if (SoundcoreEqualizerPresets.fromIndex(equalizer.getIndex()) != null) {
+                //LOG.debug("Equalizer preset from device info: {}", equalizer.getIndex());
+                storeEqualizer(equalizer);
+            }/* else {
+               LOG.warn("Unknown equalizer preset id in device info: 0x{}", Integer.toHexString(equalizer.getIndex()));
+            }*/
         }
 
         //Tap function and controlButtonMode byte: 55 to 63

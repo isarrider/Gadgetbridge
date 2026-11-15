@@ -46,7 +46,10 @@ class SoundcoreA30iCoordinator : SoundcoreEarbudsCoordinator() {
         Capability.Multipoint,
         Capability.FitTest,
         Capability.TouchControls,
+        Capability.AudioEqualizer,
     )
+
+    override fun getDefaultEqualizerCommand(): String = "compact"
 
     override val supportedButtonActions: List<ButtonAction> = listOf(
         ButtonAction.SINGLE_TAP,

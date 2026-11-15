@@ -429,7 +429,7 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
 
         if((batteryIndex > -1) && (disconnected)){
             GBDeviceEventBatteryInfo batteryInfo = buildBatteryInfo(
-                batteryIndex, getDevice().getBatteryLevel(batteryIndex));
+                    batteryIndex, getDevice().getBatteryLevel(batteryIndex));
             batteryInfo.level = GBDevice.BATTERY_UNKNOWN;
             batteryInfo.state = BatteryState.UNKNOWN;
             events.add(batteryInfo);
@@ -462,7 +462,7 @@ public class SoundcoreProtocolImplV1 extends AbstractSoundcoreProtocol {
                 batteryIndex, getDevice().getBatteryLevel(batteryIndex));
             batteryInfo.voltage = getDevice().getBatteryVoltage(batteryIndex);
             batteryInfo.state = payload[index] == 0x01
-                ? BatteryState.BATTERY_CHARGING : BatteryState.BATTERY_NORMAL;
+                    ? BatteryState.BATTERY_CHARGING : BatteryState.BATTERY_NORMAL;
             events.add(batteryInfo);
         }
         return events.toArray(new GBDeviceEvent[0]);
