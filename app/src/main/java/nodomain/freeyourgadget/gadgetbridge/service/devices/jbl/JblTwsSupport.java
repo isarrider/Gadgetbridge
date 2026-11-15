@@ -12,8 +12,6 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.jbl;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattService;
-import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Handler;
@@ -21,14 +19,12 @@ import android.os.Looper;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresPermission;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.List;
 import java.util.UUID;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
@@ -38,35 +34,17 @@ import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventBatteryInfo;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
-import nodomain.freeyourgadget.gadgetbridge.service.AbstractDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 import static nodomain.freeyourgadget.gadgetbridge.service.devices.jbl.JblProtocol.*;
 
 /**
  * Transport and protocol implementation for JBL TWS headsets using Harman Protocol 3.
- *
- * <p>A paired JBL TWS headset exposes a rotating BLE address: the persistent identifier
- * is the device's Classic MAC, but the actual {@code BluetoothGatt} connection has to
- * be opened against the most recent session address stashed on
- * {@link GBDevice#getVolatileAddress()}. The stock {@code BtLEQueue} always opens
- * against {@code GBDevice.getAddress()} and has no override hook, so this support
- * drives its own {@link JblGattLink} against the session address. The Gadgetbridge
- * core is otherwise untouched.</p>
- *
- * <h3>Connection strategy</h3>
- * <ol>
- *   <li>If a cached volatile LE address exists, try connecting directly.</li>
- *   <li>If that fails (or no cache exists), scan for headset advertisements
- *       whose product ID and CRC match this phone.</li>
- *   <li>On disconnect, the volatile address is <em>not</em> cleared; the BLE
- *       session address usually remains valid while the Classic ACL link is up.
- *       Only when a reconnect attempt fails do we invalidate the cache and
- *       re-scan.</li>
- * </ol>
  */
 @SuppressLint("MissingPermission") // if we're using this, we have bluetooth permissions
-public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.Sink {
+public class JblTwsSupport extends AbstractBTLESingleDeviceSupport {
     private static final Logger LOG = LoggerFactory.getLogger(JblTwsSupport.class);
 
     // Preference keys
@@ -140,10 +118,6 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     private Integer mRequestedAnc = null;
     private Integer mRequestedBalance = null;
     private Integer mRequestedLatencyMode = null;
-    private JblGattLink gattLink;
-    private JblLeAddressScanner addressScanner;
-    private boolean disposed;
-    private boolean servicesDiscovered = false;
     // At most one accidental touch state request per connection, deferred until
     // the earbuds report their firmware. See maybeRequestAccidentalTouchState().
     private boolean accidentalTouchStateRequested = false;
@@ -160,10 +134,10 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     };
 
     public JblTwsSupport(@NonNull final JblTwsProduct product) {
-        super();
+        super(LOG);
         this.product = product;
+        addSupportedService(JblProtocol.SERVICE_UUID);
         setAutoReconnect(true);
-        setScanReconnect(true);
     }
 
     @Override
@@ -182,133 +156,49 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
 
     // ─── Connection ────────────────────────────────────────────────────────
 
-    @RequiresPermission(allOf = {"android.permission.BLUETOOTH_SCAN", "android.permission.BLUETOOTH_CONNECT"})
     @Override
-    public synchronized boolean connect() {
-        final GBDevice device = getDevice();
-        if (device == null) {
-            return false;
-        }
-        final Context context = getContext();
-        if (context == null) {
-            return false;
-        }
-        disposed = false;
-        accidentalTouchStateRequested = false;
-        device.setUpdateState(GBDevice.State.CONNECTING, context);
-
-        // Try the cached volatile LE address first.
-        final String cached = device.getVolatileAddress();
-        if (cached != null) {
-            LOG.info("JblTwsSupport.connect: trying cached session address {}", cached);
-            openLink(context, device, cached);
-            return true;
-        }
-
-        // No cache: scan for the Harman broadcast with the local Bluetooth-name CRC.
-        LOG.info("JblTwsSupport.connect: no cached session address, scanning");
-        scanAndConnect(context, device);
-        return true;
-    }
-
-    @RequiresPermission(allOf = {"android.permission.BLUETOOTH_SCAN", "android.permission.BLUETOOTH_CONNECT"})
-    private synchronized void scanAndConnect(@NonNull final Context context, @NonNull final GBDevice device) {
-        if (disposed || (addressScanner != null && addressScanner.isInFlight())) {
-            return;
-        }
-        final JblLeAddressScanner scanner = new JblLeAddressScanner(context, product.getProductId());
-        addressScanner = scanner;
-        scanner.start(new JblLeAddressScanner.Listener() {
-            @Override
-            public void onResolved(@NonNull final String address) {
-                synchronized (JblTwsSupport.this) {
-                    if (disposed || addressScanner != scanner) {
-                        return;
-                    }
-                    addressScanner = null;
-                    LOG.info("JblTwsSupport: scanner resolved {}", address);
-                    device.setVolatileAddress(address);
-                    openLink(context, device, address);
-                }
-            }
-
-            @Override
-            public void onFailed() {
-                synchronized (JblTwsSupport.this) {
-                    if (disposed || addressScanner != scanner) {
-                        return;
-                    }
-                    addressScanner = null;
-                    LOG.warn("JblTwsSupport: scanner failed to find LE address");
-                    if (device.getState() == GBDevice.State.CONNECTING) {
-                        device.setUpdateState(GBDevice.State.NOT_CONNECTED, context);
-                        device.sendDeviceUpdateIntent(context);
-                    }
-                }
-            }
-        });
-    }
-
-    @RequiresPermission("android.permission.BLUETOOTH_CONNECT")
-    private synchronized void openLink(@NonNull final Context context,
-                          @NonNull final GBDevice device,
-                          @NonNull final String address) {
-        if (disposed) {
-            return;
-        }
-        if (addressScanner != null) {
-            addressScanner.cancel();
-            addressScanner = null;
-        }
-        if (gattLink != null) {
-            gattLink.dispose();
-        }
-        gattLink = new JblGattLink(context, device, this);
-        gattLink.connect(address);
-    }
-
-    @Override
-    public synchronized void dispose() {
-        disposed = true;
+    public void dispose() {
         mainHandler.removeCallbacks(writeCustomEq);
-        if (addressScanner != null) {
-            addressScanner.cancel();
-            addressScanner = null;
-        }
-        if (gattLink != null) {
-            gattLink.dispose();
-            gattLink = null;
-        }
-        servicesDiscovered = false;
+        super.dispose();
     }
 
-    @RequiresPermission("android.permission.BLUETOOTH_CONNECT")
     private void write(@NonNull final byte[] value) {
-        if (gattLink == null) {
-            LOG.warn("JblTwsSupport.write: no gatt link, dropping {} bytes", value.length);
-            return;
-        }
-        gattLink.enqueueWrite(JblProtocol.SERVICE_UUID, JblProtocol.WRITE_CHARACTERISTIC_UUID, value);
+        final TransactionBuilder builder = createTransactionBuilder("write");
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, value);
+        builder.queue();
     }
 
-    private void initializeDevice() {
-        gattLink.requestMtu(512);
-        write(GET_DEVICE_INFO_GENERAL);
-        write(GET_DEVICE_INFO_BATTERY);
-        write(GET_MODES);
-        write(GET_ADVANCED_ANC);
-        write(GET_LATENCY_MODE);
-        write(GET_BALANCE);
-        write(GET_VOICE_PROMPTS);
-        write(GET_EQ);
-        write(GET_GESTURES);
+    @NonNull
+    @Override
+    protected TransactionBuilder initializeDevice(@NonNull final TransactionBuilder builder) {
+        accidentalTouchStateRequested = false;
+        mRequestedAnc = null;
+        mRequestedBalance = null;
+        mRequestedLatencyMode = null;
+        ensureDeviceRegistered();
+
+        builder.setDeviceState(GBDevice.State.INITIALIZING);
+        builder.notify(JblProtocol.NOTIFY_CHARACTERISTIC_UUID, true);
+        builder.requestMtu(512);
+        builder.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_DEVICE_INFO_GENERAL);
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_DEVICE_INFO_BATTERY);
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_MODES);
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_ADVANCED_ANC);
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_LATENCY_MODE);
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_BALANCE);
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_VOICE_PROMPTS);
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_EQ);
+        builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_GESTURES);
         if (product.getCapabilities().isEarTipsSupported()) {
-            write(GET_EAR_TIPS);
+            builder.write(JblProtocol.WRITE_CHARACTERISTIC_UUID, GET_EAR_TIPS);
         }
         // Accidental touch prevention is requested from parseDeviceConfigResponse()
         // once the earbuds report their firmware version on this connection. The
         // database copy of the version may be stale. See
         // maybeRequestAccidentalTouchState().
+        builder.setDeviceState(GBDevice.State.INITIALIZED);
+        return builder;
     }
 
     /**
@@ -344,63 +234,6 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
         return buildPacketWide(CMD_DEVICE_CONFIG, payload.array());
     }
 
-    // ─── GATT callbacks ────────────────────────────────────────────────────
-
-    @RequiresPermission("android.permission.BLUETOOTH_CONNECT")
-    @Override
-    public void onConnectionStateChange(final int newState, final int status) {
-        final GBDevice device = getDevice();
-        if (device == null) {
-            return;
-        }
-        final Context context = broadcastContext();
-        switch (newState) {
-            case BluetoothProfile.STATE_CONNECTED:
-                LOG.info("JBL: connected (status={})", status);
-                servicesDiscovered = false;
-                if (device.getState() != GBDevice.State.CONNECTED) {
-                    device.setUpdateState(GBDevice.State.CONNECTED, context);
-                }
-                device.sendDeviceUpdateIntent(context);
-                ensureDeviceRegistered();
-                if (gattLink != null) {
-                    gattLink.discoverServices();
-                }
-                break;
-
-            case BluetoothProfile.STATE_DISCONNECTED:
-                LOG.info("JBL: disconnected (status={})", status);
-                servicesDiscovered = false;
-                // The scan fallback below reconnects without going through
-                // connect(), so reset the per-connection request flag here too.
-                accidentalTouchStateRequested = false;
-
-                // Keep the cached address only after the expected JBL GATT
-                // service and notifications were configured. A successful LE
-                // link to a different peripheral is not a usable connection.
-                final boolean protocolNotReady = gattLink == null || !gattLink.didCompleteProtocolSetup();
-                if (protocolNotReady) {
-                    LOG.warn("JBL: protocol setup did not complete (status={}), invalidating stale LE address", status);
-                    device.setVolatileAddress(null);
-                }
-
-                final GBDevice.State prevState = device.getState();
-                if (prevState != GBDevice.State.NOT_CONNECTED) {
-                    device.setUpdateState(GBDevice.State.NOT_CONNECTED, context);
-                }
-                device.sendDeviceUpdateIntent(context);
-
-                if (protocolNotReady && device.getState() == GBDevice.State.NOT_CONNECTED) {
-                    // Immediate fresh scan fallback for auto-reconnect.
-                    scanAndConnect(context, device);
-                }
-                break;
-
-            default:
-                break;
-        }
-    }
-
     private Context broadcastContext() {
         final Context ctx = getContext();
         return ctx != null ? ctx : GBApplication.app();
@@ -411,7 +244,6 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
         if (device == null) {
             return;
         }
-        final Context context = broadcastContext();
         try (DBHandler dbHandler = GBApplication.acquireDB()) {
             DBHelper.getDevice(device, dbHandler.getDaoSession());
             LOG.info("JBL: device {} registered in database", device.getAddress());
@@ -421,32 +253,20 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
     }
 
     @Override
-    public void onServicesDiscovered(@NonNull final List<BluetoothGattService> services) {
-        servicesDiscovered = true;
-        final GBDevice device = getDevice();
-        if (device == null) {
-            return;
-        }
-        if (device.getState() == GBDevice.State.CONNECTING
-                || device.getState() == GBDevice.State.CONNECTED) {
-            initializeDevice();
-        }
-    }
-
-    @Override
-    public void onCharacteristicChanged(@NonNull final BluetoothGattCharacteristic characteristic,
-                                        @NonNull final byte[] value) {
-        if (getDevice() == null) {
-            return;
+    public boolean onCharacteristicChanged(final BluetoothGatt gatt,
+                                           final BluetoothGattCharacteristic characteristic,
+                                           final byte[] value) {
+        if (super.onCharacteristicChanged(gatt, characteristic, value)) {
+            return true;
         }
         final UUID uuid = characteristic.getUuid();
         if (!JblProtocol.NOTIFY_CHARACTERISTIC_UUID.equals(uuid) && !JblProtocol.RAW_CHARACTERISTIC_UUID.equals(uuid)) {
-            return;
+            return false;
         }
         LOG.info("JBL notification {}: {}", uuid, GB.hexdump(value));
 
         if (value.length < 4 || value[0] != HEADER_MAGIC) {
-            return;
+            return true;
         }
 
         switch (value[1]) {
@@ -496,36 +316,7 @@ public class JblTwsSupport extends AbstractDeviceSupport implements JblGattLink.
             default:
                 break;
         }
-    }
-
-    @Override
-    public void onCharacteristicWrite(@NonNull final BluetoothGattCharacteristic characteristic, final int status) {
-        final GBDevice device = getDevice();
-        if (device == null) {
-            return;
-        }
-        final Context context = getContext();
-        if (context == null) {
-            return;
-        }
-        if (status == BluetoothGatt.GATT_SUCCESS) {
-            // Transition CONNECTING -> INITIALIZED once the first write succeeds.
-            // Note: STAY_ON_CONNECTED was set when the GATT link came up, so the
-            // state is CONNECTED (not CONNECTING) by the time writes flow; accept
-            // either so the device does not remain stuck on "connecting".
-            if (servicesDiscovered
-                    && (device.getState() == GBDevice.State.CONNECTING
-                        || device.getState() == GBDevice.State.CONNECTED)) {
-                device.setUpdateState(GBDevice.State.INITIALIZED, context);
-            }
-        }
-    }
-
-    @Override
-    public void onMtuChanged(final int mtu, final int status) {
-        if (status == BluetoothGatt.GATT_SUCCESS) {
-            LOG.info("JBL: MTU changed to {}", mtu);
-        }
+        return true;
     }
 
     // ─── Configuration dispatch ────────────────────────────────────────────
