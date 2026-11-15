@@ -330,6 +330,17 @@ public class DBHelper {
         return true;
     }
 
+    /**
+     * Returns the volatile address to save, or null for a device with a rotating address.
+     */
+    @Nullable
+    private static String getSavedVolatileAddress(final GBDevice gbDevice) {
+        if (gbDevice.getDeviceCoordinator().usesRotatingAddress()) {
+            return null;
+        }
+        return gbDevice.getVolatileAddress();
+    }
+
     private static boolean isEqual(DeviceAttributes attr, GBDevice gbDevice) {
         if (!Objects.equals(attr.getFirmwareVersion1(), gbDevice.getFirmwareVersion())) {
             return false;
@@ -337,7 +348,7 @@ public class DBHelper {
         if (!Objects.equals(attr.getFirmwareVersion2(), gbDevice.getFirmwareVersion2())) {
             return false;
         }
-        if (!Objects.equals(attr.getVolatileIdentifier(), gbDevice.getVolatileAddress())) {
+        if (!Objects.equals(attr.getVolatileIdentifier(), getSavedVolatileAddress(gbDevice))) {
             return false;
         }
         return true;
@@ -504,7 +515,7 @@ public class DBHelper {
         attributes.setValidFromUTC(now.getTime());
         attributes.setFirmwareVersion1(gbDevice.getFirmwareVersion());
         attributes.setFirmwareVersion2(gbDevice.getFirmwareVersion2());
-        attributes.setVolatileIdentifier(gbDevice.getVolatileAddress());
+        attributes.setVolatileIdentifier(getSavedVolatileAddress(gbDevice));
         DeviceAttributesDao attributesDao = session.getDeviceAttributesDao();
         attributesDao.insert(attributes);
 

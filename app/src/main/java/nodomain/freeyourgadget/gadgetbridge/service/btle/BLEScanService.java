@@ -40,6 +40,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Parcel;
+import android.util.Pair;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
@@ -68,6 +69,7 @@ public class BLEScanService extends Service {
 
     public static final String EXTRA_DEVICE = "EXTRA_DEVICE";
     public static final String EXTRA_DEVICE_ADDRESS = "EXTRA_DEVICE_ADDRESS";
+    public static final String EXTRA_FOUND_ADDRESS = "EXTRA_FOUND_ADDRESS";
     public static final String EXTRA_RSSI = "EXTRA_RSSI";
     public static final String EXTRA_MANUFACTURER_SPECIFIC_DATA = "EXTRA_MANUFACTURER_SPECIFIC_DATA";
 
@@ -80,7 +82,7 @@ public class BLEScanService extends Service {
     private BluetoothLeScanner scanner;
 
     private Logger LOG = LoggerFactory.getLogger(getClass());
-    // private final ArrayList<ScanFilter> currentFilters = new ArrayList<>();
+    private final List<Pair<ScanFilter, String>> reconnectFilters = new ArrayList<>();
 
     private enum ScanningState {
         NOT_SCANNING,
@@ -107,7 +109,8 @@ public class BLEScanService extends Service {
             LOG.debug("onScanResult: {}", result);
 
             Intent intent = new Intent(EVENT_DEVICE_FOUND);
-            intent.putExtra(EXTRA_DEVICE_ADDRESS, device.getAddress());
+            intent.putExtra(EXTRA_DEVICE_ADDRESS, findDeviceAddress(result));
+            intent.putExtra(EXTRA_FOUND_ADDRESS, device.getAddress());
             intent.putExtra(EXTRA_RSSI, result.getRssi());
 
             Parcel parcel = Parcel.obtain();
@@ -396,20 +399,27 @@ public class BLEScanService extends Service {
                 scanner.stopScan(scanCallback);
             }
         }
+        reconnectFilters.clear();
+        int scannedDeviceCount = 0;
+        for (GBDevice device : GBApplication.app().getDeviceManager().getDevices()) {
+            if (device.getState() != GBDevice.State.WAITING_FOR_SCAN) {
+                continue;
+            }
+            final List<ScanFilter> filters = device.getDeviceCoordinator().createReconnectScanFilters(device);
+            if (!filters.isEmpty()) {
+                scannedDeviceCount++;
+            }
+            for (ScanFilter filter : filters) {
+                reconnectFilters.add(Pair.create(filter, device.getAddress()));
+            }
+        }
+
         ArrayList<ScanFilter> scanFilters = null;
 
         if (applyFilters) {
-            List<GBDevice> devices = GBApplication.app().getDeviceManager().getDevices();
-
-            scanFilters = new ArrayList<>(devices.size());
-
-            for (GBDevice device : devices) {
-                if (device.getState() == GBDevice.State.WAITING_FOR_SCAN) {
-                    scanFilters.add(new ScanFilter.Builder()
-                            .setDeviceAddress(device.getAddress())
-                            .build()
-                    );
-                }
+            scanFilters = new ArrayList<>(reconnectFilters.size());
+            for (Pair<ScanFilter, String> reconnectFilter : reconnectFilters) {
+                scanFilters.add(reconnectFilter.first);
             }
 
             if (scanFilters.isEmpty()) {
@@ -432,8 +442,8 @@ public class BLEScanService extends Service {
 
         scanner.startScan(scanFilters, scanSettingsBuilder.build(), scanCallback);
         if (applyFilters) {
-            LOG.debug("restartScan: started scan for {} devices", scanFilters.size());
-            updateNotification(true, scanFilters.size());
+            LOG.debug("restartScan: started scan for {} devices with {} filters", scannedDeviceCount, scanFilters.size());
+            updateNotification(true, scannedDeviceCount);
             currentState = ScanningState.SCANNING_WITH_FILTERS;
         } else {
             LOG.debug("restartScan: started scan for all devices");
@@ -441,6 +451,21 @@ public class BLEScanService extends Service {
             currentState = ScanningState.SCANNING_WITHOUT_FILTERS;
         }
 
+    }
+
+    /**
+     * Returns the address of the device whose reconnect scan filter matches the result.
+     * <p>
+     * If none matches, returns the address of the result.
+     */
+    private String findDeviceAddress(final ScanResult result) {
+        for (Pair<ScanFilter, String> reconnectFilter : reconnectFilters) {
+            if (reconnectFilter.first.matches(result)) {
+                LOG.debug("{} matches {} with {}", result.getDevice().getAddress(), reconnectFilter.second, reconnectFilter.first);
+                return reconnectFilter.second;
+            }
+        }
+        return result.getDevice().getAddress();
     }
 
     @Override

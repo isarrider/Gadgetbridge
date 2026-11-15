@@ -216,6 +216,20 @@ public interface DeviceCoordinator {
     Collection<? extends ScanFilter> createBLEScanFilters();
 
     /**
+     * Returns the scan filters that find a given device for a reconnect.
+     * <p>
+     * Defaults to an empty list (device is connected directly by its address).
+     */
+    @NonNull
+    List<ScanFilter> createReconnectScanFilters(@NonNull GBDevice device);
+
+    /**
+     * Whether the BLE address of the device changes when power-cycled.
+     * For such devices, it will only be found with {@link #createReconnectScanFilters(GBDevice)}.
+     */
+    boolean usesRotatingAddress();
+
+    /**
      * Creates a GBDevice from a candidate device. This is used to create a device based on the
      * results of a device scan (bluetooth or otherwise).
      *

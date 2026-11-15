@@ -348,7 +348,8 @@ public final class BtLEQueue implements Thread.UncaughtExceptionHandler {
 
     private boolean connectImp() {
         mPauseTransaction = false;
-        LOG.info("connectImp: Attempting to connect to {} ({})", mGbDevice.getAddress(), mGbDevice.getName());
+        final String connectionAddress = getConnectionAddress();
+        LOG.info("connectImp: Attempting to connect to {} at {} ({})", mGbDevice.getAddress(), connectionAddress, mGbDevice.getName());
         final boolean lowPower = GBApplication.getDevicePrefs(mGbDevice).getConnectionPriorityLowPower();
         // 30 seconds: the longest allowed ATT transaction timeout
         // 32 seconds: the longest allowed BLE connection timeout for an established  connection (supervision timeout)
@@ -359,7 +360,7 @@ public final class BtLEQueue implements Thread.UncaughtExceptionHandler {
         }, lowPower ? 45000L : 5000L);
 
         mBluetoothAdapter.cancelDiscovery();
-        BluetoothDevice remoteDevice = mBluetoothAdapter.getRemoteDevice(mGbDevice.getAddress());
+        BluetoothDevice remoteDevice = mBluetoothAdapter.getRemoteDevice(connectionAddress);
         if(!mSupportedServerServices.isEmpty()) {
             BluetoothManager bluetoothManager = (BluetoothManager) mContext.getSystemService(Context.BLUETOOTH_SERVICE);
             if (bluetoothManager == null) {
@@ -388,6 +389,19 @@ public final class BtLEQueue implements Thread.UncaughtExceptionHandler {
         }
 
         return mBluetoothGatt != null;
+    }
+
+    /**
+     * Returns the address for the GATT connection.
+     * <p>
+     * For a device with a rotating address, this is the address that the last scan found.
+     */
+    private String getConnectionAddress() {
+        final String volatileAddress = mGbDevice.getVolatileAddress();
+        if (volatileAddress != null && mGbDevice.getDeviceCoordinator().usesRotatingAddress()) {
+            return volatileAddress;
+        }
+        return mGbDevice.getAddress();
     }
 
     private void setDeviceConnectionState(final State newState) {
@@ -597,7 +611,7 @@ public final class BtLEQueue implements Thread.UncaughtExceptionHandler {
     private boolean checkCorrectBluetoothDevice(BluetoothDevice device) {
         //BluetoothDevice clientDevice = mBluetoothAdapter.getRemoteDevice(mGbDevice.getAddress());
 
-        if(!device.getAddress().equals(mGbDevice.getAddress())) { // != clientDevice && clientDevice != null) {
+        if(!device.getAddress().equals(getConnectionAddress())) { // != clientDevice && clientDevice != null) {
             LOG.warn("Ignoring request from wrong BluetoothDevice: {}", device.getAddress());
             return false;
         }

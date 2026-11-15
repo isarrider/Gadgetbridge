@@ -126,6 +126,7 @@ class DevicePairingViewModel(
         val address = candidate.macAddress
         val needsAssociation = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
             coordinator.connectionType != DeviceCoordinator.ConnectionType.USB &&
+            !coordinator.usesRotatingAddress() &&
             BluetoothAdapter.checkBluetoothAddress(address) &&
             CompanionDeviceUtil.getCompanionDeviceManager(context) != null &&
             !CompanionDeviceUtil.isCompanionAssociated(context, address)

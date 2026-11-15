@@ -343,7 +343,13 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                     return;
                 }
 
-                connectToDevice(target, false);
+                if (target.getDeviceCoordinator().usesRotatingAddress()) {
+                    final String foundAddress = intent.getStringExtra(BLEScanService.EXTRA_FOUND_ADDRESS);
+                    LOG.debug("Found {} at {}", deviceAddress, foundAddress);
+                    target.setVolatileAddress(foundAddress);
+                }
+
+                connectToDevice(target, false, true);
             }
         }
     };
@@ -509,7 +515,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 continue;
             }
             LOG.info("Reconnecting to {} after restart", device);
-            connectToDevice(device, false);
+            connectToDevice(device, false, false);
         }
     }
 
@@ -539,7 +545,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         return registeredStruct;
     }
 
-    private void connectToDevice(@Nullable final GBDevice device, final boolean firstTime) {
+    private void connectToDevice(@Nullable final GBDevice device, final boolean firstTime, final boolean fromScan) {
         final List<GBDevice> gbDevs = new ArrayList<>(2);
         final boolean fromExtra;
 
@@ -629,6 +635,20 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 registeredStruct = createDeviceStruct(gbDevice);
             }
 
+            final DeviceCoordinator coordinator = gbDevice.getDeviceCoordinator();
+            if (coordinator.usesRotatingAddress() && !fromScan) {
+                final boolean waitForScan = !firstTime && !gbDevice.isConnected() && !gbDevice.isConnecting()
+                        && !coordinator.createReconnectScanFilters(gbDevice).isEmpty();
+                if (waitForScan) {
+                    LOG.debug("connectToDevice - {} uses a rotating address, waiting for scan", deviceAddress);
+                    gbDevice.setUpdateState(GBDevice.State.WAITING_FOR_SCAN, this);
+                }
+                startService(new Intent(this, BLEScanService.class).setAction(BLEScanService.COMMAND_SCAN_DEVICE));
+                if (waitForScan) {
+                    continue;
+                }
+            }
+
             try {
                 DeviceSupport deviceSupport = registeredStruct.getDeviceSupport();
 
@@ -678,7 +698,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                             connected = deviceSupport.connectFirstTime();
                         } else {
                             deviceSupport.setAutoReconnect(autoReconnect);
-                            deviceSupport.setScanReconnect(reconnectViaScan);
+                            deviceSupport.setScanReconnect(reconnectViaScan || coordinator.usesRotatingAddress());
                             if (BuildConfig.DEBUG) {
                                 connected = stressTestConnect(deviceSupport);
                             } else {
@@ -741,7 +761,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         switch (action) {
             case ACTION_CONNECT:
                 boolean firstTime = intent.getBooleanExtra(EXTRA_CONNECT_FIRST_TIME, false);
-                connectToDevice(targetDevice, firstTime);
+                connectToDevice(targetDevice, firstTime, false);
                 break;
             default:
                 ArrayList<GBDevice> targetedDevices = new ArrayList<>();
@@ -1013,7 +1033,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         if (!pendingSleepAsAndroidAction.store(intent, device.getAddress())) {
             if (!connectInFlight && pendingSleepAsAndroidAction.wakes(saaAction)) {
                 LOG.info("Connecting to {}, Sleep as Android is looking for it", device.getAliasOrName());
-                connectToDevice(device, false);
+                connectToDevice(device, false, false);
                 return;
             }
             LOG.debug("Dropping Sleep as Android action {}, {} is not connected", saaAction, device.getAliasOrName());
@@ -1026,7 +1046,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         }
 
         LOG.info("Connecting to {} to replay Sleep as Android action {}", device.getAliasOrName(), saaAction);
-        connectToDevice(device, false);
+        connectToDevice(device, false, false);
     }
 
     private void sendPendingSleepAsAndroidAction(final GBDevice device) {

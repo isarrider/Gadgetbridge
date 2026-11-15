@@ -168,6 +168,21 @@ public abstract class AbstractDeviceCoordinator implements DeviceCoordinator {
         return Collections.emptyList();
     }
 
+    @NonNull
+    @Override
+    public List<ScanFilter> createReconnectScanFilters(@NonNull final GBDevice device) {
+        if (usesRotatingAddress()) {
+            LOG.error("{} uses a rotating address, but has no reconnect scan filters", getClass().getSimpleName());
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(new ScanFilter.Builder().setDeviceAddress(device.getAddress()).build());
+    }
+
+    @Override
+    public boolean usesRotatingAddress() {
+        return false;
+    }
+
     protected void setBatteryConfigOnDevice(GBDevice gbDevice) {
         for (BatteryConfig batteryConfig : getBatteryConfig(gbDevice)) {
             gbDevice.setBatteryIcon(batteryConfig.getBatteryIcon(), batteryConfig.getBatteryIndex());
@@ -217,7 +232,9 @@ public abstract class AbstractDeviceCoordinator implements DeviceCoordinator {
             DeviceAttributes attrs = deviceAttributesList.get(0);
             gbDevice.setFirmwareVersion(attrs.getFirmwareVersion1());
             gbDevice.setFirmwareVersion2(attrs.getFirmwareVersion2());
-            gbDevice.setVolatileAddress(attrs.getVolatileIdentifier());
+            if (!usesRotatingAddress()) {
+                gbDevice.setVolatileAddress(attrs.getVolatileIdentifier());
+            }
         }
 
         return gbDevice;
