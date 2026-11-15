@@ -409,6 +409,7 @@ public class InitOperation extends AbstractBTLEOperation<CasioGBD200DeviceSuppor
                     } catch (Exception e) {
                         LOG.error("Failed to release GATT callback after init: {}", e.getMessage());
                     }
+                    mSupport.onPostInitDone();
                     if (mFirstConnect) {
                         mSupport.disconnect();
                         mSupport.reconnectDelayed();

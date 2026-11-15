@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import nodomain.freeyourgadget.gadgetbridge.activities.casio.CasioIntervalTimerActivity;
+import nodomain.freeyourgadget.gadgetbridge.activities.casio.CasioMeasurementScreensActivity;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsCustomizer;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsHandler;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -49,6 +50,15 @@ public class CasioIntervalTimerSettingsCustomizer implements DeviceSpecificSetti
         if (pref != null) {
             pref.setOnPreferenceClickListener(preference -> {
                 final Intent intent = new Intent(handler.getContext(), CasioIntervalTimerActivity.class);
+                intent.putExtra(GBDevice.EXTRA_DEVICE, device);
+                handler.getContext().startActivity(intent);
+                return true;
+            });
+        }
+        final Preference measurementScreens = handler.findPreference("pref_casio_gbd200_measurement_screens");
+        if (measurementScreens != null) {
+            measurementScreens.setOnPreferenceClickListener(preference -> {
+                final Intent intent = new Intent(handler.getContext(), CasioMeasurementScreensActivity.class);
                 intent.putExtra(GBDevice.EXTRA_DEVICE, device);
                 handler.getContext().startActivity(intent);
                 return true;

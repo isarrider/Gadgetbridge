@@ -101,6 +101,7 @@ public class CasioGBD200DeviceCoordinator extends CasioGBX100DeviceCoordinator {
                 R.xml.devicesettings_casio_alert,
                 R.xml.devicesettings_world_clocks,
                 R.xml.devicesettings_casio_interval_timer,
+                R.xml.devicesettings_casio_gbd200_measurement_screens,
                 R.xml.devicesettings_workout_start_on_phone
         };
     }

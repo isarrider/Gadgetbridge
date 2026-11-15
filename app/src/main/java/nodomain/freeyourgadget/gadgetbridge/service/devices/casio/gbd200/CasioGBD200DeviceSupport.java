@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.casio.gbd200;
 import android.Manifest;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -28,6 +29,7 @@ import android.os.Looper;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +55,7 @@ import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSett
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventFindPhone;
 import nodomain.freeyourgadget.gadgetbridge.devices.casio.CasioConstants;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.opentracks.OpenTracksController;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind;
 import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
 import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
@@ -92,6 +95,9 @@ public class CasioGBD200DeviceSupport extends Casio2C2DSupport
 
     private static final Logger LOG = LoggerFactory.getLogger(CasioGBD200DeviceSupport.class);
 
+    // InitOperation normally reports the end of its post-init reads well within this time
+    private static final long POST_INIT_TIMEOUT_MS = 5000;
+
     private boolean mGetConfigurationPending = false;
     private boolean mRingNotificationPending = false;
     private boolean mNeedsGetConfiguration = false;
@@ -103,6 +109,13 @@ public class CasioGBD200DeviceSupport extends Casio2C2DSupport
     private final Handler mFakeRingDurationHandler = new Handler(Looper.getMainLooper());
     private final Handler mAutoRemoveMessageHandler = new Handler(Looper.getMainLooper());
     private final Handler mReconnectHandler = new Handler(Looper.getMainLooper());
+    private final Handler mPostInitHandler = new Handler(Looper.getMainLooper());
+    // set once InitOperation has finished its post-init reads and released the GATT callback
+    private volatile boolean mPostInitDone = false;
+    // the layout last read from the watch on this connection
+    private volatile CasioMeasurementScreens mWatchMeasurementScreens = null;
+    // the layout that was just written and is awaiting its read-back
+    private volatile CasioMeasurementScreens mExpectedMeasurementScreens = null;
 
     public CasioGBD200DeviceSupport() {
         super(LOG);
@@ -138,12 +151,31 @@ public class CasioGBD200DeviceSupport extends Casio2C2DSupport
         mFakeRingDurationHandler.removeCallbacksAndMessages(null);
         mAutoRemoveMessageHandler.removeCallbacksAndMessages(null);
         mReconnectHandler.removeCallbacksAndMessages(null);
+        mPostInitHandler.removeCallbacksAndMessages(null);
 
         mGetConfigurationPending = false;
         mRingNotificationPending = false;
         mResyncPending = false;
         mFakeRingDurationCounter = 0;
         mSyncedNotificationIDs.clear();
+        mPostInitDone = false;
+        mWatchMeasurementScreens = null;
+        mExpectedMeasurementScreens = null;
+    }
+
+    /** Called by InitOperation once the post-init reads are done. */
+    void onPostInitDone() {
+        mPostInitHandler.removeCallbacksAndMessages(null);
+        mPostInitDone = true;
+    }
+
+    @Override
+    public void setInitialized() {
+        super.setInitialized();
+        // InitOperation never gets to report the end of its post-init reads if another
+        // transaction takes the GATT callback away from it in the meantime
+        mPostInitHandler.removeCallbacksAndMessages(null);
+        mPostInitHandler.postDelayed(this::onPostInitDone, POST_INIT_TIMEOUT_MS);
     }
 
     @Override
@@ -661,6 +693,10 @@ public class CasioGBD200DeviceSupport extends Casio2C2DSupport
             pushActiveTimer();
             return;
         }
+        if (CasioMeasurementScreens.CONFIG_MEASUREMENT_SCREENS.equals(config)) {
+            writeMeasurementScreens();
+            return;
+        }
         onSharedPreferenceChanged(null, config);
     }
 
@@ -671,6 +707,10 @@ public class CasioGBD200DeviceSupport extends Casio2C2DSupport
 
     @Override
     public void onReadConfiguration(String config) {
+        if (CasioMeasurementScreens.CONFIG_MEASUREMENT_SCREENS.equals(config)) {
+            readMeasurementScreens();
+            return;
+        }
         if (config == null) {
             try {
                 mGetConfigurationPending = true;
@@ -734,6 +774,114 @@ public class CasioGBD200DeviceSupport extends Casio2C2DSupport
         } catch (IOException e) {
             LOG.info("onSharedPreferenceChanged: config send failed for {}", key);
         }
+    }
+
+    // ── Measurement screens (0x3e) ────────────────────────────────────────────
+
+    /** InitOperation keeps reading for a while after the device is set to initialized, and a
+     *  transaction queued in between would take the GATT callback away from it. The state is
+     *  compared directly because isInitialized() also holds for a scanned device without a link. */
+    private boolean isMeasurementScreensAccessible() {
+        return getDevice().getState().equalsOrHigherThan(GBDevice.State.INITIALIZED)
+                && mPostInitDone && !getDevice().isBusy();
+    }
+
+    private void readMeasurementScreens() {
+        mExpectedMeasurementScreens = null;
+        if (!isMeasurementScreensAccessible()) {
+            LOG.info("readMeasurementScreens skipped: not ready");
+            broadcastMeasurementScreens(CasioMeasurementScreens.Result.ERROR);
+            return;
+        }
+        try {
+            TransactionBuilder b = performInitialized("readMeasurementScreens");
+            requestFeature(b, new FeatureRequest(CasioMeasurementScreens.FEATURE),
+                    this::onMeasurementScreensResponse);
+            b.queue();
+        } catch (IOException e) {
+            LOG.warn("readMeasurementScreens failed: {}", e.getMessage());
+            broadcastMeasurementScreens(CasioMeasurementScreens.Result.ERROR);
+        }
+    }
+
+    /** Writes the layout from {@link CasioMeasurementScreens#PREF_MEASUREMENT_SCREENS_DRAFT} and
+     *  reads it back. */
+    private void writeMeasurementScreens() {
+        mExpectedMeasurementScreens = null;
+
+        SharedPreferences prefs = GBApplication.getDeviceSpecificSharedPrefs(
+                getDevice().getAddress());
+        final CasioMeasurementScreens draft = CasioMeasurementScreens.fromHex(
+                prefs.getString(CasioMeasurementScreens.PREF_MEASUREMENT_SCREENS_DRAFT, null));
+        // never leave it behind, a later stray call must not replay it over an on-watch edit
+        prefs.edit().remove(CasioMeasurementScreens.PREF_MEASUREMENT_SCREENS_DRAFT).apply();
+
+        final CasioMeasurementScreens watchState = mWatchMeasurementScreens;
+        if (!isMeasurementScreensAccessible()) {
+            LOG.info("writeMeasurementScreens skipped: not ready");
+            broadcastMeasurementScreens(CasioMeasurementScreens.Result.ERROR);
+            return;
+        }
+        if (draft == null) {
+            LOG.warn("writeMeasurementScreens skipped: no valid layout to write");
+            broadcastMeasurementScreens(CasioMeasurementScreens.Result.ERROR);
+            return;
+        }
+        if (watchState == null) {
+            LOG.warn("writeMeasurementScreens skipped: layout was not read from the watch yet");
+            broadcastMeasurementScreens(CasioMeasurementScreens.Result.ERROR);
+            return;
+        }
+        if (!draft.isWritable(watchState)) {
+            LOG.warn("writeMeasurementScreens skipped: {} has unknown fields the watch ({}) does not have",
+                    draft, watchState);
+            broadcastMeasurementScreens(CasioMeasurementScreens.Result.ERROR);
+            return;
+        }
+        if (draft.equals(watchState)) {
+            broadcastMeasurementScreens(CasioMeasurementScreens.Result.WRITE_OK);
+            return;
+        }
+        try {
+            TransactionBuilder b = performInitialized("writeMeasurementScreens");
+            writeAllFeatures(b, draft.encode());
+            // only reached once the watch has acknowledged the write
+            b.run(() -> mExpectedMeasurementScreens = draft);
+            requestFeature(b, new FeatureRequest(CasioMeasurementScreens.FEATURE),
+                    this::onMeasurementScreensResponse);
+            b.queue();
+        } catch (IOException e) {
+            LOG.warn("writeMeasurementScreens failed: {}", e.getMessage());
+            broadcastMeasurementScreens(CasioMeasurementScreens.Result.ERROR);
+        }
+    }
+
+    /** Handles the response to a plain read as well as the read-back after a write. */
+    private void onMeasurementScreensResponse(byte[] response) {
+        final CasioMeasurementScreens expected = mExpectedMeasurementScreens;
+        mExpectedMeasurementScreens = null;
+
+        CasioMeasurementScreens.Response result = CasioMeasurementScreens.classify(expected, response);
+        if (result.screens == null) {
+            LOG.warn("unexpected measurement screens response: {}", GB.hexdump(response));
+        } else {
+            mWatchMeasurementScreens = result.screens;
+            if (result.result == CasioMeasurementScreens.Result.WRITE_MISMATCH) {
+                LOG.warn("measurement screens read-back is {}, expected {}", result.screens, expected);
+            }
+        }
+        broadcastMeasurementScreens(result.result);
+    }
+
+    private void broadcastMeasurementScreens(CasioMeasurementScreens.Result result) {
+        final CasioMeasurementScreens watchState = mWatchMeasurementScreens;
+        Intent intent = new Intent(CasioMeasurementScreens.ACTION_MEASUREMENT_SCREENS);
+        intent.putExtra(GBDevice.EXTRA_DEVICE, getDevice());
+        intent.putExtra(CasioMeasurementScreens.EXTRA_MEASUREMENT_SCREENS_RESULT, result.name());
+        if (watchState != null) {
+            intent.putExtra(CasioMeasurementScreens.EXTRA_MEASUREMENT_SCREENS_IDS, watchState.toIds());
+        }
+        LocalBroadcastManager.getInstance(getContext()).sendBroadcast(intent);
     }
 
     // ── Reconnect helper ──────────────────────────────────────────────────────
