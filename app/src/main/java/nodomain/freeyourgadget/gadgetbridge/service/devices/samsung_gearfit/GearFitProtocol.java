@@ -275,8 +275,8 @@ public final class GearFitProtocol {
         w.i32(temperature);
         w.u8(unit);
         w.u8(0);
-        w.i32((int) timestampMillis);
-        w.i32((int) timestampMillis);
+        w.i32((int) (timestampMillis / 1000L));
+        w.i32((int) (timestampMillis / 1000L));
         return frame(PORT_HOME, w.toByteArray());
     }
 

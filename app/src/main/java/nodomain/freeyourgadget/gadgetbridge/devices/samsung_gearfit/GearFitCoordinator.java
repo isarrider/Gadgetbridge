@@ -75,6 +75,11 @@ public class GearFitCoordinator extends AbstractBLClassicDeviceCoordinator {
     }
 
     @Override
+    public boolean supportsManualHeartRateMeasurement(@NonNull final GBDevice device) {
+        return false;
+    }
+
+    @Override
     public SampleProvider<? extends ActivitySample> getSampleProvider(@NonNull final GBDevice device,
                                                                       @NonNull final DaoSession session) {
         return new GearFitActivitySampleProvider(device, session);

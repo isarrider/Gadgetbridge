@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.devices.samsung_gearfit;
 
-import android.content.SharedPreferences;
 import android.os.Parcel;
 
 import androidx.annotation.NonNull;
@@ -32,7 +31,6 @@ import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSett
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 
 public class GearFitSettingsCustomizer implements DeviceSpecificSettingsCustomizer {
-    private static final String PREF_GEARFIT_CALENDAR_DEFAULT_APPLIED = "gearfit_calendar_default_applied";
     private static final String DEFAULT_CALENDAR_LOOKAHEAD_DAYS = "1";
 
     @Override
@@ -43,19 +41,17 @@ public class GearFitSettingsCustomizer implements DeviceSpecificSettingsCustomiz
     public void customizeSettings(final DeviceSpecificSettingsHandler handler,
                                   final Prefs prefs,
                                   final String rootKey) {
-        if (prefs.getBoolean(PREF_GEARFIT_CALENDAR_DEFAULT_APPLIED, false)) {
-            return;
-        }
-
+        // The Gear Fit event clock only shows the hour of upcoming events, so keep the lookahead at
+        // one day and hide the preference rather than offering a setting the device cannot honor.
         final String key = DeviceSettingsPreferenceConst.PREF_CALENDAR_LOOKAHEAD_DAYS;
-        final SharedPreferences sharedPreferences = prefs.getPreferences();
-        // The Gear Fit event clock is intended for near-term events, so default to one day.
-        sharedPreferences.edit().putString(key, DEFAULT_CALENDAR_LOOKAHEAD_DAYS).apply();
+        prefs.getPreferences().edit().putString(key, DEFAULT_CALENDAR_LOOKAHEAD_DAYS).apply();
         final Preference preference = handler.findPreference(key);
+        if (preference != null) {
+            preference.setVisible(false);
+        }
         if (preference instanceof EditTextPreference) {
             ((EditTextPreference) preference).setText(DEFAULT_CALENDAR_LOOKAHEAD_DAYS);
         }
-        sharedPreferences.edit().putBoolean(PREF_GEARFIT_CALENDAR_DEFAULT_APPLIED, true).apply();
     }
 
     @Override
