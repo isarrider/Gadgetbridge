@@ -25,24 +25,24 @@
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
-package nodomain.freeyourgadget.gadgetbridge.model;
+package nodomain.freeyourgadget.gadgetbridge.model
 
 /**
  * For every supported device, a device type constant must exist.
  * Its coordinator is bound in its vendor's coordinator module, keyed by
- * {@link nodomain.freeyourgadget.gadgetbridge.devices.DeviceTypeKey}.
- * <p>
+ * [nodomain.freeyourgadget.gadgetbridge.devices.DeviceTypeKey].
+ *
  * Note: they name of the enum is stored in the DB, so it is fixed forever,
  * and may not be changed.
- * <p>
- * Migration note: As of <a href="https://codeberg.org/Freeyourgadget/Gadgetbridge/pulls/3347">#3347</a>,
+ *
+ * Migration note: As of [#3347](https://codeberg.org/Freeyourgadget/Gadgetbridge/pulls/3347),
  * the numeric device id is not used anymore. If your database has development devices that still used
  * the numeric ID, you need to update assets/migrations/devicetype.json before installing Gadgetbridge
  * after rebasing, in order for your device to be migrated correctly. If you failed to do this and the
  * device is now not being displayed, please update the file and uncomment the call to migrateDeviceTypes
  * in GBApplication.
  */
-public enum DeviceType {
+enum class DeviceType {
     UNKNOWN,
     PEBBLE,
     MIBAND,
@@ -714,16 +714,11 @@ public enum DeviceType {
     INNOVO_IP900BP_B,
     TEST;
 
-    public boolean isSupported() {
-        return this != UNKNOWN;
-    }
+    val isSupported: Boolean
+        get() = this != UNKNOWN
 
-    public static DeviceType fromName(final String name) {
-        for (DeviceType type : values()) {
-            if (type.name().equals(name)) {
-                return type;
-            }
-        }
-        return DeviceType.UNKNOWN;
+    companion object {
+        @JvmStatic
+        fun fromName(name: String): DeviceType = entries.firstOrNull { it.name == name } ?: UNKNOWN
     }
 }
