@@ -417,6 +417,7 @@ object EndurainService : WorkoutUploadTarget {
                         }
                     } catch (e: Exception) {
                         LOG.error("Endurain photo sync failed for activity {}", activityId, e)
+                        done(failed)
                     }
                 }.start()
             }
