@@ -26,7 +26,11 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
@@ -41,7 +45,9 @@ import nodomain.freeyourgadget.gadgetbridge.entities.HeartPulseSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.User;
 import nodomain.freeyourgadget.gadgetbridge.entities.GenericRespiratoryRateSample;
 import nodomain.freeyourgadget.gadgetbridge.entities.XiaomiSleepStageSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.XiaomiSleepStageSampleDao;
 import nodomain.freeyourgadget.gadgetbridge.entities.XiaomiSleepTimeSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.XiaomiSleepTimeSampleDao;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.XiaomiActivityFileId;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.XiaomiActivityParser;
@@ -49,6 +55,17 @@ import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 public class SleepDetailsParser extends XiaomiActivityParser {
     private static final Logger LOG = LoggerFactory.getLogger(SleepDetailsParser.class);
+
+    private int stagePacketsOffset = -1;
+
+    /**
+     * Package-private for unit tests: returns the buffer position reached after parsing all
+     * header sections (metadata, extended header, HR, SpO2, snore) and immediately prior
+     * to parsing stage packets. Instance-scoped; not thread-shared.
+     */
+    int getStagePacketsOffset() {
+        return stagePacketsOffset;
+    }
 
     @Override
     public boolean parse(final Context context, final GBDevice gbDevice, final XiaomiActivityFileId fileId, final byte[] bytes) {
@@ -130,20 +147,25 @@ public class SleepDetailsParser extends XiaomiActivityParser {
         sample.setWakeupTime(wakeupTime * 1000L);
         sample.setIsAwake(isAwake == 1);
 
-        if (fileId.getVersion() == 5) {
-            // 9 bytes of unverified metadata. Layout observed in v5 bins:
+        if (fileId.getVersion() >= 5) {
+            // 9 bytes of unverified metadata. Layout observed in v5 and v6 bins:
             //   off 0..3  u32 LE  unknown counter (no obvious correlation with sleep)
             //   off 4     u8      always 0 (padding)
             //   off 5..8  u32 LE  (wakeupTime - bedTime2) in seconds (redundant)
+            if (buf.remaining() < 17) {
+                LOG.warn("Truncated sleep details version {} metadata header", fileId.getVersion());
+                return false;
+            }
             buf.get(new byte[9]);
             final int bedTime2 = buf.getInt(); // around ~30 min before bedTime, is previous one fall asleep time?
             final int wakeupTime2 = buf.getInt(); // == wakeupTime
             intoBedTime = bedTime2 * 1000L;
-            headerIdx += 5;
-        }
-
-        if (intoBedTime != null) {
-            sample.setIntoBedTime(intoBedTime);
+            if (intoBedTime != null) {
+                sample.setIntoBedTime(intoBedTime);
+            }
+            if (version == 5) {
+                headerIdx += 5; // In v5 (2-byte header), Heart rate is at bit 9
+            }
         }
 
         if (version >= 6) {
@@ -151,9 +173,8 @@ public class SleepDetailsParser extends XiaomiActivityParser {
                 LOG.warn("Truncated sleep details version 6 extended header");
                 return false;
             }
-            buf.get(new byte[24]); // unknown, all zeros in the seen v6 files
-            // Bits 8..18 are clear, and bit 19 is set in all seen v6 headers, which
-            // contain only heart rate samples
+            buf.get(new byte[24]); // 24-byte extended header block in v6 (Watch S5)
+            // In v6 (3-byte header): bit 19 = HR, bit 20 = SpO2, bit 21 = Snore
             headerIdx = 19;
         }
 
@@ -216,9 +237,11 @@ public class SleepDetailsParser extends XiaomiActivityParser {
             headerIdx++;
         }
 
-        final List<XiaomiSleepStageSample> stages = new ArrayList<>();
+        final Map<Long, List<XiaomiSleepStageSample>> sessionStages = new LinkedHashMap<>();
+        final Map<Long, Long> sessionDurations = new LinkedHashMap<>();
         final List<HeartPulseSample> heartPulseSamples = new ArrayList<>();
         final List<GenericRespiratoryRateSample> respiratoryRateSamples = new ArrayList<>();
+        stagePacketsOffset = buf.position();
         LOG.debug("Sleep stage packets from offset {}", Integer.toHexString(buf.position()));
 
         // Do not crash if we face a buffer underflow, as the next parsing is not 100% fool-proof,
@@ -318,6 +341,7 @@ public class SleepDetailsParser extends XiaomiActivityParser {
                     summaries.add(sample);
                     sample = null;
                 } else if (type == 17) { // Stages
+                    final List<XiaomiSleepStageSample> packetStages = new ArrayList<>();
                     long currentTime = ts * 1000;
                     for (int i = 0; i < dataLen / 2; i++) {
                         // when the change to the phase occurs
@@ -329,9 +353,25 @@ public class SleepDetailsParser extends XiaomiActivityParser {
                         final XiaomiSleepStageSample stageSample = new XiaomiSleepStageSample();
                         stageSample.setTimestamp(currentTime);
                         stageSample.setStage(decodeStage(stage));
-                        stages.add(stageSample);
+                        packetStages.add(stageSample);
 
                         currentTime += offsetMinutes * 60000;
+                    }
+
+                    // A type 17 packet is a full snapshot from the session start timestamp `ts`.
+                    // When multiple type 17 packets are present for the same session (intermediate
+                    // progress checkpoints emitted during sleep), later snapshots cover longer durations
+                    // and may revise earlier boundary classifications (e.g. merging phases, which can
+                    // reduce the segment count despite covering a longer duration).
+                    // Prefer the snapshot covering the longest duration; if durations are equal, keep
+                    // the later packet in the stream as it represents the watch's latest consolidation.
+                    if (!packetStages.isEmpty()) {
+                        final long packetDurationMs = currentTime - (ts * 1000L);
+                        final Long previousDurationMs = sessionDurations.get(ts);
+                        if (previousDurationMs == null || packetDurationMs >= previousDurationMs) {
+                            sessionStages.put(ts, packetStages);
+                            sessionDurations.put(ts, packetDurationMs);
+                        }
                     }
                 } else if (type == 0xa) {
                     // Per-sample sleep readouts: 4 bytes per record.
@@ -386,53 +426,127 @@ public class SleepDetailsParser extends XiaomiActivityParser {
             summaries.add(sample);
         }
 
-        boolean persistSuccess = !stagesParseFailed;
+        final List<XiaomiSleepStageSample> stages = new ArrayList<>();
+        for (final List<XiaomiSleepStageSample> sList : sessionStages.values()) {
+            stages.addAll(sList);
+        }
 
-        // save all the samples that we got
+        boolean persistSuccess = !stagesParseFailed;
+        final boolean finalStagesParseFailed = stagesParseFailed;
+
+        // Save summary and stage samples atomically
         try (DBHandler handler = GBApplication.acquireDB()) {
             final DaoSession session = handler.getDaoSession();
 
-            final XiaomiSleepTimeSampleProvider sampleProvider = new XiaomiSleepTimeSampleProvider(gbDevice, session);
-
-            for (final XiaomiSleepTimeSample summary : summaries) {
-                summary.setDevice(DBHelper.getDevice(gbDevice, session));
-                summary.setUser(DBHelper.getUser(session));
-
-                // Check if there is already a later sleep sample - if so, ignore this one
-                // Samples for the same sleep will always have the same bedtime (timestamp), but we might get
-                // multiple bedtimes until the user wakes up
-                final List<XiaomiSleepTimeSample> existingSamples = sampleProvider.getAllSamples(summary.getTimestamp(), summary.getTimestamp());
-                if (!existingSamples.isEmpty()) {
-                    final XiaomiSleepTimeSample existingSample = existingSamples.get(0);
-                    if (existingSample.getWakeupTime() > summary.getWakeupTime()) {
-                        LOG.warn("Ignoring sleep sample - existing sample is more recent ({})", existingSample.getWakeupTime());
-                        continue;
-                    }
+            session.runInTx(() -> {
+                final Device device = DBHelper.findDevice(gbDevice, session);
+                if (device == null || device.getId() == null) {
+                    LOG.warn("Device not found in database for '{}'", gbDevice.getAliasOrName());
+                    throw new IllegalStateException("Device not found in database for '" + gbDevice.getAliasOrName() + "'");
                 }
 
-                sampleProvider.addSample(summary);
-            }
+                final XiaomiSleepTimeSampleProvider summaryProvider = new XiaomiSleepTimeSampleProvider(gbDevice, session);
+                final Set<Long> acceptedSessions = new HashSet<>();
+                final Map<Long, Long> previousWakeupTimes = new LinkedHashMap<>();
+
+                for (final XiaomiSleepTimeSample summary : summaries) {
+                    summary.setDevice(device);
+                    summary.setUser(DBHelper.getUser(session));
+
+                    final long sessionBedTime = summary.getTimestamp();
+
+                    // Check for existing session with same bedtime
+                    final List<XiaomiSleepTimeSample> existingSamples = summaryProvider.getAllSamples(sessionBedTime, sessionBedTime);
+                    if (!existingSamples.isEmpty()) {
+                        final XiaomiSleepTimeSample existingSample = existingSamples.get(0);
+                        final boolean existingIsFinished = Boolean.TRUE.equals(existingSample.getIsAwake());
+                        final boolean newIsFinished = Boolean.TRUE.equals(summary.getIsAwake());
+
+                        // If parsing of sleep stages failed, do not modify an existing session
+                        if (finalStagesParseFailed) {
+                            LOG.warn("Ignoring sleep update - stages parsing failed, preserving existing session ({})", existingSample.getWakeupTime());
+                            continue;
+                        }
+
+                        // If the incoming update has no stage samples, do not modify an existing finalized session
+                        if (existingIsFinished && stages.isEmpty()) {
+                            LOG.warn("Ignoring sleep update - no stages decoded, preserving finalized session ({})", existingSample.getWakeupTime());
+                            continue;
+                        }
+
+                        // If existing session is already finalized and the incoming update is an unfinalized checkpoint, reject
+                        if (existingIsFinished && !newIsFinished) {
+                            LOG.warn("Ignoring sleep update - existing session is already finalized ({})", existingSample.getWakeupTime());
+                            continue;
+                        }
+                        // If both are unfinalized checkpoints and existing covers a later wakeup time, reject older incoming file
+                        if (!existingIsFinished && !newIsFinished && existingSample.getWakeupTime() != null
+                                && summary.getWakeupTime() != null && existingSample.getWakeupTime() > summary.getWakeupTime()) {
+                            LOG.warn("Ignoring sleep checkpoint - existing checkpoint covers later wakeup ({})", existingSample.getWakeupTime());
+                            continue;
+                        }
+
+                        if (existingSample.getWakeupTime() != null) {
+                            previousWakeupTimes.put(sessionBedTime, existingSample.getWakeupTime());
+                        }
+                    }
+
+                    // In the Xiaomi protocol, each sleep session is permanently identified by its fileId
+                    // timestamp (bedTime). Cross-file bedtime revisions are not observed in real captures;
+                    // session matching and cleanup are strictly scoped to sessionBedTime.
+                    summaryProvider.addSample(summary);
+                    acceptedSessions.add(sessionBedTime);
+                }
+
+                if (!finalStagesParseFailed && !stages.isEmpty()) {
+                    final List<XiaomiSleepStageSample> stagesToPersist = new ArrayList<>();
+
+                    for (final Map.Entry<Long, List<XiaomiSleepStageSample>> entry : sessionStages.entrySet()) {
+                        final List<XiaomiSleepStageSample> sList = entry.getValue();
+                        if (sList.isEmpty()) {
+                            continue;
+                        }
+                        final long start = sList.get(0).getTimestamp();
+                        // Only update stages for sessions that were accepted (not older/rejected intermediate files)
+                        if (!summaries.isEmpty() && !acceptedSessions.contains(start)) {
+                            LOG.warn("Skipping sleep stages for rejected/older session at {}", start);
+                            continue;
+                        }
+
+                        final Long durationMs = sessionDurations.get(entry.getKey());
+                        long end = (durationMs != null && durationMs > 0) ? (start + durationMs) : (sList.get(sList.size() - 1).getTimestamp() + 1);
+                        if (wakeupTime > 0 && wakeupTime * 1000L > start) {
+                            end = Math.max(end, wakeupTime * 1000L);
+                        }
+                        final Long prevWakeup = previousWakeupTimes.get(start);
+                        if (prevWakeup != null && prevWakeup > start) {
+                            end = Math.max(end, prevWakeup);
+                        }
+
+                        session.getXiaomiSleepStageSampleDao().queryBuilder()
+                                .where(
+                                        XiaomiSleepStageSampleDao.Properties.DeviceId.eq(device.getId()),
+                                        XiaomiSleepStageSampleDao.Properties.Timestamp.ge(start),
+                                        XiaomiSleepStageSampleDao.Properties.Timestamp.lt(end)
+                                )
+                                .buildDelete()
+                                .executeDeleteWithoutDetachingEntities();
+
+                        stagesToPersist.addAll(sList);
+                    }
+
+                    if (!stagesToPersist.isEmpty()) {
+                        final XiaomiSleepStageSampleProvider stageSampleProvider = new XiaomiSleepStageSampleProvider(gbDevice, session);
+                        if (!stageSampleProvider.persistSamples(stagesToPersist, context)) {
+                            throw new IllegalStateException("Failed to persist sleep stage samples");
+                        }
+                    }
+                }
+            });
         } catch (final Exception e) {
-            GB.toast(context, "Error saving sleep sample", Toast.LENGTH_LONG, GB.ERROR);
-            LOG.error("Error saving sleep sample", e);
+            GB.toast(context, "Error saving sleep data", Toast.LENGTH_LONG, GB.ERROR);
+            LOG.error("Error saving sleep data", e);
             persistSuccess = false;
-        }
-
-        if (!stagesParseFailed && !stages.isEmpty()) {
-            LOG.debug("Persisting {} sleep stage samples", stages.size());
-
-            // Save the sleep stage samples
-            try (DBHandler handler = GBApplication.acquireDB()) {
-                final DaoSession session = handler.getDaoSession();
-
-                final XiaomiSleepStageSampleProvider sampleProvider = new XiaomiSleepStageSampleProvider(gbDevice, session);
-
-                sampleProvider.persistSamples(stages, context);
-            } catch (final Exception e) {
-                GB.toast(context, "Error saving sleep stage samples", Toast.LENGTH_LONG, GB.ERROR);
-                LOG.error("Error saving sleep stage samples", e);
-                persistSuccess = false;
-            }
         }
 
         // Save the heart pulse samples
