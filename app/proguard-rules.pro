@@ -25,7 +25,7 @@
 
 -keepattributes JavascriptInterface
 
-# DeviceType is the root for DeviceCoordinators and their DeviceSupports
+# DeviceType's constant names are stored in the database and read back by name, so keep them as written
 -keep class nodomain.freeyourgadget.gadgetbridge.model.DeviceType {
     *;
 }
