@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.regex.Pattern;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.MiScaleWeightSampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.TimeSampleProvider;
@@ -71,6 +72,16 @@ public class MiCompositionScaleCoordinator extends AbstractBLEDeviceCoordinator 
     public String getManufacturer() {
         // Actual manufacturer is Huami
         return "Xiaomi";
+    }
+
+    @Override
+    public DeviceSpecificSettings getDeviceSpecificSettings(final GBDevice device) {
+        final DeviceSpecificSettings settings = new DeviceSpecificSettings();
+
+        // Same switch as the Mi Smart Scale 2: whether measurements below 10 kg are stored.
+        settings.addRootScreen(R.xml.devicesettings_mismartscale);
+
+        return settings;
     }
 
     @Override

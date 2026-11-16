@@ -48,6 +48,15 @@ public class WeightMeasurement {
     }
 
     public static WeightMeasurement decode(ByteBuffer buf) {
+        return decode(buf, true);
+    }
+
+    /**
+     * @param requireStable whether an unstabilized reading must be rejected. Live weight packets
+     *                      are sent repeatedly while the reading settles, but history frames are
+     *                      already complete and do not always repeat the stability bit.
+     */
+    public static WeightMeasurement decode(ByteBuffer buf, boolean requireStable) {
         if (buf.remaining() < 10)
             return null;
 
@@ -57,7 +66,7 @@ public class WeightMeasurement {
         boolean stabilized = testBit(flags, 5) && !testBit(flags, 7);
 
         // Only decode measurement once weight reading has stabilized
-        if (!stabilized)
+        if (requireStable && !stabilized)
             return null;
 
         float weightKg = weightToKg(buf.getShort(), flags);
