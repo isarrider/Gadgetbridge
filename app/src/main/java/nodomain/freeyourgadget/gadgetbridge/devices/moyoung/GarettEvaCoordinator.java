@@ -20,6 +20,7 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.MoyoungBloodPressureSampleProvider;
@@ -29,6 +30,10 @@ import nodomain.freeyourgadget.gadgetbridge.entities.MoyoungBloodPressureSample;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarettEvaCoordinator extends AbstractMoyoungDeviceCoordinator {
+    @Inject
+    public GarettEvaCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Garett Eva$");

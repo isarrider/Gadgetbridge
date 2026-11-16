@@ -25,6 +25,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 
 import java.util.List;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2;
@@ -114,6 +115,7 @@ public class UnknownDeviceCoordinator extends AbstractDeviceCoordinator {
 
     }
 
+    @Inject
     public UnknownDeviceCoordinator() {
         sampleProvider = new UnknownSampleProvider();
     }

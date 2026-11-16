@@ -19,10 +19,15 @@ package nodomain.freeyourgadget.gadgetbridge.devices.sbm_67;
 import androidx.annotation.Nullable;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class SanitasSBM67Coordinator extends AbstractSBM67Coordinator {
+    @Inject
+    public SanitasSBM67Coordinator() {
+    }
+
     @Nullable
     @Override
     protected Pattern getSupportedDeviceName() {

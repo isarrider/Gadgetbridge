@@ -40,12 +40,13 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.ninebot.NinebotKers
 import nodomain.freeyourgadget.gadgetbridge.service.devices.ninebot.NinebotRideMode
 import nodomain.freeyourgadget.gadgetbridge.service.devices.ninebot.NinebotScooterSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 /**
  * Ninebot / Segway KickScooters with the classic Ninebot protocol, tested with the F2 Pro (BLE name `NAGV` and ten
  * more characters).
  */
-class NinebotScooterCoordinator : AbstractBLEDeviceCoordinator() {
+class NinebotScooterCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^NAGV[0-9A-F]{10}$")
 
     override fun getManufacturer(): String = "Segway-Ninebot"

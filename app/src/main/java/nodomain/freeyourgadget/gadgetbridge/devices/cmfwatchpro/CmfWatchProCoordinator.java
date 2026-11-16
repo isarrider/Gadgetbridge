@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -63,6 +64,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.cmfwatchpro.CmfWatch
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 
 public class CmfWatchProCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public CmfWatchProCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Watch Pro$");

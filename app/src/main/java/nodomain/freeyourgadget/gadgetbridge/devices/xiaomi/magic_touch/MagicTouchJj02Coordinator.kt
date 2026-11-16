@@ -27,6 +27,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.magic_touch.MagicTouchJj02Support
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 /**
  * Mijia Smart Neck and Shoulder Massager (xiaomi.magic_touch.jj02).
@@ -36,7 +37,7 @@ import java.util.regex.Pattern
  * 12-byte Mi Home cloud token (device settings); afterwards power, mode, heat,
  * timer and battery all work over the encrypted channel.
  */
-class MagicTouchJj02Coordinator : AbstractBLEDeviceCoordinator() {
+class MagicTouchJj02Coordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^xiaomi\\.magic_touch\\.jj02.*")
 
     override fun getDeviceNameResource(): Int = R.string.devicetype_magic_touch_jj02

@@ -1,11 +1,16 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.garmin.bike;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminEdge840Coordinator extends GarminBikeComputerCoordinator {
+    @Inject
+    public GarminEdge840Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Edge 840$");

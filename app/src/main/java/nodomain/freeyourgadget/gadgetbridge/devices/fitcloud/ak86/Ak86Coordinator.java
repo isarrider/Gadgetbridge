@@ -20,6 +20,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.fitcloud.ak86;
 import androidx.annotation.DrawableRes;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.fitcloud.ak102.Ak102Coordinator;
@@ -36,6 +37,9 @@ import nodomain.freeyourgadget.gadgetbridge.devices.fitcloud.ak102.Ak102Coordina
  * from the AK102 is the advertised name it matches and the display name.
  */
 public class Ak86Coordinator extends Ak102Coordinator {
+    @Inject
+    public Ak86Coordinator() {
+    }
 
     @Override
     protected Pattern getSupportedDeviceName() {

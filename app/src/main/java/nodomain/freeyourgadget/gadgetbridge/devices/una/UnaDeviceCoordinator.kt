@@ -32,8 +32,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.una.UnaDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class UnaDeviceCoordinator : AbstractBLEDeviceCoordinator() {
+class UnaDeviceCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern {
         // Digit count isn't a confirmed fixed width; unconstrained to avoid missing real units.
         return Pattern.compile("^UNA Watch \\d+$")

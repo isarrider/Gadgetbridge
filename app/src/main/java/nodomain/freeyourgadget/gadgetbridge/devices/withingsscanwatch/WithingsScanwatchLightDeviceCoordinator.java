@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.withingsscanwatch;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsCustomizer;
@@ -27,6 +28,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.withingsscanwatch.WithingsScanwatchLightDeviceSupport;
 
 public class WithingsScanwatchLightDeviceCoordinator extends WithingsScanwatchDeviceCoordinator {
+    @Inject
+    public WithingsScanwatchLightDeviceCoordinator() {
+    }
+
     @Override
     public Pattern getSupportedDeviceName() {
         return Pattern.compile("(?i)^ScanWatch Light.*");

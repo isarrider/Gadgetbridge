@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -57,6 +58,7 @@ public class PebbleCoordinator extends AbstractBLClassicDeviceCoordinator {
     private static final String APP_STORE_PREF = "pebble_app_store";
     private static final String APP_STORE_DEFAULT = "rebble";
 
+    @Inject
     public PebbleCoordinator() {
     }
 

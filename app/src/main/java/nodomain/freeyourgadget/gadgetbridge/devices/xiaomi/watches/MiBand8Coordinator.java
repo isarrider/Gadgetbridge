@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
@@ -29,6 +30,10 @@ import nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class MiBand8Coordinator extends XiaomiCoordinator {
+    @Inject
+    public MiBand8Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Xiaomi Smart Band 8 [A-Z0-9]{4}$");

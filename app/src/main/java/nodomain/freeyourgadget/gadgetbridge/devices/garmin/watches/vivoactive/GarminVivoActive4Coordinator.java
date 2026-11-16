@@ -3,12 +3,17 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.vivoactive;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminVivoActive4Coordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminVivoActive4Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^vívoactive 4$");

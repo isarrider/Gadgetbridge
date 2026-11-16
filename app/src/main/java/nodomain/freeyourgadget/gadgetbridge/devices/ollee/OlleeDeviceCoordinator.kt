@@ -28,8 +28,9 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.ollee.OlleeDeviceSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class OlleeDeviceCoordinator : AbstractBLEDeviceCoordinator() {
+class OlleeDeviceCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern {
         // The watch advertises as "Ollee Watch" (verified on hardware)
         return Pattern.compile("^Ollee.*")

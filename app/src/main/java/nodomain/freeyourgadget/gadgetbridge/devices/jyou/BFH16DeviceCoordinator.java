@@ -24,6 +24,7 @@ import android.os.ParcelUuid;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import androidx.annotation.NonNull;
 
@@ -35,6 +36,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.jyou.BFH16DeviceSupport;
 
 public class BFH16DeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public BFH16DeviceCoordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         return "Denver";

@@ -23,8 +23,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.SoundcoreE
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.SoundcoreEqualizerPresets
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.devices.SoundcoreMotionPlusProtocol
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class SoundcoreMotionPlusCoordinator : SoundcoreEarbudsCoordinator() {
+class SoundcoreMotionPlusCoordinator @Inject constructor() : SoundcoreEarbudsCoordinator() {
     override fun getModelName(): String = "A3116"
 
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^Soundcore Motion\\+$", Pattern.CASE_INSENSITIVE)

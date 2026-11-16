@@ -17,6 +17,7 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.watches;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
@@ -31,6 +32,10 @@ import nodomain.freeyourgadget.gadgetbridge.R;
  * <p>Observed advertisement: {@code Xiaomi Smart Band 11 3C8D}.
  */
 public class MiBand11Coordinator extends MiBand10Coordinator {
+    @Inject
+    public MiBand11Coordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_miband11;

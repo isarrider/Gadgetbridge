@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.CameraActivity;
@@ -44,6 +45,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.fitpro.FitProDeviceS
 
 public class FitProDeviceCoordinator extends AbstractBLEDeviceCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(FitProDeviceCoordinator.class);
+
+    @Inject
+    public FitProDeviceCoordinator() {
+    }
 
 
     @Override

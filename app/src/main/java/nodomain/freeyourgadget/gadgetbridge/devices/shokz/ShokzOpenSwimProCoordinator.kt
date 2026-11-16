@@ -4,8 +4,9 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class ShokzOpenSwimProCoordinator: ShokzCoordinator() {
+class ShokzOpenSwimProCoordinator @Inject constructor(): ShokzCoordinator() {
     override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("^OpenSwim Pro by Shokz$")
     }

@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.moondrop;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
@@ -29,6 +30,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.moondrop.MoondropSpaceTravel2DeviceSupport;
 
 public class MoondropSpaceTravel2Coordinator extends MoondropSpaceTravelCoordinator {
+    @Inject
+    public MoondropSpaceTravel2Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("Space Travel 2");

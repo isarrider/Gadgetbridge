@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.moondrop;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class MoondropSpaceTravel2UltraCoordinator extends MoondropSpaceTravel2Coordinator {
+    @Inject
+    public MoondropSpaceTravel2UltraCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("Space Travel 2 Ultra");

@@ -18,12 +18,16 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.fitcloud.ak75;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.fitcloud.ak102.Ak102Coordinator;
 
 /// #6446
 public class Ak75ProCoordinator extends Ak102Coordinator {
+    @Inject
+    public Ak75ProCoordinator() {
+    }
 
     @Override
     protected Pattern getSupportedDeviceName() {

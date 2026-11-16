@@ -4,11 +4,16 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class KW19BCoordinator extends AbstractMoyoungDeviceCoordinator {
+    @Inject
+    public KW19BCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^KW19-B$");

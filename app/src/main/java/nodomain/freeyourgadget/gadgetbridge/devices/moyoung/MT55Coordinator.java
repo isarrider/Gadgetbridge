@@ -20,6 +20,7 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -40,6 +41,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
  * contention stalls the activity fetch. Pair only within Gadgetbridge.
  */
 public class MT55Coordinator extends AbstractMoyoungDeviceCoordinator {
+    @Inject
+    public MT55Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^MT55$");

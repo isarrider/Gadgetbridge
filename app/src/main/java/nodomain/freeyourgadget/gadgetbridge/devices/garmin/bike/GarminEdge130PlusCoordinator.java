@@ -3,11 +3,16 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.bike;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminEdge130PlusCoordinator extends GarminBikeComputerCoordinator {
+    @Inject
+    public GarminEdge130PlusCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Edge 130 Plus$");

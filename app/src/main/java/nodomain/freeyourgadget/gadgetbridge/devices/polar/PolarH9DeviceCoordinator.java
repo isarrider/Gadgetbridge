@@ -3,11 +3,16 @@ package nodomain.freeyourgadget.gadgetbridge.devices.polar;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class PolarH9DeviceCoordinator extends AbstractPolarDeviceCoordinator {
+    @Inject
+    public PolarH9DeviceCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_polarh9;

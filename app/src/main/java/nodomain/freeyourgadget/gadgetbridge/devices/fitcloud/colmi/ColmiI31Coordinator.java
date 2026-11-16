@@ -17,6 +17,7 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.fitcloud.colmi;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.fitcloud.ak102.Ak102Coordinator;
@@ -34,6 +35,9 @@ import nodomain.freeyourgadget.gadgetbridge.devices.fitcloud.ak102.Ak102Coordina
  * matches and the display name.
  */
 public class ColmiI31Coordinator extends Ak102Coordinator {
+    @Inject
+    public ColmiI31Coordinator() {
+    }
 
     @Override
     protected Pattern getSupportedDeviceName() {

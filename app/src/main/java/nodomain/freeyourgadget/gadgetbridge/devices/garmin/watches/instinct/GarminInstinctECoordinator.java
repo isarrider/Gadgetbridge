@@ -3,12 +3,17 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.instinct;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminInstinctECoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminInstinctECoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Instinct E - \\d+mm$");

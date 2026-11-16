@@ -3,12 +3,17 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.venu;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminVenuSq2MusicCoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminVenuSq2MusicCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // Not tested, and the supported device name below is unconfirmed

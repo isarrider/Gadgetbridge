@@ -24,6 +24,7 @@ import androidx.annotation.Nullable;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import de.greenrobot.dao.query.QueryBuilder;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
@@ -49,6 +50,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.acti
 import nodomain.freeyourgadget.gadgetbridge.service.devices.withingsscanwatch.WithingsScanwatchDeviceSupport;
 
 public class WithingsScanwatchDeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public WithingsScanwatchDeviceCoordinator() {
+    }
 
     @Override
     public EnumSet<ServiceDeviceSupport.Flags> getInitialFlags() {

@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -15,6 +16,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.gree.GreeAcSupport;
 
 public class GreeAcCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public GreeAcCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         // GR-AC_10001_09_xxxx_SC

@@ -24,6 +24,7 @@ import android.os.ParcelUuid;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import androidx.annotation.NonNull;
 
@@ -38,6 +39,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.no1f1.No1F1Support;
 
 public class No1F1Coordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public No1F1Coordinator() {
+    }
 
     @NonNull
     @Override

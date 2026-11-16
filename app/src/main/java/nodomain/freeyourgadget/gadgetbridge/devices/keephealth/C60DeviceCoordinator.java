@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.CameraActivity;
@@ -42,6 +43,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.keephealth.C60DeviceSupport;
 
 public class C60DeviceCoordinator extends AbstractDeviceCoordinator  {
+    @Inject
+    public C60DeviceCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_c60;

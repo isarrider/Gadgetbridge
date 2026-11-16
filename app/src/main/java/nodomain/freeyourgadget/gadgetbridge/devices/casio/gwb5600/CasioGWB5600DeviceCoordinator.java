@@ -20,6 +20,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.casio.gwb5600;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
@@ -31,6 +32,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.casio.gwb5600.CasioGWB5600DeviceSupport;
 
 public class CasioGWB5600DeviceCoordinator extends Casio2C2DDeviceCoordinator {
+    @Inject
+    public CasioGWB5600DeviceCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("CASIO GW-B5600");

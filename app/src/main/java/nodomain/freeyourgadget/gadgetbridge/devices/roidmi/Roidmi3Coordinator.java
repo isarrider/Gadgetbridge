@@ -21,6 +21,8 @@ import androidx.annotation.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
+
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
@@ -29,6 +31,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.roidmi.RoidmiSupport
 
 public class Roidmi3Coordinator extends RoidmiCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(Roidmi3Coordinator.class);
+
+    @Inject
+    public Roidmi3Coordinator() {
+    }
 
     @Override
     public boolean supports(@NonNull final GBDeviceCandidate candidate) {

@@ -3,6 +3,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.vivosport;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
@@ -10,6 +11,10 @@ import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCo
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminVivosportCoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminVivosportCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^vívosport$");

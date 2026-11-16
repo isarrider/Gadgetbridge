@@ -36,11 +36,16 @@ import static nodomain.freeyourgadget.gadgetbridge.devices.lefun.LefunConstants.
 import static nodomain.freeyourgadget.gadgetbridge.devices.lefun.LefunConstants.NUM_ALARM_SLOTS;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 /**
  * Device coordinator for Lefun band
  */
 public class LefunDeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public LefunDeviceCoordinator() {
+    }
+
     @Override
     public int getBondingStyle() {
         return BONDING_STYLE_NONE;

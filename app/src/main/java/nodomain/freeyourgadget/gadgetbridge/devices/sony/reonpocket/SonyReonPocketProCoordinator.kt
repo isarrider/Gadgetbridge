@@ -30,8 +30,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.reonpocket.SonyReonPocketProSupport
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class SonyReonPocketProCoordinator : AbstractBLEDeviceCoordinator() {
+class SonyReonPocketProCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^RNP-P1$")
 
     override fun getManufacturer(): String = "Sony"

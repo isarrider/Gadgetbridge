@@ -35,8 +35,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.jabra.JabraEvolve255Support
 import androidx.core.content.edit
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-open class JabraEvolve255Coordinator : AbstractBLClassicDeviceCoordinator() {
+open class JabraEvolve255Coordinator @Inject constructor() : AbstractBLClassicDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern {
         return Pattern.compile("Jabra Evolve2 55", Pattern.CASE_INSENSITIVE)
     }

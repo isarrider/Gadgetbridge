@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -45,6 +46,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.fitcloud.ak102.Ak102
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 public class Ak102Coordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public Ak102Coordinator() {
+    }
 
     @Override
     @NonNull

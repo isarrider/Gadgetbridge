@@ -21,12 +21,17 @@ import android.util.Size;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class MiWatchLiteCoordinator extends XiaomiCoordinator {
+    @Inject
+    public MiWatchLiteCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         return true;

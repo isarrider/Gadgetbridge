@@ -19,8 +19,9 @@ package nodomain.freeyourgadget.gadgetbridge.devices.onemoresonoflow
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class OneMoreSonoFlowSECoordinator : OneMoreSonoFlowCoordinator() {
+class OneMoreSonoFlowSECoordinator @Inject constructor() : OneMoreSonoFlowCoordinator() {
     protected override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("1MORE SonoFlow SE", Pattern.LITERAL)
     }

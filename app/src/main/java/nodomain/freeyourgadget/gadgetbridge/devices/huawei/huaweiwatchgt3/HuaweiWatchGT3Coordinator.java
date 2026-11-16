@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.huawei.huaweiwatchgt3;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiBRCoordinator;
@@ -26,6 +27,10 @@ import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiConstants;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class HuaweiWatchGT3Coordinator extends HuaweiBRCoordinator {
+    @Inject
+    public HuaweiWatchGT3Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("(" + HuaweiConstants.HU_WATCHGT3_NAME + "|" + HuaweiConstants.HU_WATCHGT3PRO_NAME + "|" + HuaweiConstants.HU_WATCHGT3SE_NAME + ").*", Pattern.CASE_INSENSITIVE);

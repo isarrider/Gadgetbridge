@@ -25,8 +25,9 @@ import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.devices.gloryfit.GloryFitCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class ColmiP10Coordinator : GloryFitCoordinator() {
+class ColmiP10Coordinator @Inject constructor() : GloryFitCoordinator() {
     override fun getManufacturer(): String = "Colmi"
 
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^P10\\(ID-[0-9A-F]{4}\\)$")

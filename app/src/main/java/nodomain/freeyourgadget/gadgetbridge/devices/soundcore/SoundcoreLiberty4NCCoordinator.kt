@@ -20,8 +20,9 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.devices.SoundcoreLiberty4NCProtocol
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class SoundcoreLiberty4NCCoordinator : SoundcoreEarbudsCoordinator() {
+class SoundcoreLiberty4NCCoordinator @Inject constructor() : SoundcoreEarbudsCoordinator() {
     override fun getModelName(): String = "A3947"
 
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("soundcore Liberty 4 NC")

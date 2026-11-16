@@ -8,6 +8,8 @@ import androidx.annotation.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
+
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractDeviceCoordinator;
@@ -19,6 +21,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.generic_headphones.G
 
 public class GenericHeadphonesCoordinator extends AbstractDeviceCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(GenericHeadphonesCoordinator.class);
+
+    @Inject
+    public GenericHeadphonesCoordinator() {
+    }
 
     @Override
     public int getOrderPriority() {

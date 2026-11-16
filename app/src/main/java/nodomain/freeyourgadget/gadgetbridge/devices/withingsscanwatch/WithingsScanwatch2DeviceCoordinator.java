@@ -17,6 +17,7 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.withingsscanwatch;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
@@ -35,6 +36,10 @@ import nodomain.freeyourgadget.gadgetbridge.R;
  * first-generation ScanWatch for now.
  */
 public class WithingsScanwatch2DeviceCoordinator extends WithingsScanwatchDeviceCoordinator {
+    @Inject
+    public WithingsScanwatch2DeviceCoordinator() {
+    }
+
     @Override
     public Pattern getSupportedDeviceName() {
         return Pattern.compile("(?i)^ScanWatch 2(\\s.*)?$");

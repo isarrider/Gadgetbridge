@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.GBException;
@@ -37,6 +38,9 @@ import nodomain.freeyourgadget.gadgetbridge.util.BondingUtil;
  * This class partners with G1DeviceSupport.java and G1PairingActivity.java
  */
 public class G1DeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public G1DeviceCoordinator() {
+    }
 
     @NonNull
     @Override

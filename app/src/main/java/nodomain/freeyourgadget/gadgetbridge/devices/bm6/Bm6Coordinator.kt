@@ -11,9 +11,10 @@ import nodomain.freeyourgadget.gadgetbridge.model.TemperatureSample
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.bm6.Bm6Support
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 
-class Bm6Coordinator : AbstractBLEDeviceCoordinator() {
+class Bm6Coordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun isExperimental(): Boolean {
         // #6236 - Untested
         return true;

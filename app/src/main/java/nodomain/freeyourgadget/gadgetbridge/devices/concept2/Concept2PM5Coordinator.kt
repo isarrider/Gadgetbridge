@@ -23,13 +23,14 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.concept2.Concept2PM5Support
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 /**
  * Concept2 Performance Monitor 5, the monitor of the RowErg, SkiErg and BikeErg. It advertises
  * while its "Connect Device" screen is open (More Options, Turn Wireless ON), and needs no pairing
  * or key.
  */
-class Concept2PM5Coordinator : AbstractBLEDeviceCoordinator() {
+class Concept2PM5Coordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     // "PM5 430070439", optionally followed by the erg, as in "PM5 430070439 Row"
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^PM5 \\d+( .*)?$")
 

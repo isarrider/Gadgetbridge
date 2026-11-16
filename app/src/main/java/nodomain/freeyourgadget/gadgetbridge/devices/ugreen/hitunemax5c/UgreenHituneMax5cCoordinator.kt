@@ -24,8 +24,9 @@ import nodomain.freeyourgadget.gadgetbridge.model.BatteryConfig
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.ugreen.UgreenHituneMax5cSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-open class UgreenHituneMax5cCoordinator : AbstractBLClassicDeviceCoordinator() {
+open class UgreenHituneMax5cCoordinator @Inject constructor() : AbstractBLClassicDeviceCoordinator() {
 
     override fun getSupportedDeviceName(): Pattern {
         return Pattern.compile("UGREEN HiTune Max\\s*5[cC]", Pattern.CASE_INSENSITIVE)

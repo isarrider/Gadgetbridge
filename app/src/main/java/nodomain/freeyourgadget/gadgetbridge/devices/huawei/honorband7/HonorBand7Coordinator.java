@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.huawei.honorband7;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
@@ -27,6 +28,10 @@ import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiLECoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class HonorBand7Coordinator extends HuaweiLECoordinator {
+    @Inject
+    public HonorBand7Coordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // #6027

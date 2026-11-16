@@ -7,8 +7,13 @@ import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCo
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 public class GarminInstinct2SolarCoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminInstinct2SolarCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Instinct 2 Solar$");

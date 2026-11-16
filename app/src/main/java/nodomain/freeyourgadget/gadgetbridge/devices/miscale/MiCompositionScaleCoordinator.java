@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -38,6 +39,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.miscale.MiCompositionScaleDeviceSupport;
 
 public class MiCompositionScaleCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public MiCompositionScaleCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("MIBCS|MIBFS", Pattern.CASE_INSENSITIVE);

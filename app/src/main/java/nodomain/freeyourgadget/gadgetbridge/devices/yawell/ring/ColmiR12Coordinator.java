@@ -22,12 +22,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class ColmiR12Coordinator extends AbstractYawellRingCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(ColmiR12Coordinator.class);
+
+    @Inject
+    public ColmiR12Coordinator() {
+    }
 
     @Override
     protected Pattern getSupportedDeviceName() {

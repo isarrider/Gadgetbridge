@@ -4,8 +4,9 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.gloryfit.GloryFitCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class GrvFc1Coordinator : GloryFitCoordinator() {
+class GrvFc1Coordinator @Inject constructor() : GloryFitCoordinator() {
     override fun getManufacturer(): String {
         return "GRV"
     }

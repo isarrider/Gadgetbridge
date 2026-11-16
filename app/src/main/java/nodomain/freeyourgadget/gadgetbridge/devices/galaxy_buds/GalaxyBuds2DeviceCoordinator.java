@@ -17,6 +17,7 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.galaxy_buds;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsCustomizer;
@@ -24,6 +25,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryConfig;
 
 public class GalaxyBuds2DeviceCoordinator extends GalaxyBudsGenericCoordinator {
+    @Inject
+    public GalaxyBuds2DeviceCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         // Some devices are just called "Buds2", others "Galaxy Buds2 (..."

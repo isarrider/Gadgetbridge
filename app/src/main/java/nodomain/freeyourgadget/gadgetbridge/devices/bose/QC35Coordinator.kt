@@ -18,8 +18,9 @@ package nodomain.freeyourgadget.gadgetbridge.devices.bose
 
 import nodomain.freeyourgadget.gadgetbridge.R
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class QC35Coordinator : AbstractBoseCoordinator() {
+class QC35Coordinator @Inject constructor() : AbstractBoseCoordinator() {
     protected override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("Bose QC 35.*")
     }

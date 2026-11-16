@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.huawei.huaweiwatchfit4pro;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiBRCoordinator;
@@ -26,6 +27,10 @@ import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiConstants;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class HuaweiWatchFit4ProCoordinator extends HuaweiBRCoordinator {
+    @Inject
+    public HuaweiWatchFit4ProCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         return true;

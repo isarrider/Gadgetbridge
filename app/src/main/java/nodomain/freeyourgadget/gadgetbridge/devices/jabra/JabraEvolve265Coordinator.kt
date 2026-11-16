@@ -18,8 +18,9 @@ package nodomain.freeyourgadget.gadgetbridge.devices.jabra
 
 import nodomain.freeyourgadget.gadgetbridge.R
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class JabraEvolve265Coordinator : JabraEvolve255Coordinator() {
+class JabraEvolve265Coordinator @Inject constructor() : JabraEvolve255Coordinator() {
     override fun getSupportedDeviceName(): Pattern {
         return Pattern.compile("Jabra Evolve2 65", Pattern.CASE_INSENSITIVE)
     }

@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.flipper.zero;
 import androidx.annotation.NonNull;
 
 import java.util.UUID;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -29,6 +30,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.flipper.zero.support.FlipperZeroSupport;
 
 public class FlipperZeroCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public FlipperZeroCoordinator() {
+    }
+
     @Override
     public boolean supports(GBDeviceCandidate candidate) {
         if (candidate.supportsService(UUID.fromString("00003082-0000-1000-8000-00805f9b34fb"))){

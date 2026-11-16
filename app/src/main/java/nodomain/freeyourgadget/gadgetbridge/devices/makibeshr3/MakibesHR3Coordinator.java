@@ -21,6 +21,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import android.content.SharedPreferences;
 
@@ -49,6 +50,10 @@ public class MakibesHR3Coordinator extends AbstractBLEDeviceCoordinator {
     public static final int FindPhone_OFF = 0;
 
     private static final Logger LOG = LoggerFactory.getLogger(MakibesHR3Coordinator.class);
+
+    @Inject
+    public MakibesHR3Coordinator() {
+    }
 
 
     public static boolean shouldEnableHeadsUpScreen(SharedPreferences sharedPrefs) {

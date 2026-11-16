@@ -19,11 +19,16 @@ package nodomain.freeyourgadget.gadgetbridge.devices.yawell.ring;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class YawellR10Coordinator extends AbstractYawellRingCoordinator {
+    @Inject
+    public YawellR10Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^R10_[0-9A-F]{4}$");

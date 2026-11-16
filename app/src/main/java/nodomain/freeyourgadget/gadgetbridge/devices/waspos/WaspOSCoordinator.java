@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -36,6 +37,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.waspos.WaspOSDeviceSupport;
 
 public class WaspOSCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public WaspOSCoordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         return "MicroPython";

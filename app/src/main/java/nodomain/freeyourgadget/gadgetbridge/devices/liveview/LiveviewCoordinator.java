@@ -20,6 +20,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.liveview;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLClassicDeviceCoordinator;
@@ -28,6 +29,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.liveview.LiveviewSupport;
 
 public class LiveviewCoordinator extends AbstractBLClassicDeviceCoordinator {
+    @Inject
+    public LiveviewCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("LiveView.*");

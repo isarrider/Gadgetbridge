@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.yawell.ring;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class YawellY27Coordinator extends ColmiR02Coordinator {
+    @Inject
+    public YawellY27Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Y27_[0-9A-F]{4}$");

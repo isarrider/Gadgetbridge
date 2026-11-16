@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiCoordinator;
@@ -33,6 +34,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 /// #6614
 /// Xiaomi Watch 5 (miwear.watch.o61w). Runs Wear OS, but still speaks the Xiaomi protobuf protocol over SPP.
 public class XiaomiWatch5Coordinator extends XiaomiCoordinator {
+    @Inject
+    public XiaomiWatch5Coordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_xiaomi_watch_5;

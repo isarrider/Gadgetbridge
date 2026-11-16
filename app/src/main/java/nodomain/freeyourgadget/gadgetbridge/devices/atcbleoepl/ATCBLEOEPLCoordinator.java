@@ -28,6 +28,7 @@ import androidx.annotation.NonNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractDeviceCoordinator;
@@ -38,6 +39,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.atcbleoepl.ATCBLEOEPLDeviceSupport;
 
 public class ATCBLEOEPLCoordinator extends AbstractDeviceCoordinator {
+    @Inject
+    public ATCBLEOEPLCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_atc_ble_oepl;

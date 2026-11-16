@@ -18,9 +18,10 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.hrm
 
 import nodomain.freeyourgadget.gadgetbridge.R
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 // #5633
-class GarminHrm600Coordinator : GarminHrmProPlusCoordinator() {
+class GarminHrm600Coordinator @Inject constructor() : GarminHrmProPlusCoordinator() {
     override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("^HRM600:[0-9]+$")
     }

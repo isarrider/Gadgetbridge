@@ -37,6 +37,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -58,6 +59,10 @@ public class WatchXPlusDeviceCoordinator extends AbstractBLEDeviceCoordinator {
     private static final int FindPhone_ON = -1;
     public static final int FindPhone_OFF = 0;
     public static boolean isBPCalibrated = false;
+
+    @Inject
+    public WatchXPlusDeviceCoordinator() {
+    }
 
     @NonNull
     @Override

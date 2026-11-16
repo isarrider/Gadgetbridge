@@ -21,6 +21,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.casio.gb6900;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider;
@@ -32,6 +33,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.casio.gb6900.CasioGB6900DeviceSupport;
 
 public class CasioGB6900DeviceCoordinator extends CasioDeviceCoordinator {
+    @Inject
+    public CasioGB6900DeviceCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("CASIO.*(6900B|5600B|STB-1000).*");

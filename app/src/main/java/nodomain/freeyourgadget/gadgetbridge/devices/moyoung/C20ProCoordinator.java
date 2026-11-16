@@ -20,11 +20,16 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class C20ProCoordinator extends AbstractMoyoungDeviceCoordinator {
+    @Inject
+    public C20ProCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^C20_Pro$");

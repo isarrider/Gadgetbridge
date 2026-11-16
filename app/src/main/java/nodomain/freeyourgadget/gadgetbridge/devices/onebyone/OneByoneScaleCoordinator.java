@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.onebyone;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -37,6 +38,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.onebyone.OneByoneSca
  * manufacturer. The protocol is documented in the openScale project (OneByoneHandler, GPLv3).
  */
 public class OneByoneScaleCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public OneByoneScaleCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("Health Scale", Pattern.CASE_INSENSITIVE);

@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 
 import java.util.EnumSet;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -32,6 +33,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.ServiceDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.vibratissimo.VibratissimoSupport;
 
 public class VibratissimoCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public VibratissimoCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("Vibratissimo.*");

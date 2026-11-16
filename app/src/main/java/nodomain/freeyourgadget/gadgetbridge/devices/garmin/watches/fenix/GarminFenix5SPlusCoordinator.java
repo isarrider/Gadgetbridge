@@ -3,6 +3,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.fenix;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCoordinator;
@@ -10,6 +11,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 /// #6433
 public class GarminFenix5SPlusCoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminFenix5SPlusCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // #4616 - Some sync and connection issues

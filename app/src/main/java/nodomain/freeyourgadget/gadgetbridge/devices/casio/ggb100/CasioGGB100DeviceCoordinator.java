@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Collections;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.casio.CasioLocationIndicatorActivity;
@@ -64,6 +65,10 @@ import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs;
 
 public class CasioGGB100DeviceCoordinator extends Casio2C2DDeviceCoordinator {
     protected static final Logger LOG = LoggerFactory.getLogger(CasioGGB100DeviceCoordinator.class);
+
+    @Inject
+    public CasioGGB100DeviceCoordinator() {
+    }
 
     @Override
     protected void applyDefaultPreferences(final DevicePrefs devicePreferences, final SharedPreferences.Editor editor) {

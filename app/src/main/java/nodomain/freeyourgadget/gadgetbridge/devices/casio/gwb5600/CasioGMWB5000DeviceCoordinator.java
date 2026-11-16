@@ -20,12 +20,17 @@ package nodomain.freeyourgadget.gadgetbridge.devices.casio.gwb5600;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
 
 public class CasioGMWB5000DeviceCoordinator extends CasioGWB5600DeviceCoordinator {
+    @Inject
+    public CasioGMWB5000DeviceCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("CASIO GMW-B5000");

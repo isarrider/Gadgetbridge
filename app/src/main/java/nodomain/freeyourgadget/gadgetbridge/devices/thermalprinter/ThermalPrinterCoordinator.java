@@ -9,6 +9,7 @@ import androidx.annotation.Nullable;
 
 import java.util.Collections;
 import java.util.List;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
@@ -22,6 +23,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.thermalprinter.GenericThermalPrinterSupport;
 
 public class ThermalPrinterCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public ThermalPrinterCoordinator() {
+    }
+
     @Override
     public int getBondingStyle() {
         return BONDING_STYLE_LAZY;

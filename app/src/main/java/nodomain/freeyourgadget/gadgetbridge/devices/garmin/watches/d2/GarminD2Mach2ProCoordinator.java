@@ -1,11 +1,16 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.d2;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.fenix.GarminFenix8ProCoordinator;
 
 public class GarminD2Mach2ProCoordinator extends GarminFenix8ProCoordinator {
+    @Inject
+    public GarminD2Mach2ProCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // Not tested, and the supported device name below is unconfirmed

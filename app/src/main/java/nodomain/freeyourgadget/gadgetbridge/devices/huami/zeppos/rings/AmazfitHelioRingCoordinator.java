@@ -21,12 +21,17 @@ import androidx.annotation.NonNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class AmazfitHelioRingCoordinator extends ZeppOsCoordinator {
+    @Inject
+    public AmazfitHelioRingCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         return true;

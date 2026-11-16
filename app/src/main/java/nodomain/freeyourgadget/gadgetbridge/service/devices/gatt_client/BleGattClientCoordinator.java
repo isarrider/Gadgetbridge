@@ -2,6 +2,8 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.gatt_client;
 
 import androidx.annotation.NonNull;
 
+import javax.inject.Inject;
+
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -9,6 +11,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 
 public class BleGattClientCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public BleGattClientCoordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         return "Generic";

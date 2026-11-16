@@ -3,12 +3,17 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.vivoactive;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminVivoActiveCoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminVivoActiveCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // Not tested, and the supported device name below is unconfirmed

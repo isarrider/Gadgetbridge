@@ -37,8 +37,9 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.pinetime.PineTimeJFSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class PineTimeJFCoordinator : AbstractBLEDeviceCoordinator() {
+class PineTimeJFCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     protected override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("Pinetime-JF.*|InfiniTime.*")
     }

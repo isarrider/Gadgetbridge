@@ -10,8 +10,9 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.victron.VictronSmartShuntSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class VictronSmartShuntCoordinator : AbstractBLEDeviceCoordinator() {
+class VictronSmartShuntCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern {
         return Pattern.compile("^SmartShunt [A-Z0-9]+$")
     }

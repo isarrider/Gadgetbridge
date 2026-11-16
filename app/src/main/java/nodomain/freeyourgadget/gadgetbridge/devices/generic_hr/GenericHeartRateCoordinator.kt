@@ -1,5 +1,6 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.generic_hr
 
+import javax.inject.Inject
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
@@ -12,7 +13,7 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService
 import nodomain.freeyourgadget.gadgetbridge.service.devices.generic_hr.GenericHeartRateSupport
 
-class GenericHeartRateCoordinator : AbstractBLEDeviceCoordinator() {
+class GenericHeartRateCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun isExperimental(): Boolean {
         // Not heavily tested
         return true

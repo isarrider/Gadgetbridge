@@ -1,11 +1,16 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.tactix;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCoordinator;
 
 public class GarminTactix7Coordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminTactix7Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^tactix 7$");

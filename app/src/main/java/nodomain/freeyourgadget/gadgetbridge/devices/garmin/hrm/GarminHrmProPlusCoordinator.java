@@ -21,6 +21,7 @@ import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -35,6 +36,10 @@ import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs;
 
 public class GarminHrmProPlusCoordinator extends GarminCoordinator {
+    @Inject
+    public GarminHrmProPlusCoordinator() {
+    }
+
     @Override
     public int getDefaultIconResource() {
         return R.drawable.ic_device_lovetoy;

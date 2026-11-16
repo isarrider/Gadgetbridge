@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -33,6 +34,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.nut.NutSupport;
 
 public class NutCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public NutCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("nut.*", Pattern.CASE_INSENSITIVE);

@@ -26,8 +26,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.sinilink.SinilinkPla
 import nodomain.freeyourgadget.gadgetbridge.service.devices.sinilink.SinilinkPlaybackState
 import nodomain.freeyourgadget.gadgetbridge.service.devices.sinilink.SinilinkSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class SinilinkCoordinator : AbstractBLEDeviceCoordinator() {
+class SinilinkCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("^Sinilink-APP$")
     }

@@ -5,8 +5,9 @@ import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.devices.SoundcoreSpaceOneProtocol
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class SoundcoreSpaceOneCoordinator : SoundcoreEarbudsCoordinator() {
+class SoundcoreSpaceOneCoordinator @Inject constructor() : SoundcoreEarbudsCoordinator() {
     override fun isExperimental(): Boolean = true
 
     override fun getModelName(): String = "A3035"

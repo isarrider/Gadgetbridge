@@ -17,8 +17,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.teufel.TeufelMyndAut
 import nodomain.freeyourgadget.gadgetbridge.service.devices.teufel.TeufelMyndSource
 import nodomain.freeyourgadget.gadgetbridge.service.devices.teufel.TeufelMyndSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class TeufelMyndCoordinator : AbstractBLClassicDeviceCoordinator() {
+class TeufelMyndCoordinator @Inject constructor() : AbstractBLClassicDeviceCoordinator() {
     override fun getManufacturer(): String {
         return "Teufel"
     }

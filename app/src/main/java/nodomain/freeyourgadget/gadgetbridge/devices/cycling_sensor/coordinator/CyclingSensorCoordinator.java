@@ -4,6 +4,8 @@ import android.app.Activity;
 
 import androidx.annotation.NonNull;
 
+import javax.inject.Inject;
+
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.CyclingSampleProvider;
@@ -18,6 +20,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.cycling_sensor.support.CyclingSensorSupport;
 
 public class CyclingSensorCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public CyclingSensorCoordinator() {
+    }
+
     @Override
     public boolean supports(GBDeviceCandidate candidate) {
         return candidate.supportsService(CyclingSensorSupport.UUID_CYCLING_SENSOR_SERVICE);

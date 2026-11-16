@@ -23,12 +23,17 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class AmazfitBalance2Coordinator extends ZeppOsCoordinator {
+    @Inject
+    public AmazfitBalance2Coordinator() {
+    }
+
     @Override
     public List<String> getDeviceBluetoothNames() {
         return Collections.singletonList("Amazfit Balance 2");

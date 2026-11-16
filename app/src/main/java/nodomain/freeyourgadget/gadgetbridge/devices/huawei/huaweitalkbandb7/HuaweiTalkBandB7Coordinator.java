@@ -3,6 +3,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.huawei.huaweitalkbandb7;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
@@ -11,6 +12,10 @@ import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiConstants;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class HuaweiTalkBandB7Coordinator extends HuaweiBRCoordinator {
+    @Inject
+    public HuaweiTalkBandB7Coordinator() {
+    }
+
     @Override
     public boolean isTransactionCrypted() {
         return false;

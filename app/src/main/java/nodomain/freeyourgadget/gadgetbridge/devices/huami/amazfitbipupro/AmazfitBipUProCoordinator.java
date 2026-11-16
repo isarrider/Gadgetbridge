@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
@@ -36,6 +37,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.amazfitbipupro.AmazfitBipUProSupport;
 
 public class AmazfitBipUProCoordinator extends HuamiCoordinator {
+    @Inject
+    public AmazfitBipUProCoordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         // Actual manufacturer is Huami

@@ -20,6 +20,7 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -29,6 +30,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
  * Same MoYoung platform as the Fire-Boltt 069; it also streams live heart rate on 0x2A37.
  */
 public class FireBolttNinjaPhantomCoordinator extends AbstractMoyoungDeviceCoordinator {
+    @Inject
+    public FireBolttNinjaPhantomCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^FB BGS001$");

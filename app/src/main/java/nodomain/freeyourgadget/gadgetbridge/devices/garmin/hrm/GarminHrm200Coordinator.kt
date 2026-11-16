@@ -4,9 +4,10 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 /// #5110
-class GarminHrm200Coordinator: GarminHrmCoordinator() {
+class GarminHrm200Coordinator @Inject constructor(): GarminHrmCoordinator() {
     override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("^HRM 200$")
     }

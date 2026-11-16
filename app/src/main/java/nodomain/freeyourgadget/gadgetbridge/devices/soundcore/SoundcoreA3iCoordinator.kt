@@ -19,8 +19,9 @@ package nodomain.freeyourgadget.gadgetbridge.devices.soundcore
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class SoundcoreA3iCoordinator : SoundcoreEarbudsCoordinator() {
+class SoundcoreA3iCoordinator @Inject constructor() : SoundcoreEarbudsCoordinator() {
     override fun getModelName(): String = "A3992"
 
     override fun getSupportedDeviceName(): Pattern =

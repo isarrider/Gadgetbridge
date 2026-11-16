@@ -22,6 +22,8 @@ import android.os.ParcelUuid;
 
 import androidx.annotation.NonNull;
 
+import javax.inject.Inject;
+
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
@@ -38,6 +40,10 @@ public class VescCoordinator extends AbstractBLEDeviceCoordinator {
     public final static String UUID_SERVICE_SERIAL_NRF = "0000ffe0-0000-1000-8000-00805f9b34fb";
     public final static String UUID_CHARACTERISTIC_SERIAL_TX_NRF = "0000ffe0-0000-1000-8000-00805f9b34fb";
     public final static String UUID_CHARACTERISTIC_SERIAL_RX_NRF = "0000ffe1-0000-1000-8000-00805f9b34fb";
+
+    @Inject
+    public VescCoordinator() {
+    }
 
     @Override
     public int[] getSupportedDeviceSpecificSettings(GBDevice device) {

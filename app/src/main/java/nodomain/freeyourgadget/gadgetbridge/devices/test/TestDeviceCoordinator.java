@@ -32,6 +32,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -112,6 +113,10 @@ import nodomain.freeyourgadget.gadgetbridge.util.FileUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 
 public class TestDeviceCoordinator extends AbstractDeviceCoordinator {
+    @Inject
+    public TestDeviceCoordinator() {
+    }
+
     @Override
     public boolean supports(@NonNull final GBDeviceCandidate candidate) {
         return false;

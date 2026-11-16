@@ -19,10 +19,15 @@ package nodomain.freeyourgadget.gadgetbridge.devices.moyoung;
 import androidx.annotation.DrawableRes;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class R50ProCoordinator extends AbstractMoyoungDeviceCoordinator {
+    @Inject
+    public R50ProCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^R50Pro$");

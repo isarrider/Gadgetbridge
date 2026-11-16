@@ -7,8 +7,9 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.bm2.Bm2Support
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class Bm2Coordinator : AbstractBLEDeviceCoordinator() {
+class Bm2Coordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern {
         return Pattern.compile("^MATSON Monitor$")
     }

@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
@@ -35,6 +36,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.amazfitgts2.AmazfitGTS2MiniSupport;
 
 public class AmazfitGTS2MiniCoordinator extends AmazfitGTS2Coordinator {
+    @Inject
+    public AmazfitGTS2MiniCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("Amazfit GTS2 mini", Pattern.CASE_INSENSITIVE);

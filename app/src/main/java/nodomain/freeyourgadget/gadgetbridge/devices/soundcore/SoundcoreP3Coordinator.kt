@@ -19,8 +19,9 @@ package nodomain.freeyourgadget.gadgetbridge.devices.soundcore
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class SoundcoreP3Coordinator : SoundcoreEarbudsCoordinator() {
+class SoundcoreP3Coordinator @Inject constructor() : SoundcoreEarbudsCoordinator() {
     // Real model: A3939011. The A3939 control service mapping is assumed and unverified.
     override fun getModelName(): String = "A3939"
 

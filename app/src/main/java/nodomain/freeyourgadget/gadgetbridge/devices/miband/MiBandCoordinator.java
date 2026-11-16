@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -63,6 +64,7 @@ import static nodomain.freeyourgadget.gadgetbridge.model.ActivityUser.PREF_USER_
 public class MiBandCoordinator extends AbstractBLEDeviceCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(MiBandCoordinator.class);
 
+    @Inject
     public MiBandCoordinator() {
     }
 

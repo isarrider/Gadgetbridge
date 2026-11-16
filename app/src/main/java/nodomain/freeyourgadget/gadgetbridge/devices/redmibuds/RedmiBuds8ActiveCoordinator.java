@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.redmibuds.prefs.RedmiBudsEqualizerPreset;
@@ -12,6 +13,10 @@ import nodomain.freeyourgadget.gadgetbridge.devices.redmibuds.prefs.RedmiBudsLon
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class RedmiBuds8ActiveCoordinator extends AbstractRedmiBudsCoordinator {
+    @Inject
+    public RedmiBuds8ActiveCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_redmi_buds_8_active;

@@ -3,12 +3,17 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.gps;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminGpsmapH1Coordinator extends GarminCoordinator {
+    @Inject
+    public GarminGpsmapH1Coordinator() {
+    }
+
     @Override
     public boolean supportsDataFetching(@NonNull final GBDevice device) {
         // for gps tracks

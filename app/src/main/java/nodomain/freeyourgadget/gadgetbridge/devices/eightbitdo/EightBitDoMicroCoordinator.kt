@@ -17,8 +17,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.eightbitdo.EightBitD
 import nodomain.freeyourgadget.gadgetbridge.service.devices.eightbitdo.EightBitDoMicroSupport
 import nodomain.freeyourgadget.gadgetbridge.util.HidKey
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class EightBitDoMicroCoordinator : AbstractBLEDeviceCoordinator() {
+class EightBitDoMicroCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern? {
         // The "8BitDo Micro gamepad" is actual HID keyboard
         // 80EL is the BLE interface the app connects to

@@ -4,9 +4,10 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 /// #5025
-class CoospoHW807Coordinator: CoospoHeartRateCoordinator() {
+class CoospoHW807Coordinator @Inject constructor(): CoospoHeartRateCoordinator() {
     override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("^(COOSPO )?HW807$")
     }

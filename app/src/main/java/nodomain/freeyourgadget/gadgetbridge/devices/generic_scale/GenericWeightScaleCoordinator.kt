@@ -30,8 +30,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService
 import nodomain.freeyourgadget.gadgetbridge.service.devices.generic_scale.GenericWeightScaleSupport
 import java.util.Collections
+import javax.inject.Inject
 
-class GenericWeightScaleCoordinator : AbstractBLEDeviceCoordinator() {
+class GenericWeightScaleCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getCustomActions(): MutableList<DeviceCardAction?> {
         return Collections.singletonList(
             DeviceCardAction.forActivity(

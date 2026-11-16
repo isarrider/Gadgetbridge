@@ -7,6 +7,7 @@ import android.content.Context;
 import java.util.regex.Pattern;
 import java.util.Collections;
 import java.util.List;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -20,6 +21,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.soundbrenner.Soundbr
 
 
 public class SoundbrennerCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public SoundbrennerCoordinator() {
+    }
 
     @Override
     public String getManufacturer() {

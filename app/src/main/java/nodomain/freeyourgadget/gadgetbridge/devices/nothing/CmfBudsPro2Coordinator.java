@@ -21,12 +21,17 @@ import androidx.annotation.NonNull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.nothing.prefs.NothingAudioMode;
 import nodomain.freeyourgadget.gadgetbridge.devices.nothing.prefs.NothingEqualizer;
 
 public class CmfBudsPro2Coordinator extends AbstractEarCoordinator {
+    @Inject
+    public CmfBudsPro2Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^CMF Buds Pro 2$");

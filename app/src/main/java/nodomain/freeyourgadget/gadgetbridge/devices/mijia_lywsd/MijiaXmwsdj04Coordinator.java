@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.mijia_lywsd;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class MijiaXmwsdj04Coordinator extends AbstractMijiaLywsdCoordinator {
+    @Inject
+    public MijiaXmwsdj04Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("XMWSDJ04MMC");

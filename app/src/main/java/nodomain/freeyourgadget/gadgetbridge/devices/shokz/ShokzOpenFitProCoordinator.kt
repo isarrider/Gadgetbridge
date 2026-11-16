@@ -5,8 +5,9 @@ import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.devices.shokz.ShokzEqualizer
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class ShokzOpenFitProCoordinator : ShokzCoordinator() {
+class ShokzOpenFitProCoordinator @Inject constructor() : ShokzCoordinator() {
     override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("^OpenFit Pro by Shokz$")
     }

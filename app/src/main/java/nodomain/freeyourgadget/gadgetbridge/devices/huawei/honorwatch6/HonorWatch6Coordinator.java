@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.huawei.honorwatch6;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HonorBRCoordinator;
@@ -27,6 +28,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
 
 public class HonorWatch6Coordinator extends HonorBRCoordinator {
+    @Inject
+    public HonorWatch6Coordinator() {
+    }
+
     @Override
     public boolean isTransactionCrypted() {
         return false;

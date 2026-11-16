@@ -22,8 +22,9 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soundcore.devices.SoundcoreSportX20Protocol
 import nodomain.freeyourgadget.gadgetbridge.activities.multipoint.MultipointPairingActivity
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class SoundcoreR50iNCCoordinator : SoundcoreEarbudsCoordinator() {
+class SoundcoreR50iNCCoordinator @Inject constructor() : SoundcoreEarbudsCoordinator() {
     override fun isExperimental(): Boolean = true
 
     override fun getModelName(): String = "A3959"

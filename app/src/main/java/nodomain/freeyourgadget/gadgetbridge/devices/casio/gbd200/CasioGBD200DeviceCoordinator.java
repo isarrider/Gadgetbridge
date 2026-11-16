@@ -22,6 +22,7 @@ import android.content.SharedPreferences;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
@@ -35,6 +36,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.casio.gbd200.CasioGB
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs;
 
 public class CasioGBD200DeviceCoordinator extends CasioGBX100DeviceCoordinator {
+    @Inject
+    public CasioGBD200DeviceCoordinator() {
+    }
+
     @Override
     protected void applyDefaultPreferences(final DevicePrefs devicePreferences, final SharedPreferences.Editor editor) {
         editor.putString(

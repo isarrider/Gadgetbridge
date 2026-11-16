@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.oppo;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class OppoEncoAir2Coordinator extends OppoEncoAirCoordinator {
+    @Inject
+    public OppoEncoAir2Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("OPPO Enco Air2", Pattern.LITERAL);

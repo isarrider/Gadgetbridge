@@ -12,8 +12,9 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.generic_bp.GenericBloodPressureSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class BeurerBm69Coordinator : AbstractBLEDeviceCoordinator() {
+class BeurerBm69Coordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     protected override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("^BM69")
     }

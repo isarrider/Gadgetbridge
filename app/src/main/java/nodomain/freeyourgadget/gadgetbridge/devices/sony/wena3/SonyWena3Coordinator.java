@@ -23,6 +23,7 @@ import androidx.annotation.NonNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsCustomizer;
@@ -45,6 +46,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.wena3.protocol.
 import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.wena3.protocol.packets.notification.defines.VibrationKind;
 
 public class SonyWena3Coordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public SonyWena3Coordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         return "Sony";

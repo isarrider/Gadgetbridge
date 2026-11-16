@@ -24,12 +24,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class AmazfitGTR4Coordinator extends ZeppOsCoordinator {
+    @Inject
+    public AmazfitGTR4Coordinator() {
+    }
+
     @Override
     public List<String> getDeviceBluetoothNames() {
         return Arrays.asList(

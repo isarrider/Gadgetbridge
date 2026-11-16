@@ -1,11 +1,16 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.instinct;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCoordinator;
 
 public class GarminInstinct3TacticalCoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminInstinct3TacticalCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Instinct 3 - \\d+mm Tac$");

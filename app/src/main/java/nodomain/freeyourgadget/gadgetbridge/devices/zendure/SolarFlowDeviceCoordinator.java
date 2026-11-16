@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -38,6 +39,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.zendure.SolarFlowDev
 
 
 public class SolarFlowDeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public SolarFlowDeviceCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_solarflow;

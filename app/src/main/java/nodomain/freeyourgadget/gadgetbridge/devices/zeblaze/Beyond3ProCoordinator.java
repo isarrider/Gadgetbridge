@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -41,6 +42,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.Beyond3ProSu
  * used by the official app either.
  */
 public class Beyond3ProCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public Beyond3ProCoordinator() {
+    }
+
     @NonNull
     @Override
     public Collection<? extends ScanFilter> createBLEScanFilters() {

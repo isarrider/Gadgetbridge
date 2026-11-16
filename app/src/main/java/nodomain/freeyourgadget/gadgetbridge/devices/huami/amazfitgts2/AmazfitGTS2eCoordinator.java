@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
@@ -36,6 +37,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.amazfitgts2.AmazfitGTS2eSupport;
 
 public class AmazfitGTS2eCoordinator extends HuamiCoordinator {
+    @Inject
+    public AmazfitGTS2eCoordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         // Actual manufacturer is Huami

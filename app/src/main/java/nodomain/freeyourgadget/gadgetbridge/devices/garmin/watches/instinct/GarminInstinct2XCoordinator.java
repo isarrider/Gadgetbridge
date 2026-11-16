@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.instinct;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class GarminInstinct2XCoordinator extends GarminInstinct2Coordinator {
+    @Inject
+    public GarminInstinct2XCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // Not tested, and the supported device name below is unconfirmed

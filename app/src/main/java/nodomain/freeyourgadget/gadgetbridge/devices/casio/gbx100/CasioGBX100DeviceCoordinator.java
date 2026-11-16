@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider;
@@ -37,6 +38,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.casio.gbx100.CasioGBX100DeviceSupport;
 
 public class CasioGBX100DeviceCoordinator extends Casio2C2DDeviceCoordinator {
+    @Inject
+    public CasioGBX100DeviceCoordinator() {
+    }
+
     /** CASIO brand identifier in GB Device name */
     public static final String CASIO_IDENTIFIER = "CASIO";
 

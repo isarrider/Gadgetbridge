@@ -27,12 +27,13 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.sennheiser.SennheiserMomentumSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 /**
  * Sennheiser MOMENTUM In-Ear Wireless (M2 IEBT). The battery level comes from Android, which the
  * headset reports it to over the hands-free profile.
  */
-class SennheiserMomentumInEarWirelessCoordinator : AbstractBLClassicDeviceCoordinator() {
+class SennheiserMomentumInEarWirelessCoordinator @Inject constructor() : AbstractBLClassicDeviceCoordinator() {
     override fun getDeviceNameResource(): Int = R.string.devicetype_sennheiser_momentum_in_ear_wireless
 
     override fun getDefaultIconResource(): Int = R.drawable.ic_device_headphones

@@ -18,6 +18,8 @@ package nodomain.freeyourgadget.gadgetbridge.devices.hplus;
 
 import androidx.annotation.NonNull;
 
+import javax.inject.Inject;
+
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
@@ -28,6 +30,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.hplus.SG2Support;
  * Pseudo Coordinator for the Lemfo SG2, a sub type of the HPLUS devices
  */
 public class SG2Coordinator extends HPlusCoordinator {
+    @Inject
+    public SG2Coordinator() {
+    }
+
     @Override
     public boolean supports(GBDeviceCandidate candidate) {
         String name = candidate.getName();

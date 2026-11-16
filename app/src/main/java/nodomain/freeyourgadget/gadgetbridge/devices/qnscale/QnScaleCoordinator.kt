@@ -27,6 +27,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.WeightSample
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.qnscale.QnScaleDeviceSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 /**
  * A family of Chipsea CS20-based BLE body-composition scales, all advertising as "QN-Scale"
@@ -35,7 +36,7 @@ import java.util.regex.Pattern
  * intentionally not derived or stored here, matching this app's own convention for that (see
  * [GenericWeightSampleProvider] / codeberg.org/Freeyourgadget/Gadgetbridge/issues/6393).
  */
-class QnScaleCoordinator : AbstractBLEDeviceCoordinator() {
+class QnScaleCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern {
         // The GE Fit Plus is a QN-Scale sold under its own name.
         return Pattern.compile("QN-Scale.*|Fit Plus", Pattern.CASE_INSENSITIVE)

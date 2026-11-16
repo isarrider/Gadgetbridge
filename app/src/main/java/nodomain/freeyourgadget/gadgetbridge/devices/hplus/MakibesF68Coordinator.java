@@ -23,6 +23,8 @@ package nodomain.freeyourgadget.gadgetbridge.devices.hplus;
 
 import androidx.annotation.NonNull;
 
+import javax.inject.Inject;
+
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
@@ -33,6 +35,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.hplus.MakibesF68Supp
  * Pseudo Coordinator for the Makibes F68, a sub type of the HPLUS devices
  */
 public class MakibesF68Coordinator extends HPlusCoordinator {
+    @Inject
+    public MakibesF68Coordinator() {
+    }
+
     @Override
     public boolean supports(GBDeviceCandidate candidate) {
         String name = candidate.getName();

@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.forerunner;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class GarminForerunner45PlusCoordinator extends GarminForerunner45Coordinator {
+    @Inject
+    public GarminForerunner45PlusCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // Not tested, and the supported device name below is unconfirmed

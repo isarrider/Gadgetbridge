@@ -19,10 +19,15 @@ package nodomain.freeyourgadget.gadgetbridge.devices.moyoung;
 import androidx.annotation.DrawableRes;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class C20Coordinator extends AbstractMoyoungDeviceCoordinator {
+    @Inject
+    public C20Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^C *20$");

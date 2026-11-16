@@ -19,10 +19,15 @@ package nodomain.freeyourgadget.gadgetbridge.devices.moyoung;
 import androidx.annotation.DrawableRes;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class P22B1Coordinator extends AbstractMoyoungDeviceCoordinator {
+    @Inject
+    public P22B1Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^P22B1", Pattern.CASE_INSENSITIVE);

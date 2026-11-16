@@ -17,12 +17,17 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.galaxy_buds;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryConfig;
 
 public class GalaxyBudsDeviceCoordinator extends GalaxyBudsGenericCoordinator {
+    @Inject
+    public GalaxyBudsDeviceCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("Galaxy Buds \\(.*");

@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.overmax;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import de.greenrobot.dao.query.QueryBuilder;
 import nodomain.freeyourgadget.gadgetbridge.GBException;
@@ -37,6 +38,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.overmax.OVTouch26DeviceSupport;
 
 public class OVTouch26Coordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public OVTouch26Coordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_ovtouch_26;

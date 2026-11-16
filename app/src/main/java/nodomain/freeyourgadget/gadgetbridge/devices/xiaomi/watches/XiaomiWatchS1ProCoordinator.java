@@ -21,12 +21,16 @@ import android.util.Size;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class XiaomiWatchS1ProCoordinator extends XiaomiCoordinator {
+    @Inject
+    public XiaomiWatchS1ProCoordinator() {
+    }
 
     @Override
     protected Pattern getSupportedDeviceName() {

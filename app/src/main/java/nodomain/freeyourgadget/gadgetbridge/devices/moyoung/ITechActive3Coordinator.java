@@ -19,11 +19,16 @@ package nodomain.freeyourgadget.gadgetbridge.devices.moyoung;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class ITechActive3Coordinator extends AbstractMoyoungDeviceCoordinator {
+    @Inject
+    public ITechActive3Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^iTECH Active 3$");

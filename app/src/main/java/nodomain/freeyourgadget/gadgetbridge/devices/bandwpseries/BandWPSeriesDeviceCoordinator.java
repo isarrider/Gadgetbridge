@@ -3,6 +3,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.bandwpseries;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -12,6 +13,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.bandwpseries.BandWPSeriesDeviceSupport;
 
 public class BandWPSeriesDeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public BandWPSeriesDeviceCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_bandw_pseries;

@@ -20,6 +20,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.sonyswr12;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -32,6 +33,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.sonyswr12.SonySWR12DeviceSupport;
 
 public class SonySWR12DeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public SonySWR12DeviceCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile(".*swr12.*", Pattern.CASE_INSENSITIVE);

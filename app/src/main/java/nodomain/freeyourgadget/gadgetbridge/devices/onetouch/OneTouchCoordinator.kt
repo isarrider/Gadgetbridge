@@ -11,8 +11,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.ServiceDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.onetouch.OneTouchSupport
 import java.util.EnumSet
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class OneTouchCoordinator : AbstractBLEDeviceCoordinator() {
+class OneTouchCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun isExperimental(): Boolean {
         return true
     }

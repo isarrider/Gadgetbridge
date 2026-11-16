@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.redmibuds;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class RedmiBuds6ProCoordinator extends RedmiBuds5ProCoordinator {
+    @Inject
+    public RedmiBuds6ProCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_redmi_buds_6_pro;

@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.capabilities.password.PasswordCapabilityImpl;
@@ -30,6 +31,10 @@ import nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class RedmiSmartBandProCoordinator extends XiaomiCoordinator {
+    @Inject
+    public RedmiSmartBandProCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         return true;

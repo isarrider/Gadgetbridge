@@ -22,6 +22,7 @@ import android.os.ParcelUuid;
 
 import java.util.Collection;
 import java.util.Collections;
+import javax.inject.Inject;
 
 import androidx.annotation.NonNull;
 
@@ -37,6 +38,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.id115.ID115Support;
 
 public class ID115Coordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public ID115Coordinator() {
+    }
+
     @NonNull
     @Override
     public Collection<? extends ScanFilter> createBLEScanFilters() {

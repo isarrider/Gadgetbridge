@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 
 import java.util.Collection;
 import java.util.Collections;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -36,6 +37,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.binary_sensor.BinarySensorSupport;
 
 public class BinarySensorCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public BinarySensorCoordinator() {
+    }
+
     @NonNull
     @Override
     public Collection<? extends ScanFilter> createBLEScanFilters() {

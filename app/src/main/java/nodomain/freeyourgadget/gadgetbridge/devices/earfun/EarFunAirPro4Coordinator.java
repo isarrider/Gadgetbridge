@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 
 import java.util.Arrays;
 import java.util.List;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
@@ -18,6 +19,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.earfun.airpro4.EarFu
 
 public class EarFunAirPro4Coordinator extends AbstractEarFunCoordinator {
     private static final byte[] PRODUCT_ID = new byte[] { 0x45, 0x35 };
+
+    @Inject
+    public EarFunAirPro4Coordinator() {
+    }
 
     @Override
     public int getDeviceNameResource() {

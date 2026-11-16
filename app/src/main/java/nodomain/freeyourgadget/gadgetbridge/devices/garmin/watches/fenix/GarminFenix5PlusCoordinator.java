@@ -3,12 +3,17 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.fenix;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminFenix5PlusCoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminFenix5PlusCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // https://codeberg.org/Freeyourgadget/Gadgetbridge/issues/3963

@@ -13,8 +13,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.CardoDeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.cardo.state.CardoDeviceStatus
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class Ls24xDeviceCoordinator : AbstractBLEDeviceCoordinator() {
+class Ls24xDeviceCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
 
     override fun getManufacturer(): String {
         return "Cardo"

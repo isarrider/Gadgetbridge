@@ -17,11 +17,16 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.quatix;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.fenix.GarminFenix6Coordinator;
 
 public class GarminQuatix6Coordinator extends GarminFenix6Coordinator {
+    @Inject
+    public GarminQuatix6Coordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // Not tested, and the supported device name below is unconfirmed

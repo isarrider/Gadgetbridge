@@ -2,6 +2,8 @@ package nodomain.freeyourgadget.gadgetbridge.devices.scannable;
 
 import androidx.annotation.NonNull;
 
+import javax.inject.Inject;
+
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
@@ -11,6 +13,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.scannable.ScannableDeviceSupport;
 
 public class ScannableDeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public ScannableDeviceCoordinator() {
+    }
+
     @Override
     public boolean supports(GBDeviceCandidate candidate) {
         return false;

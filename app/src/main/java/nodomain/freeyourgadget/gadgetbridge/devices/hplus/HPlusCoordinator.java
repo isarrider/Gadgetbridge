@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -49,6 +50,10 @@ import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
 public class HPlusCoordinator extends AbstractBLEDeviceCoordinator {
     protected static final Logger LOG = LoggerFactory.getLogger(HPlusCoordinator.class);
     protected static GBPrefs prefs = GBApplication.getPrefs();
+
+    @Inject
+    public HPlusCoordinator() {
+    }
 
     @NonNull
     @Override

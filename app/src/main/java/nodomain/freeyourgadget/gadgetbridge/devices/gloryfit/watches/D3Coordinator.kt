@@ -20,8 +20,9 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.gloryfit.GloryFitCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class D3Coordinator : GloryFitCoordinator() {
+class D3Coordinator @Inject constructor() : GloryFitCoordinator() {
     override fun getManufacturer(): String {
         return "GloryFit"
     }

@@ -21,6 +21,7 @@ import android.content.Context;
 import androidx.annotation.Nullable;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.cmfwatchpro.workout.CmfWorkoutSummaryParser;
@@ -28,6 +29,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryParser;
 
 public class CmfWatchPro3Coordinator extends CmfWatchProCoordinator {
+    @Inject
+    public CmfWatchPro3Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^CMF Watch 3 Pro(-[A-Z0-9]{4})$");

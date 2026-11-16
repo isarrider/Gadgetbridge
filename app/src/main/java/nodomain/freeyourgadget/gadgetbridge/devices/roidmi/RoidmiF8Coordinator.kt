@@ -33,6 +33,7 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.roidmi.RoidmiF8Suppo
 import java.text.DecimalFormat
 import java.util.Locale
 import java.util.regex.Pattern
+import javax.inject.Inject
 import lineageos.weather.util.TemperatureUtils
 
 /**
@@ -41,7 +42,7 @@ import lineageos.weather.util.TemperatureUtils
  * The device advertises via Xiaomi MiBeacon (service UUID 0xFE95, device ID 0x0248).
  * Battery percentage is estimated from FFD2 voltage and FFD8 run/charge state.
  */
-class RoidmiF8Coordinator : AbstractBLEDeviceCoordinator() {
+class RoidmiF8Coordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
 
     override fun getManufacturer(): String = "Roidmi"
 

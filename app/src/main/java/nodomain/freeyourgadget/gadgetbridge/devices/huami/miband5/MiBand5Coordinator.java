@@ -26,6 +26,7 @@ import androidx.annotation.NonNull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
@@ -39,6 +40,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.miband5.MiBand5Support;
 
 public class MiBand5Coordinator extends HuamiCoordinator {
+    @Inject
+    public MiBand5Coordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         // Actual manufacturer is Huami

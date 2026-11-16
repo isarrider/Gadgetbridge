@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.itag
 
 import android.bluetooth.le.ScanFilter
 import java.util.regex.Pattern
+import javax.inject.Inject
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsScreen
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.DeviceSettingsSpec
@@ -30,7 +31,7 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.itag.ITagSupport
 
-class ITagCoordinator : AbstractBLEDeviceCoordinator() {
+class ITagCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
 
     override fun getSupportedDeviceName(): Pattern =
         Pattern.compile("itag.*", Pattern.CASE_INSENSITIVE)

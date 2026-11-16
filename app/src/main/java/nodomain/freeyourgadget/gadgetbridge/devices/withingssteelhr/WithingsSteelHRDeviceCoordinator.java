@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 
 import java.util.EnumSet;
 import java.util.Locale;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -38,6 +39,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.acti
 import nodomain.freeyourgadget.gadgetbridge.service.devices.withingssteelhr.WithingsSteelHRDeviceSupport;
 
 public class WithingsSteelHRDeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public WithingsSteelHRDeviceCoordinator() {
+    }
 
     @Override
     public EnumSet<ServiceDeviceSupport.Flags> getInitialFlags() {

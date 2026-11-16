@@ -38,8 +38,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.aawireless.AAWireles
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.CountryCodeTextWatcher
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.MinMaxTextWatcher
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class AAWirelessCoordinator : AbstractBLClassicDeviceCoordinator() {
+class AAWirelessCoordinator @Inject constructor() : AbstractBLClassicDeviceCoordinator() {
     protected override fun getSupportedDeviceName(): Pattern {
         // AAW 1 - AAWireless-xUkL1YH0
         // AAW 2 - Normal mode: AAWireless-12345abc

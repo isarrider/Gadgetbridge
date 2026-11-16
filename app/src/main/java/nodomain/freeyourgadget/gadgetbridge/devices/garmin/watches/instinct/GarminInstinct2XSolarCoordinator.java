@@ -3,12 +3,17 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.instinct;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminInstinct2XSolarCoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminInstinct2XSolarCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         // Allow ending both with "Sol" (#3063) and "Solar" (reported on Matrix).

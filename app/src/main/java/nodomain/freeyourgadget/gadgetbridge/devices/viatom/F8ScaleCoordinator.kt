@@ -14,8 +14,9 @@ import nodomain.freeyourgadget.gadgetbridge.model.WeightSample
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.viatom.F8Support
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class F8ScaleCoordinator : AbstractBLEDeviceCoordinator() {
+class F8ScaleCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getWeightSampleProvider(
         device: GBDevice, session: DaoSession
     ): TimeSampleProvider<out WeightSample?> {

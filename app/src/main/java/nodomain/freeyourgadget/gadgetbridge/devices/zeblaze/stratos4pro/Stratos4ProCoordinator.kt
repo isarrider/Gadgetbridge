@@ -42,11 +42,12 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProLights
 import nodomain.freeyourgadget.gadgetbridge.service.devices.zeblaze.stratos4pro.Stratos4ProSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 /**
  * Zeblaze Stratos 4 Pro, with classic BT call audio and LEDs. Settings verified on this firmware only.
  */
-class Stratos4ProCoordinator : AbstractBLEDeviceCoordinator() {
+class Stratos4ProCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getManufacturer(): String {
         return "Zeblaze"
     }

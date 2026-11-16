@@ -22,6 +22,7 @@ import android.app.Activity;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -33,6 +34,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.marstek.MarstekB2500
 
 
 public class MarstekB2500DeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public MarstekB2500DeviceCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_marstek_b2500;

@@ -2,8 +2,9 @@ package nodomain.freeyourgadget.gadgetbridge.devices.dji.cameras
 
 import nodomain.freeyourgadget.gadgetbridge.R
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class DjiOsmoAction4Coordinator: AbstractDjiCameraCoordinator() {
+class DjiOsmoAction4Coordinator @Inject constructor(): AbstractDjiCameraCoordinator() {
     override fun getSupportedDeviceName(): Pattern {
         return Pattern.compile("^OsmoAction4-[0-9A-Z]{4}$")
     }

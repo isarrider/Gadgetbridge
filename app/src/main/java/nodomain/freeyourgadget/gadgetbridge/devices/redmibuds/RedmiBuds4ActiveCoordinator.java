@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.redmibuds;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class RedmiBuds4ActiveCoordinator extends AbstractRedmiBudsCoordinator {
+    @Inject
+    public RedmiBuds4ActiveCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_redmi_buds_4_active;

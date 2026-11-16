@@ -25,12 +25,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class MiBand7Coordinator extends ZeppOsCoordinator {
+    @Inject
+    public MiBand7Coordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         // Actual manufacturer is Huami

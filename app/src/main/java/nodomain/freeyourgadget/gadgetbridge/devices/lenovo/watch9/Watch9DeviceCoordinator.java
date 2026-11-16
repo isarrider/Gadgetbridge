@@ -27,6 +27,7 @@ import androidx.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -37,6 +38,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.ServiceDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.lenovo.watch9.Watch9DeviceSupport;
 
 public class Watch9DeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public Watch9DeviceCoordinator() {
+    }
+
     @NonNull
     @Override
     public Collection<? extends ScanFilter> createBLEScanFilters() {

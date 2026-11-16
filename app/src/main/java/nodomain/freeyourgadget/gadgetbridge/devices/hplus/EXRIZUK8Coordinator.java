@@ -24,6 +24,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.hplus;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -34,6 +35,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.devices.hplus.EXRIZUK8Suppor
  * Pseudo Coordinator for the EXRIZU K8, a sub type of the HPLUS devices
  */
 public class EXRIZUK8Coordinator extends HPlusCoordinator {
+    @Inject
+    public EXRIZUK8Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("iRun .*");

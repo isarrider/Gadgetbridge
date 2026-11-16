@@ -19,8 +19,9 @@ package nodomain.freeyourgadget.gadgetbridge.devices.gloryfit.watches
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.gloryfit.GloryFitCoordinator
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class HaylouWatch2ProCoordinator : GloryFitCoordinator() {
+class HaylouWatch2ProCoordinator @Inject constructor() : GloryFitCoordinator() {
     override fun getManufacturer(): String {
         return "Haylou"
     }

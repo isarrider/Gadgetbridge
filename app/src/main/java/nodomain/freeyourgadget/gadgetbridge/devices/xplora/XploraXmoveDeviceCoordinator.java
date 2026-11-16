@@ -20,11 +20,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package nodomain.freeyourgadget.gadgetbridge.devices.xplora;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.hama.fit6900.HamaFit6900DeviceCoordinator;
 
 public class XploraXmoveDeviceCoordinator extends HamaFit6900DeviceCoordinator {
+    @Inject
+    public XploraXmoveDeviceCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^XMOVE$");

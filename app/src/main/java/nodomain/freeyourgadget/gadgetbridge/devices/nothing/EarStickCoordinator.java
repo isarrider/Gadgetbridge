@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.nothing;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class EarStickCoordinator extends AbstractEarCoordinator {
+    @Inject
+    public EarStickCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("Ear (stick)", Pattern.LITERAL);

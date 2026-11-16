@@ -16,8 +16,9 @@ import nodomain.freeyourgadget.gadgetbridge.model.Spo2Sample
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.innovo.InnovoPulseOximeterSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class InnovoPulseOximeterCoordinator : AbstractBLEDeviceCoordinator() {
+class InnovoPulseOximeterCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern {
         return Pattern.compile("^iP900BPB$")
     }

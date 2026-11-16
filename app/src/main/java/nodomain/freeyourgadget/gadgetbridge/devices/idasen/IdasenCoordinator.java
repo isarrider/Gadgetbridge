@@ -5,6 +5,7 @@ import android.app.Activity;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsCustomizer;
@@ -15,6 +16,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.idasen.IdasenDeviceSupport;
 
 public class IdasenCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public IdasenCoordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         return "IKEA";

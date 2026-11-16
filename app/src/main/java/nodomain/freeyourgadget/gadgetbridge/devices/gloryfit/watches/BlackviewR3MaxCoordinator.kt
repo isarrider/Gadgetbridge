@@ -20,8 +20,9 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.devices.gloryfit.GloryFitCoordinator
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class BlackviewR3MaxCoordinator : GloryFitCoordinator() {
+class BlackviewR3MaxCoordinator @Inject constructor() : GloryFitCoordinator() {
     override fun isExperimental(): Boolean {
         return true
     }

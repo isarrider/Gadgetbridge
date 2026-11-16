@@ -52,8 +52,9 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
+import javax.inject.Inject
 
-class QHybridCoordinator : AbstractBLEDeviceCoordinator() {
+class QHybridCoordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun supports(candidate: GBDeviceCandidate): Boolean {
         for (uuid in candidate.serviceUuids) {
             if (uuid.uuid.toString() == "3dda0001-957f-7d4a-34a6-74696673696d") {

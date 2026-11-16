@@ -3,6 +3,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.haylou;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
@@ -15,6 +16,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.haylou.HaylouS35AncSupport;
 
 public class HaylouS35AncCoordinator extends AbstractBLClassicDeviceCoordinator {
+    @Inject
+    public HaylouS35AncCoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_haylou_s35_anc;

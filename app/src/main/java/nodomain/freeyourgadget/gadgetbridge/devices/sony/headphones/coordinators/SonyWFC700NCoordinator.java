@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
@@ -30,6 +31,9 @@ import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.SonyHeadphon
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class SonyWFC700NCoordinator extends SonyHeadphonesCoordinator {
+    @Inject
+    public SonyWFC700NCoordinator() {
+    }
 
     @Override
     protected Pattern getSupportedDeviceName() {

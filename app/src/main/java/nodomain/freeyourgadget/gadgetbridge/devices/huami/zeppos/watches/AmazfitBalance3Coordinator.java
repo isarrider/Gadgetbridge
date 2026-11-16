@@ -22,12 +22,17 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class AmazfitBalance3Coordinator extends ZeppOsCoordinator {
+    @Inject
+    public AmazfitBalance3Coordinator() {
+    }
+
     @Override
     public ConnectionType getConnectionType() {
         // unconfirmed

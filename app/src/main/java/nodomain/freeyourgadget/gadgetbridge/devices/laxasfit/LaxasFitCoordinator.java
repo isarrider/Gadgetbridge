@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 
 import java.util.EnumSet;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -36,6 +37,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.ServiceDeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.laxasfit.LaxasFitDeviceSupport;
 
 public class LaxasFitCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public LaxasFitCoordinator() {
+    }
+
     @Override
     public String getManufacturer() {
         return "LaxasFit";

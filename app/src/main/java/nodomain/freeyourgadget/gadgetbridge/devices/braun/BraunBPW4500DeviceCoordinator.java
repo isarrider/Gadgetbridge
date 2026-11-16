@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -35,6 +36,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.braun.BraunBPW4500DeviceSupport;
 
 public class BraunBPW4500DeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public BraunBPW4500DeviceCoordinator() {
+    }
 
     @Nullable
     @Override

@@ -20,6 +20,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.soflow;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -29,6 +30,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.soflow.SoFlowSupport;
 
 public class SoFlowCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public SoFlowCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("SoFlow-.*");

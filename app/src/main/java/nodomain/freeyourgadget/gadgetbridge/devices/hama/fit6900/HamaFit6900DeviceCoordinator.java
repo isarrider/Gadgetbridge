@@ -22,6 +22,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.hama.fit6900;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -30,6 +31,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.hama.fit6900.HamaFit6900DeviceSupport;
 
 public class HamaFit6900DeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public HamaFit6900DeviceCoordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^Fit6900$");

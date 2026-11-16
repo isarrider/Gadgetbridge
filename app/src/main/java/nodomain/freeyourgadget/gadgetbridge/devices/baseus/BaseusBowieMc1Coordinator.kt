@@ -14,8 +14,9 @@ import nodomain.freeyourgadget.gadgetbridge.model.BatteryConfig
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.baseus.BaseusBowieMc1Support
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class BaseusBowieMc1Coordinator : AbstractBLClassicDeviceCoordinator() {
+class BaseusBowieMc1Coordinator @Inject constructor() : AbstractBLClassicDeviceCoordinator() {
     // Classic name is "Baseus Bowie MC1", BLE name "Bowie MC1"; the Pro is a different product.
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^(Baseus )?Bowie MC1(?! Pro)( .*)?$")
 

@@ -17,10 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.cmfwatchpro;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class CmfWatchPro2Coordinator extends CmfWatchProCoordinator {
+    @Inject
+    public CmfWatchPro2Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("^CMF Watch Pro 2(-[A-Z0-9]{4})$");

@@ -1,10 +1,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.garmin.bike;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class GarminEdgeMtbCoordinator extends GarminBikeComputerCoordinator {
+    @Inject
+    public GarminEdgeMtbCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // Not tested, and the supported device name below is unconfirmed

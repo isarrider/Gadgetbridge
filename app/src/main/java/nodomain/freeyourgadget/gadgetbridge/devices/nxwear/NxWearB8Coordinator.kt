@@ -49,8 +49,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearB8Support
 import nodomain.freeyourgadget.gadgetbridge.service.devices.nxwear.NxWearSportSession
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class NxWearB8Coordinator : AbstractBLEDeviceCoordinator() {
+class NxWearB8Coordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     fun getMtu(): Int = MTU
 
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^B8-SW$")

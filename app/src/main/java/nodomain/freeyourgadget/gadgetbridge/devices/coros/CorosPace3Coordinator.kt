@@ -27,8 +27,9 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.coros.CorosPace3Support
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class CorosPace3Coordinator : AbstractBLEDeviceCoordinator() {
+class CorosPace3Coordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("^COROS PACE 3 [0-9A-F]{6}$")
 
     override fun getManufacturer(): String = "COROS"

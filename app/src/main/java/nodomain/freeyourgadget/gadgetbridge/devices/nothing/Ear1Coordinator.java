@@ -22,12 +22,17 @@ import androidx.annotation.NonNull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.nothing.prefs.NothingAudioMode;
 import nodomain.freeyourgadget.gadgetbridge.devices.nothing.prefs.NothingTapAction;
 
 public class Ear1Coordinator extends AbstractEarCoordinator {
+    @Inject
+    public Ear1Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile("Nothing ear (1)", Pattern.LITERAL);

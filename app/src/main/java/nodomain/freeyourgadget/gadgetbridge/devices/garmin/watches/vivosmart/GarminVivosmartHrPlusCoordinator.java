@@ -3,6 +3,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.vivosmart;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
@@ -10,6 +11,10 @@ import nodomain.freeyourgadget.gadgetbridge.devices.garmin.watches.GarminWatchCo
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class GarminVivosmartHrPlusCoordinator extends GarminWatchCoordinator {
+    @Inject
+    public GarminVivosmartHrPlusCoordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         // Not tested, and the supported device name below is unconfirmed

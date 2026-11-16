@@ -17,8 +17,9 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.onemore_sonoflow.OneMoreNoiseControlMode
 import nodomain.freeyourgadget.gadgetbridge.service.devices.onemore_sonoflow.OneMoreSonoFlowSupport
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-open class OneMoreSonoFlowCoordinator : AbstractBLClassicDeviceCoordinator() {
+open class OneMoreSonoFlowCoordinator @Inject constructor() : AbstractBLClassicDeviceCoordinator() {
     protected override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("1MORE SonoFlow", Pattern.LITERAL)
     }

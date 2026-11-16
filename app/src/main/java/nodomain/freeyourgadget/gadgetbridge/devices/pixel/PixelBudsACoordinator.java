@@ -3,6 +3,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.pixel;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettings;
@@ -14,6 +15,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.pixel.PixelBudsADeviceSupport;
 
 public class PixelBudsACoordinator extends AbstractBLClassicDeviceCoordinator {
+    @Inject
+    public PixelBudsACoordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_pixel_buds_a_series;

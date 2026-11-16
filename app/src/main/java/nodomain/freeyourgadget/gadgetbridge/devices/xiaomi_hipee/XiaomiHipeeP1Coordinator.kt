@@ -41,9 +41,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport
 import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi_hipee.XiaomiHipeeP1Support
 import java.util.regex.Pattern
+import javax.inject.Inject
 
 /** Xiaomi Hipee Smart Posture Corrector P1. FCC ID: 2A2AW-P1 */
-class XiaomiHipeeP1Coordinator : AbstractBLEDeviceCoordinator() {
+class XiaomiHipeeP1Coordinator @Inject constructor() : AbstractBLEDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern =
         Pattern.compile("^Hi-JZ-12CUT00[0-9A-F]{4}$")
 

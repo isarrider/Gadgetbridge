@@ -26,6 +26,7 @@ import androidx.annotation.StringRes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
@@ -56,6 +57,10 @@ import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
 import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs;
 
 public class UltrahumanDeviceCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public UltrahumanDeviceCoordinator() {
+    }
+
     @Override
     protected void applyDefaultPreferences(final DevicePrefs devicePreferences, final SharedPreferences.Editor editor) {
         // a low powered BLE gadget with gadget initiated connections

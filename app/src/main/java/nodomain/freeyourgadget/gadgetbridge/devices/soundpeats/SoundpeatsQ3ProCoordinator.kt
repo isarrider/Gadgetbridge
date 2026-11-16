@@ -18,6 +18,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.soundpeats
 
 import java.util.Locale
 import java.util.regex.Pattern
+import javax.inject.Inject
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst.PREF_SOUNDPEATS_ANC_MODE
@@ -51,7 +52,7 @@ import androidx.core.content.edit
  * the transport (BLE GATT vs SPP) and the exact setter payloads have not been observed on the wire
  * yet, so the coordinator is flagged as experimental.
  */
-open class SoundpeatsQ3ProCoordinator : AbstractBLClassicDeviceCoordinator() {
+open class SoundpeatsQ3ProCoordinator @Inject constructor() : AbstractBLClassicDeviceCoordinator() {
     override fun getSupportedDeviceName(): Pattern =
         Pattern.compile("^\\s*SOUNDPEATS Q3 Pro\\s*$", Pattern.CASE_INSENSITIVE)
 

@@ -18,8 +18,9 @@ package nodomain.freeyourgadget.gadgetbridge.devices.soundcore
 
 import nodomain.freeyourgadget.gadgetbridge.R
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-open class SoundcoreLifeTuneCoordinator : SoundcoreQ30Coordinator() {
+open class SoundcoreLifeTuneCoordinator @Inject constructor() : SoundcoreQ30Coordinator() {
     override fun getModelName(): String = "A3029"
 
     override fun getSupportedDeviceName(): Pattern = Pattern.compile("Soundcore Life Tune")

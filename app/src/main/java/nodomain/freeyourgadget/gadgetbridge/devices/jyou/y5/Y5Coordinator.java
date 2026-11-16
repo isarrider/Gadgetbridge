@@ -20,6 +20,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.jyou.y5;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
@@ -33,6 +34,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.jyou.y5.Y5Support;
 
 public class Y5Coordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    public Y5Coordinator() {
+    }
+
     @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile(".*Y5.*");

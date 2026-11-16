@@ -3,6 +3,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.casio.ecbs100;
 import androidx.annotation.NonNull;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBException;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -14,6 +15,10 @@ import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
 import nodomain.freeyourgadget.gadgetbridge.service.devices.casio.ecbs100.CasioECBS100DeviceSupport;
 
 public class CasioECBS100DeviceCoordinator extends Casio2C2DDeviceCoordinator {
+    @Inject
+    public CasioECBS100DeviceCoordinator() {
+    }
+
     @Override
     public int getBondingStyle(){
         return BONDING_STYLE_BOND;

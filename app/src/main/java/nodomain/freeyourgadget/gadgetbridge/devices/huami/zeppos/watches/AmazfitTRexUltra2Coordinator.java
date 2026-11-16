@@ -22,12 +22,17 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.ZeppOsCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class AmazfitTRexUltra2Coordinator extends ZeppOsCoordinator {
+    @Inject
+    public AmazfitTRexUltra2Coordinator() {
+    }
+
     @Override
     public boolean isExperimental() {
         return true;

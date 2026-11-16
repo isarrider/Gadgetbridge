@@ -18,6 +18,7 @@ package nodomain.freeyourgadget.gadgetbridge.devices.huami.zeppos.watches;
 
 import java.util.Collections;
 import java.util.List;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 
@@ -26,6 +27,10 @@ import nodomain.freeyourgadget.gadgetbridge.R;
  * device sources seem to be similar.
  */
 public class AmazfitActive2NfcCoordinator extends AmazfitActive2RoundCoordinator {
+    @Inject
+    public AmazfitActive2NfcCoordinator() {
+    }
+
     @Override
     public List<String> getDeviceBluetoothNames() {
         // FIXME migrate device type to normal active 2

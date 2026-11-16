@@ -18,8 +18,9 @@ package nodomain.freeyourgadget.gadgetbridge.devices.bose
 
 import nodomain.freeyourgadget.gadgetbridge.R
 import java.util.regex.Pattern
+import javax.inject.Inject
 
-class NC700Coordinator : AbstractBoseCoordinator() {
+class NC700Coordinator @Inject constructor() : AbstractBoseCoordinator() {
     protected override fun getSupportedDeviceName(): Pattern? {
         return Pattern.compile("(LE-)?Bose NC 700.*")
     }

@@ -17,11 +17,15 @@
 package nodomain.freeyourgadget.gadgetbridge.devices.igpsport;
 
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class IGPSportiGS630SCoordinator extends IGPSportAbstractCoordinator {
+    @Inject
+    public IGPSportiGS630SCoordinator() {
+    }
 
     @Override
     public int getDeviceNameResource() {

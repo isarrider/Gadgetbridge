@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 
 import java.util.List;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiCoordinator;
@@ -29,6 +30,10 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 /// #6518
 public class RedmiWatch6Coordinator extends XiaomiCoordinator {
+    @Inject
+    public RedmiWatch6Coordinator() {
+    }
+
     @Override
     public int getDeviceNameResource() {
         return R.string.devicetype_redmi_watch_6;
