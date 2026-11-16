@@ -35,6 +35,7 @@ import java.util.List;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactory;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
@@ -46,9 +47,12 @@ import nodomain.freeyourgadget.gadgetbridge.util.GB;
  */
 public class DeviceCandidateAdapter extends ArrayAdapter<GBDeviceCandidate> {
     private final ColorMatrixColorFilter grayscaleFilter;
+    private final DeviceCoordinatorFactory coordinatorFactory;
 
-    public DeviceCandidateAdapter(final Context context, final List<GBDeviceCandidate> deviceCandidates) {
+    public DeviceCandidateAdapter(final Context context, final List<GBDeviceCandidate> deviceCandidates,
+                                  final DeviceCoordinatorFactory coordinatorFactory) {
         super(context, 0, deviceCandidates);
+        this.coordinatorFactory = coordinatorFactory;
         final ColorMatrix colorMatrix = new ColorMatrix();
         colorMatrix.setSaturation(0);
         grayscaleFilter = new ColorMatrixColorFilter(colorMatrix);
@@ -75,7 +79,7 @@ public class DeviceCandidateAdapter extends ArrayAdapter<GBDeviceCandidate> {
         }
 
         final DeviceType deviceType = DeviceHelper.getInstance().resolveDeviceType(device);
-        final DeviceCoordinator coordinator = deviceType.getDeviceCoordinator();
+        final DeviceCoordinator coordinator = coordinatorFactory.getDeviceCoordinator(deviceType);
 
         deviceNameLabel.setText(device.getName());
         deviceTypeLabel.setText(coordinator.getDeviceNameResource());

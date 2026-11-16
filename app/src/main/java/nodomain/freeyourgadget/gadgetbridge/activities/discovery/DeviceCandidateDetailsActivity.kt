@@ -67,7 +67,7 @@ class DeviceCandidateDetailsActivity : AbstractGBActivity(), MenuProvider {
         candidate = extraCandidate
 
         binding.deviceCandidateDetailsIcon.setImageResource(
-            DeviceHelper.getInstance().resolveDeviceType(candidate).deviceCoordinator.defaultIconResource
+            DeviceHelper.getInstance().resolveCoordinator(candidate).defaultIconResource
         )
         binding.deviceCandidateDetailsName.text = candidate.name
         binding.deviceCandidateDetailsAddress.text = candidate.macAddress

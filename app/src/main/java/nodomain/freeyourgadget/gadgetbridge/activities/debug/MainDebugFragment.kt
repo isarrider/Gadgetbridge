@@ -9,6 +9,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.Preference
 import androidx.preference.SwitchPreferenceCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import dagger.hilt.android.AndroidEntryPoint
 import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.Logging
 import nodomain.freeyourgadget.gadgetbridge.R
@@ -18,6 +19,7 @@ import nodomain.freeyourgadget.gadgetbridge.activities.discovery.PickDeviceType
 import nodomain.freeyourgadget.gadgetbridge.activities.welcome.WelcomeActivity
 import nodomain.freeyourgadget.gadgetbridge.database.DBHelper
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventCameraRemote
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactory
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceManager
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType
@@ -27,6 +29,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
+import javax.inject.Inject
 import kotlin.Any
 import kotlin.String
 import kotlin.Suppress
@@ -34,7 +37,11 @@ import kotlin.apply
 import kotlin.let
 
 @Suppress("unused")
+@AndroidEntryPoint
 class MainDebugFragment : AbstractDebugFragment() {
+    @Inject
+    lateinit var coordinatorFactory: DeviceCoordinatorFactory
+
     private val addTestDevice = registerForActivityResult(PickDeviceType()) { selection ->
         selection?.let { createTestDevice(it.address, it.deviceType) }
     }
@@ -163,7 +170,7 @@ class MainDebugFragment : AbstractDebugFragment() {
 
     private fun createTestDevice(address: String, deviceType: DeviceType) {
         val context = requireContext()
-        val deviceNameResource = deviceType.deviceCoordinator.deviceNameResource
+        val deviceNameResource = coordinatorFactory.getDeviceCoordinator(deviceType).deviceNameResource
         val deviceName = if (deviceNameResource == 0) deviceType.name else context.getString(deviceNameResource)
 
         LOG.debug("Adding test device {} as {}", address, deviceType)

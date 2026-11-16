@@ -53,6 +53,9 @@ import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactory;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactoryEntryPoint;
+import nodomain.freeyourgadget.gadgetbridge.di.RootEntryPoints;
 import nodomain.freeyourgadget.gadgetbridge.entities.Device;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
@@ -71,6 +74,10 @@ public class DeviceHelper {
     private final Map<String, DeviceType> forcedDeviceTypes = new HashMap<>();
 
     private DeviceType[] orderedDeviceTypes = null;
+
+    private static DeviceCoordinatorFactory coordinatorFactory() {
+        return RootEntryPoints.INSTANCE.get(DeviceCoordinatorFactoryEntryPoint.class).deviceCoordinatorFactory();
+    }
 
     public static DeviceHelper getInstance() {
         return instance;
@@ -126,13 +133,14 @@ public class DeviceHelper {
 
     public GBDevice toSupportedDevice(GBDeviceCandidate candidate) {
         DeviceType resolvedType = resolveDeviceType(candidate);
-        return resolvedType.getDeviceCoordinator().createDevice(candidate, resolvedType);
+        return coordinatorFactory().getDeviceCoordinator(resolvedType).createDevice(candidate, resolvedType);
     }
 
     private DeviceType[] getOrderedDeviceTypes() {
         if (orderedDeviceTypes == null) {
+            final DeviceCoordinatorFactory factory = coordinatorFactory();
             ArrayList<DeviceType> orderedDevices = new ArrayList<>(Arrays.asList(DeviceType.values()));
-            Collections.sort(orderedDevices, Comparator.comparingInt(dc -> dc.getDeviceCoordinator().getOrderPriority()));
+            Collections.sort(orderedDevices, Comparator.comparingInt(dc -> factory.getDeviceCoordinator(dc).getOrderPriority()));
             orderedDeviceTypes = orderedDevices.toArray(new DeviceType[0]);
         }
 
@@ -164,8 +172,9 @@ public class DeviceHelper {
                 }
             }
 
+            final DeviceCoordinatorFactory factory = coordinatorFactory();
             for (DeviceType type : getOrderedDeviceTypes()) {
-                final DeviceCoordinator coordinator = type.getDeviceCoordinator();
+                final DeviceCoordinator coordinator = factory.getDeviceCoordinator(type);
                 // Older coordinators are not prepared for a candidate with a null device, so filter those out
                 if (coordinator.getConnectionType() == DeviceCoordinator.ConnectionType.USB) {
                     if (deviceCandidate.getAccessory() == null) {
@@ -187,7 +196,7 @@ public class DeviceHelper {
     }
 
     public DeviceCoordinator resolveCoordinator(GBDeviceCandidate device) {
-        return resolveDeviceType(device).getDeviceCoordinator();
+        return coordinatorFactory().getDeviceCoordinator(resolveDeviceType(device));
     }
 
     private List<GBDevice> getDatabaseDevices() {
@@ -229,6 +238,6 @@ public class DeviceHelper {
      */
     public GBDevice toGBDevice(Device dbDevice) {
         DeviceType deviceType = DeviceType.fromName(dbDevice.getTypeName());
-        return deviceType.getDeviceCoordinator().createDevice(dbDevice, deviceType);
+        return coordinatorFactory().getDeviceCoordinator(deviceType).createDevice(dbDevice, deviceType);
     }
 }

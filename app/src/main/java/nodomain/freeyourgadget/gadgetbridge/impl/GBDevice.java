@@ -44,6 +44,8 @@ import java.util.List;
 import nodomain.freeyourgadget.gadgetbridge.BuildConfig;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactoryEntryPoint;
+import nodomain.freeyourgadget.gadgetbridge.di.RootEntryPoints;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryState;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
 import nodomain.freeyourgadget.gadgetbridge.model.GenericItem;
@@ -464,7 +466,9 @@ public class GBDevice implements Parcelable {
 
     @NonNull
     public DeviceCoordinator getDeviceCoordinator() {
-        return mDeviceType.getDeviceCoordinator();
+        return RootEntryPoints.INSTANCE.get(DeviceCoordinatorFactoryEntryPoint.class)
+                .deviceCoordinatorFactory()
+                .getDeviceCoordinator(mDeviceType);
     }
 
     public void setRssi(short rssi) {

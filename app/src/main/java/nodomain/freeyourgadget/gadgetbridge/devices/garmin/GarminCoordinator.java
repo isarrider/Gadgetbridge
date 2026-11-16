@@ -29,11 +29,14 @@ import androidx.annotation.Nullable;
 
 import org.apache.commons.lang3.ArrayUtils;
 
+import dagger.Lazy;
+
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -45,6 +48,7 @@ import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpec
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.dsl.DeviceSettingsSpec;
 import nodomain.freeyourgadget.gadgetbridge.capabilities.loyaltycards.BarcodeFormat;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactory;
 import nodomain.freeyourgadget.gadgetbridge.devices.EcgDataProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.GarminBodyEnergySampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.GarminSolarChargeSampleProvider;
@@ -102,6 +106,9 @@ import nodomain.freeyourgadget.gadgetbridge.vendorimport.VendorDataImporter;
 import nodomain.freeyourgadget.gadgetbridge.widgets.DeviceWidgetsProvider;
 
 public abstract class GarminCoordinator extends AbstractBLEDeviceCoordinator {
+    @Inject
+    Lazy<DeviceCoordinatorFactory> coordinatorFactory;
+
     @Override
     public boolean supports(@NonNull final GBDeviceCandidate candidate) {
         final SparseArray<byte[]> manufacturerSpecificData = candidate.getManufacturerSpecificData();
@@ -109,7 +116,7 @@ public abstract class GarminCoordinator extends AbstractBLEDeviceCoordinator {
         if (garminData != null && garminData.length >= 2) {
             final int partNumber = ((garminData[0] & 0xFF) << 8) | (garminData[1] & 0xFF);
             final DeviceType deviceType = GarminProductNumbers.getDeviceType(partNumber);
-            return deviceType != null && deviceType.getCoordinatorClass() == this.getClass();
+            return deviceType != null && coordinatorFactory.get().getDeviceCoordinator(deviceType).getClass() == this.getClass();
         }
 
         // Fallback to device name

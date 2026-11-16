@@ -10,8 +10,10 @@ import android.widget.FrameLayout
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.graphics.createBitmap
 import com.google.android.material.card.MaterialCardView
+import dagger.hilt.EntryPoints
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.activities.dashboard.applyCardStyle
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactoryEntryPoint
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType
 import nodomain.freeyourgadget.gadgetbridge.test.TestBase
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs
@@ -69,8 +71,9 @@ class WidgetPreviewRenderTest : TestBase() {
     private fun allWidgets(): List<GBWidget<*>> {
         val byId = LinkedHashMap<String, GBWidget<*>>()
         for (widget in WidgetRegistry.all()) byId.putIfAbsent(widget.id, widget)
+        val factory = EntryPoints.get(app, DeviceCoordinatorFactoryEntryPoint::class.java).deviceCoordinatorFactory()
         DeviceType.entries
-            .map { it.deviceCoordinator }
+            .map { factory.getDeviceCoordinator(it) }
             .distinctBy { it.javaClass }
             .flatMap { it.widgetsProvider.getWidgets() }
             .forEach { byId.putIfAbsent(it.id, it) }

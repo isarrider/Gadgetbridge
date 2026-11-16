@@ -68,6 +68,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.MenuProvider;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import dagger.hilt.android.AndroidEntryPoint;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +79,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -89,6 +91,7 @@ import nodomain.freeyourgadget.gadgetbridge.activities.pairing.DevicePairingActi
 import nodomain.freeyourgadget.gadgetbridge.adapter.DeviceCandidateAdapter;
 import nodomain.freeyourgadget.gadgetbridge.adapter.SimpleIconListAdapter;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactory;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
@@ -99,11 +102,15 @@ import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
 
 
+@AndroidEntryPoint
 public class DiscoveryActivityV2 extends AbstractGBActivity implements AdapterView.OnItemClickListener,
         AdapterView.OnItemLongClickListener,
         GBScanEventProcessor.Callback,
         MenuProvider {
     private static final Logger LOG = LoggerFactory.getLogger(DiscoveryActivityV2.class);
+
+    @Inject
+    DeviceCoordinatorFactory coordinatorFactory;
 
     private static final int CHILD_RESULT = 0x826983; // "RES" as ASCII hex
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -175,7 +182,7 @@ public class DiscoveryActivityV2 extends AbstractGBActivity implements AdapterVi
         final TextView hintView = findViewById(R.id.discovery_hint);
         hintView.setText(hint);
 
-        deviceCandidateAdapter = new DeviceCandidateAdapter(this, deviceCandidates);
+        deviceCandidateAdapter = new DeviceCandidateAdapter(this, deviceCandidates, coordinatorFactory);
 
         final ListView deviceCandidatesView = findViewById(R.id.discovery_device_candidates_list);
         deviceCandidatesView.setAdapter(deviceCandidateAdapter);
@@ -196,7 +203,7 @@ public class DiscoveryActivityV2 extends AbstractGBActivity implements AdapterVi
                         }
                         final GBDeviceCandidate deviceCandidate = data.getParcelableExtra(AuthKeyActivity.EXTRA_DEVICE_CANDIDATE_RESULT);
                         final DeviceType deviceType = DeviceHelper.getInstance().resolveDeviceType(Objects.requireNonNull(deviceCandidate));
-                        startPair(deviceCandidate, deviceType.getDeviceCoordinator());
+                        startPair(deviceCandidate, coordinatorFactory.getDeviceCoordinator(deviceType));
                     }
                 });
 
@@ -629,7 +636,7 @@ public class DiscoveryActivityV2 extends AbstractGBActivity implements AdapterVi
             return;
         }
 
-        final DeviceCoordinator coordinator = deviceType.getDeviceCoordinator();
+        final DeviceCoordinator coordinator = coordinatorFactory.getDeviceCoordinator(deviceType);
         LOG.info("Using device candidate {} with coordinator {}", deviceCandidate, coordinator.getClass());
 
         if (coordinator.suggestUnbindBeforePair() && deviceCandidate.isBonded()) {
@@ -700,7 +707,7 @@ public class DiscoveryActivityV2 extends AbstractGBActivity implements AdapterVi
             ));
         }
 
-        final DeviceCoordinator coordinator = deviceType.getDeviceCoordinator();
+        final DeviceCoordinator coordinator = coordinatorFactory.getDeviceCoordinator(deviceType);
         final GBDevice device = DeviceHelper.getInstance().toSupportedDevice(deviceCandidate);
 
         if (coordinator.getSupportedDeviceSpecificAuthenticationSettings().length > 0) {

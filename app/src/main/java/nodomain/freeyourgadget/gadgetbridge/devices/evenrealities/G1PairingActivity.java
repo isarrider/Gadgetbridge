@@ -18,6 +18,7 @@ import android.widget.Toast;
 
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import dagger.hilt.android.AndroidEntryPoint;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import javax.inject.Inject;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
@@ -32,6 +34,7 @@ import nodomain.freeyourgadget.gadgetbridge.activities.AbstractGBActivity;
 import nodomain.freeyourgadget.gadgetbridge.activities.permissions.DevicePermissionsActivity;
 import nodomain.freeyourgadget.gadgetbridge.adapter.DeviceCandidateAdapter;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactory;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceCandidate;
 import nodomain.freeyourgadget.gadgetbridge.model.ItemWithDetails;
@@ -47,9 +50,14 @@ import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
  * The user will select either the left or the right and this activity will search for the other
  * side pair both.
  */
+@AndroidEntryPoint
 public class G1PairingActivity extends AbstractGBActivity
         implements BondingInterface, AdapterView.OnItemClickListener {
     private static final Logger LOG = LoggerFactory.getLogger(G1PairingActivity.class);
+
+    @Inject
+    DeviceCoordinatorFactory coordinatorFactory;
+
     private final ArrayList<GBDeviceCandidate> nextLensCandidates = new ArrayList<>();
     private final BroadcastReceiver bluetoothReceiver = new G1PairingActivity.BluetoothReceiver();
     private final BroadcastReceiver deviceChangedReceiver =
@@ -238,7 +246,7 @@ public class G1PairingActivity extends AbstractGBActivity
             // options, so collisions are inevitable. Better to have this and not need it than have
             // users get stuck.
             DeviceCandidateAdapter nextLensCandidatesAdapter =
-                    new DeviceCandidateAdapter(this, nextLensCandidates);
+                    new DeviceCandidateAdapter(this, nextLensCandidates, coordinatorFactory);
             nextLensCandidatesListView.setAdapter(nextLensCandidatesAdapter);
             nextLensCandidatesListView.setOnItemClickListener(this);
 

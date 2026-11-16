@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import dagger.hilt.EntryPoints;
+
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
 import nodomain.freeyourgadget.gadgetbridge.test.TestBase;
 
@@ -361,13 +363,14 @@ public class BluetoothNameTest extends TestBase {
             put("X9 UItra", DeviceType.WEARFIT_X9_ULTRA); // #3700
         }};
 
+        final DeviceCoordinatorFactory factory = EntryPoints.get(app, DeviceCoordinatorFactoryEntryPoint.class).deviceCoordinatorFactory();
         for (Map.Entry<String, DeviceType> e : bluetoothNameToExpectedType.entrySet()) {
             final String bluetoothName = e.getKey();
             final DeviceType expectedType = e.getValue();
             final List<DeviceType> matches = new ArrayList<>(1);
             // Check the bluetooth name against all existing coordinators
             for (DeviceType type : DeviceType.values()) {
-                final Pattern pattern = ((AbstractDeviceCoordinator) type.getDeviceCoordinator()).getSupportedDeviceName();
+                final Pattern pattern = ((AbstractDeviceCoordinator) factory.getDeviceCoordinator(type)).getSupportedDeviceName();
                 if (pattern != null) {
                     if (pattern.matcher(bluetoothName).matches()) {
                         matches.add(type);

@@ -19,15 +19,19 @@ package nodomain.freeyourgadget.gadgetbridge.model;
 import org.junit.Assert;
 import org.junit.Test;
 
+import dagger.hilt.EntryPoints;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactory;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactoryEntryPoint;
 import nodomain.freeyourgadget.gadgetbridge.test.TestBase;
 
 public class DeviceTypeTest extends TestBase {
     @Test
     public void ensureNoMissingDeviceInfo() {
         // Check that all coordinators for all device types declare valid device names, icons and manufacturer
+        final DeviceCoordinatorFactory factory = EntryPoints.get(app, DeviceCoordinatorFactoryEntryPoint.class).deviceCoordinatorFactory();
         for (final DeviceType deviceType : DeviceType.values()) {
-            final DeviceCoordinator coordinator = deviceType.getDeviceCoordinator();
+            final DeviceCoordinator coordinator = factory.getDeviceCoordinator(deviceType);
             Assert.assertNotEquals("Device name for " + deviceType + " is 0", 0, coordinator.getDeviceNameResource());
             Assert.assertNotEquals("Device icon for " + deviceType + " is 0", 0, coordinator.getDefaultIconResource());
             Assert.assertNotEquals("Manufacturer for " + deviceType + " is null", null, coordinator.getManufacturer());

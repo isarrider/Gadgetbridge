@@ -5,6 +5,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,13 +14,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nodomain.freeyourgadget.gadgetbridge.R
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinatorFactory
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator.ConnectionType
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator.DeviceKind
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType
 import nodomain.freeyourgadget.gadgetbridge.util.StringUtils
+import javax.inject.Inject
 
-class DeviceTypePickerViewModel : ViewModel() {
+@HiltViewModel
+class DeviceTypePickerViewModel @Inject constructor(
+    private val coordinatorFactory: DeviceCoordinatorFactory,
+) : ViewModel() {
     data class Entry(
         val deviceType: DeviceType,
         val name: String,
@@ -70,7 +76,7 @@ class DeviceTypePickerViewModel : ViewModel() {
         val i18nGeneric = context.getString(R.string.pref_header_generic)
 
         allEntries = DeviceType.entries.mapNotNull { deviceType ->
-            val coordinator = deviceType.deviceCoordinator
+            val coordinator = coordinatorFactory.getDeviceCoordinator(deviceType)
             if (coordinator.connectionType !in connectionTypes) {
                 return@mapNotNull null
             }

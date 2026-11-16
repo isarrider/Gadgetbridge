@@ -33,7 +33,7 @@ class AuthKeyActivity : AbstractGBActivity() {
         deviceCandidate = intent.getParcelableCompat<GBDeviceCandidate>(EXTRA_DEVICE_CANDIDATE)
 
         deviceCandidate?.let { candidate ->
-            coordinator = DeviceHelper.getInstance().resolveDeviceType(candidate).deviceCoordinator
+            coordinator = DeviceHelper.getInstance().resolveCoordinator(candidate)
         }
 
         if (deviceCandidate == null || coordinator == null) {
