@@ -588,6 +588,7 @@ import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.coordinators
 import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.coordinators.SonyWISP600NCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.sony.reonpocket.SonyReonPocketProCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.sony.wena3.SonyWena3Coordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.samsung_gearfit.GearFitCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.sonyswr12.SonySWR12DeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.soundbrenner.SoundbrennerCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.soundcore.SoundcoreP42iCoordinator;
@@ -1083,6 +1084,7 @@ public enum DeviceType {
     AAWIRELESS(AAWirelessCoordinator::new),
     VIBRATISSIMO(VibratissimoCoordinator::new),
     SONY_SWR12(SonySWR12DeviceCoordinator::new),
+    SAMSUNG_GEAR_FIT(GearFitCoordinator::new),
     LIVEVIEW(LiveviewCoordinator::new),
     WASPOS(WaspOSCoordinator::new),
     UM25(UM25Coordinator::new),
