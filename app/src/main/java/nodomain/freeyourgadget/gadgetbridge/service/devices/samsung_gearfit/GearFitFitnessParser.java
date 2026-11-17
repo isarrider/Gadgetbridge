@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Parses the record stream carried by a health port payload.
@@ -37,8 +38,6 @@ import java.util.List;
  */
 public final class GearFitFitnessParser {
     private static final Logger LOG = LoggerFactory.getLogger(GearFitFitnessParser.class);
-
-    private static final int ENVELOPE_SIZE = 9;
 
     private GearFitFitnessParser() {
     }
@@ -147,12 +146,12 @@ public final class GearFitFitnessParser {
 
     public static Result parse(final byte[] payload) {
         final Result result = new Result();
-        if (payload == null || payload.length < ENVELOPE_SIZE + 1) {
+        if (payload == null || payload.length < GearFitConstants.FITNESS_ENVELOPE_SIZE + 1) {
             return result;
         }
 
         final ByteBuffer buffer = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
-        buffer.position(ENVELOPE_SIZE);
+        buffer.position(GearFitConstants.FITNESS_ENVELOPE_SIZE);
 
         while (buffer.hasRemaining()) {
             final byte recordType = buffer.get();
@@ -178,11 +177,11 @@ public final class GearFitFitnessParser {
             case GearFitConstants.FITNESS_USER_PROFILE: {
                 // The leading integer is not a count, the profile always carries ten integers.
                 buffer.getInt();
-                skip(buffer, 40);
+                skip(buffer, GearFitConstants.USER_PROFILE_REMAINING_SIZE);
                 return true;
             }
             case GearFitConstants.FITNESS_PEDOMETER_PROFILE: {
-                skip(buffer, 16);
+                skip(buffer, GearFitConstants.PEDOMETER_PROFILE_SIZE);
                 return true;
             }
             case GearFitConstants.FITNESS_COACHING_PROFILE:
@@ -194,7 +193,7 @@ public final class GearFitFitnessParser {
                 final int count = buffer.getInt();
                 for (int i = 0; i < count; i++) {
                     result.pedometer.add(new PedometerRecord(
-                            buffer.getInt() * 1000L,
+                            TimeUnit.SECONDS.toMillis(buffer.getInt()),
                             buffer.getInt(),
                             buffer.getFloat(),
                             buffer.getFloat()));
@@ -205,8 +204,8 @@ public final class GearFitFitnessParser {
                 final int count = buffer.getInt();
                 for (int i = 0; i < count; i++) {
                     result.sleepResults.add(new SleepResultRecord(
-                            buffer.getInt() * 1000L,
-                            buffer.getInt() * 1000L,
+                            TimeUnit.SECONDS.toMillis(buffer.getInt()),
+                            TimeUnit.SECONDS.toMillis(buffer.getInt()),
                             buffer.getFloat(),
                             buffer.getInt(),
                             buffer.getInt()));
@@ -218,7 +217,7 @@ public final class GearFitFitnessParser {
                 for (int i = 0; i < count; i++) {
                     buffer.getInt(); // index
                     result.sleepInfo.add(new SleepInfoRecord(
-                            buffer.getInt() * 1000L,
+                            TimeUnit.SECONDS.toMillis(buffer.getInt()),
                             buffer.getInt()));
                 }
                 return true;
@@ -227,18 +226,18 @@ public final class GearFitFitnessParser {
                 final int count = buffer.getInt();
                 for (int i = 0; i < count; i++) {
                     result.heartRate.add(new HeartRateRecord(
-                            buffer.getInt() * 1000L,
+                            TimeUnit.SECONDS.toMillis(buffer.getInt()),
                             buffer.getInt()));
                 }
                 return true;
             }
             case GearFitConstants.FITNESS_COACHING_VARS: {
-                skip(buffer, 54);
+                skip(buffer, GearFitConstants.COACHING_VARS_SIZE);
                 return true;
             }
             case GearFitConstants.FITNESS_COACHING_EXERCISE_RESULT: {
                 final int count = buffer.getInt();
-                skip(buffer, count * 28);
+                skip(buffer, count * GearFitConstants.COACHING_EXERCISE_RESULT_SIZE);
                 return true;
             }
             case GearFitConstants.FITNESS_COACHING_RUNNING_EXERCISE:
@@ -247,7 +246,7 @@ public final class GearFitFitnessParser {
             case GearFitConstants.FITNESS_COACHING_RESULT_RECORD: {
                 final int count = buffer.getInt();
                 for (int i = 0; i < count; i++) {
-                    final long timestampMillis = buffer.getInt() * 1000L;
+                    final long timestampMillis = TimeUnit.SECONDS.toMillis(buffer.getInt());
                     final int durationSeconds = buffer.getInt();
                     final float calories = buffer.getFloat();
                     final int avgHeartRate = buffer.getInt();

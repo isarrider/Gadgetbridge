@@ -20,6 +20,7 @@
 package nodomain.freeyourgadget.gadgetbridge.service.devices.samsung_gearfit;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Wire protocol constants for the Samsung Gear Fit (SM-R350, "Wingtip").
@@ -35,6 +36,28 @@ public final class GearFitConstants {
 
     public static final int BUFFER_SIZE = 8192;
     public static final int MAX_PAYLOAD_SIZE = 4096;
+    public static final int FRAME_HEADER_SIZE = 5;
+    public static final int MAX_STRING8_BYTES = 254;
+    public static final int UTF16_BOM_SIZE = 2;
+
+    public static final int STATUS_INITIALIZE = 1;
+    public static final byte STATUS_FIRMWARE_VERSION = 0;
+    public static final byte STATUS_BATTERY_CHARGING = 1;
+    public static final byte STATUS_BATTERY_FULL = 2;
+
+    public static final int FITNESS_ENVELOPE_SIZE = 9;
+    public static final int FITNESS_ENVELOPE_TYPE = 4;
+    public static final byte FITNESS_ENVELOPE_MARKER = (byte) 0xFF;
+
+    public static final int USER_PROFILE_REMAINING_SIZE = 40;
+    public static final int PEDOMETER_PROFILE_SIZE = 16;
+    public static final int COACHING_VARS_SIZE = 54;
+    public static final int COACHING_EXERCISE_RESULT_SIZE = 28;
+
+    public static final int GPS_EXERCISE_START_MIN_SIZE = 16;
+    public static final int WEATHER_UNIT_FAHRENHEIT = 0;
+    public static final int WEATHER_UNIT_CELSIUS = 1;
+    public static final byte FIND_EVENT_TYPE = 1;
 
     /** Ports (first byte of every message). */
     public static final byte PORT_FEATURE = 0;
@@ -147,7 +170,7 @@ public final class GearFitConstants {
 
     /** Quiet time after the last fitness frame before the sync is considered complete. */
     public static final long FITNESS_SYNC_SETTLE_MILLIS = 1500;
-    public static final long BATTERY_REFRESH_INTERVAL_MILLIS = 60 * 1000L;
+    public static final long BATTERY_REFRESH_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
     public static final int HEALTH_MENU_RESPONSE = 28;
     public static final int HEALTH_MENU = 27;
     public static final int HEALTH_CANCEL = 10;

@@ -44,7 +44,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
+import lineageos.weather.util.TemperatureUtils;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.activities.SettingsActivity;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
@@ -85,6 +87,19 @@ import nodomain.freeyourgadget.gadgetbridge.service.btbr.TransactionBuilder;
 
 public class GearFitSupport extends AbstractBTBRDeviceSupport {
     private static final Logger LOG = LoggerFactory.getLogger(GearFitSupport.class);
+    private static final int DEFAULT_MEDIA_VOLUME = 7;
+    private static final int GPS_LOCATION_INTERVAL_MILLIS = (int) TimeUnit.SECONDS.toMillis(1);
+    private static final int MAX_PENDING_GPS_TRACKS = 20;
+    private static final int MAX_ACTIVE_NOTIFICATIONS = 100;
+    private static final int MAX_CANNED_REPLY_MESSAGES = 10;
+    private static final float MAX_GPS_POINT_DISTANCE_METERS = 5000f;
+    private static final long GPS_TRACK_MATCH_WINDOW_MILLIS = TimeUnit.MINUTES.toMillis(5);
+    private static final long MAX_SLEEP_WINDOW_MILLIS = TimeUnit.HOURS.toMillis(24);
+    private static final long SLEEP_SAMPLE_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
+    private static final int SLEEP_DEEP_STATUS_MIN = 80;
+    private static final int SLEEP_LIGHT_STATUS_MIN = 30;
+    private static final int KELVIN_CELSIUS_OFFSET = 273;
+    private static final int NO_ACTIVE_ALARM_NOTIFICATION_ID = -1;
 
     private final ByteBuffer packetBuffer = ByteBuffer.allocate(GearFitConstants.BUFFER_SIZE)
             .order(ByteOrder.LITTLE_ENDIAN);
@@ -107,8 +122,8 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
     private boolean handshakeDone = false;
     private boolean fitnessPending = false;
     private String lastTrack = "";
-    private int lastVolume = 7;
-    private int activeAlarmNotificationId = -1;
+    private int lastVolume = DEFAULT_MEDIA_VOLUME;
+    private int activeAlarmNotificationId = NO_ACTIVE_ALARM_NOTIFICATION_ID;
     private String activeCallNumber;
     private String[] genericReplies = new String[0];
     private String[] rejectedCallReplies = new String[0];
@@ -171,7 +186,7 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
         while (packetBuffer.hasRemaining()) {
             packetBuffer.mark();
 
-            if (packetBuffer.remaining() < 5) {
+            if (packetBuffer.remaining() < GearFitConstants.FRAME_HEADER_SIZE) {
                 packetBuffer.reset();
                 break;
             }
@@ -257,7 +272,8 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
         builder.write(GearFitProtocol.handshakeFota());
         builder.write(GearFitProtocol.handshakeFollowUp());
         builder.write(GearFitProtocol.handshakeFotaCommand());
-        builder.write(GearFitProtocol.frame(GearFitConstants.PORT_STATUS_MANAGER, new byte[]{1}));
+        builder.write(GearFitProtocol.frame(GearFitConstants.PORT_STATUS_MANAGER,
+                new byte[]{GearFitConstants.STATUS_INITIALIZE}));
         builder.write(GearFitProtocol.frame(GearFitConstants.PORT_STATUS_MANAGER,
                 new byte[]{GearFitConstants.STATUS_DEVICE_INFO_REQUEST}));
         builder.write(GearFitProtocol.setTime(is24Hour()));
@@ -271,14 +287,15 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
             return;
         }
         final int type = payload[0] & 0xFF;
-        if (type == 11 && payload.length >= 3) {
+        if (type == (GearFitConstants.STATUS_BATTERY_REQUEST & 0xFF) && payload.length >= 3) {
             final GBDeviceEventBatteryInfo battery = new GBDeviceEventBatteryInfo();
             battery.batteryIndex = 0;
             battery.level = payload[1] & 0xFF;
-            battery.state = (payload[2] == 1 || payload[2] == 2)
+            battery.state = (payload[2] == GearFitConstants.STATUS_BATTERY_CHARGING
+                    || payload[2] == GearFitConstants.STATUS_BATTERY_FULL)
                     ? BatteryState.BATTERY_CHARGING : BatteryState.BATTERY_NORMAL;
             handleGBDeviceEvent(battery);
-        } else if (type == 0 && payload.length >= 2) {
+        } else if (type == (GearFitConstants.STATUS_FIRMWARE_VERSION & 0xFF) && payload.length >= 2) {
             final int length = payload[1] & 0xFF;
             if (length > 0 && payload.length >= length + 2) {
                 publishVersionInfo(new String(payload, 2, length, StandardCharsets.US_ASCII).trim(), null);
@@ -378,13 +395,14 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
      * {@code 04 000000}, {@code 0A 000000} and a {@code 0xFF} marker.
      */
     private static boolean isFitnessPayload(final byte[] payload) {
-        return payload.length > 9
-                && readInt(payload, 0) == 4
-                && payload[8] == (byte) 0xFF;
+        return payload.length > GearFitConstants.FITNESS_ENVELOPE_SIZE
+                && readInt(payload, 0) == GearFitConstants.FITNESS_ENVELOPE_TYPE
+                && payload[GearFitConstants.FITNESS_ENVELOPE_SIZE - 1]
+                == GearFitConstants.FITNESS_ENVELOPE_MARKER;
     }
 
     private void startGpsTracking(final byte[] payload) {
-        if (payload.length < 16) {
+        if (payload.length < GearFitConstants.GPS_EXERCISE_START_MIN_SIZE) {
             LOG.warn("Truncated Gear Fit GPS exercise start ({} bytes)", payload.length);
             return;
         }
@@ -412,7 +430,8 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
         final float userWeight = start.getFloat();
         LOG.info("Starting phone GPS for Gear Fit exercise {}, user height {}, weight {}",
                 exerciseType, userHeight, userWeight);
-        GBLocationService.start(getContext(), getDevice(), GBLocationProviderType.GPS, 1000);
+        GBLocationService.start(getContext(), getDevice(), GBLocationProviderType.GPS,
+                GPS_LOCATION_INTERVAL_MILLIS);
         send(GearFitProtocol.gpsReady());
     }
 
@@ -433,7 +452,8 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
         final long endTimeMillis = System.currentTimeMillis();
         GBLocationService.stop(getContext(), getDevice());
         send(GearFitProtocol.gpsState(false));
-        final float elapsedSeconds = Math.max(1f, (endTimeMillis - gpsStartTimeMillis) / 1000f);
+        final float elapsedSeconds = Math.max(1f,
+                (endTimeMillis - gpsStartTimeMillis) / (float) TimeUnit.SECONDS.toMillis(1));
         final float averageSpeed = gpsDistanceMeters / elapsedSeconds;
         final float maxAltitude = gpsMaxAltitude == Float.NEGATIVE_INFINITY ? 0f : gpsMaxAltitude;
         final float minAltitude = gpsMinAltitude == Float.POSITIVE_INFINITY ? 0f : gpsMinAltitude;
@@ -444,7 +464,7 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
         if (trackPath != null) {
             pendingGpsTracks.put(gpsStartTimeMillis,
                     new GpsTrack(gpsStartTimeMillis, endTimeMillis, trackPath));
-            while (pendingGpsTracks.size() > 20) {
+            while (pendingGpsTracks.size() > MAX_PENDING_GPS_TRACKS) {
                 pendingGpsTracks.remove(pendingGpsTracks.keySet().iterator().next());
             }
         }
@@ -487,7 +507,7 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
                 return null;
             }
             final File gpxFile = new File(exportDirectory,
-                    "gearfit_" + (gpsStartTimeMillis / 1000L) + ".gpx");
+                    "gearfit_" + TimeUnit.MILLISECONDS.toSeconds(gpsStartTimeMillis) + ".gpx");
             final ActivityTrack track = new ActivityTrack();
             track.setBaseTime(new Date(gpsStartTimeMillis));
             track.setName("Gear Fit GPS");
@@ -519,10 +539,10 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
         if (lastGpsLocation != null) {
             final long elapsedMillis = point.getTime() - lastGpsLocation.getTime();
             final float distance = lastGpsLocation.distanceTo(point);
-            if (elapsedMillis > 0 && distance < 5000f) {
+            if (elapsedMillis > 0 && distance < MAX_GPS_POINT_DISTANCE_METERS) {
                 gpsDistanceMeters += distance;
                 if (!point.hasSpeed()) {
-                    speed = distance * 1000f / elapsedMillis;
+                    speed = distance * TimeUnit.SECONDS.toMillis(1) / elapsedMillis;
                     point.setSpeed(speed);
                 }
             }
@@ -639,7 +659,7 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
 
     private GearFitActivitySample getOrCreate(final Map<Integer, GearFitActivitySample> samples,
                                               final long timestampMillis) {
-        final int timestamp = (int) (timestampMillis / 1000L);
+        final int timestamp = (int) TimeUnit.MILLISECONDS.toSeconds(timestampMillis);
         GearFitActivitySample sample = samples.get(timestamp);
         if (sample == null) {
             sample = new GearFitActivitySample();
@@ -661,8 +681,10 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
             return;
         }
         // Guard against bogus timestamps producing hundreds of thousands of samples.
-        final long cappedEnd = Math.min(endMillis, startMillis + 24L * 60L * 60L * 1000L);
-        for (long timestamp = startMillis; timestamp < cappedEnd; timestamp += 60_000L) {
+        final long cappedEnd = Math.min(endMillis,
+                startMillis + MAX_SLEEP_WINDOW_MILLIS);
+        for (long timestamp = startMillis; timestamp < cappedEnd;
+             timestamp += SLEEP_SAMPLE_INTERVAL_MILLIS) {
             final GearFitActivitySample sample = getOrCreate(samples, timestamp);
             sample.setRawKind(ActivityKind.LIGHT_SLEEP.getCode());
             sample.setSteps(0);
@@ -674,7 +696,8 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
         final BaseActivitySummary summary = new BaseActivitySummary();
         summary.setName(getContext().getString(kind.getLabel()));
         summary.setStartTime(new Date(record.timestampMillis));
-        summary.setEndTime(new Date(record.timestampMillis + record.durationSeconds * 1000L));
+        summary.setEndTime(new Date(record.timestampMillis
+                + TimeUnit.SECONDS.toMillis(record.durationSeconds)));
         summary.setActivityKind(kind.getCode());
         summary.setRawSummaryData(payload);
         final GpsTrack gpsTrack = findGpsTrack(record.timestampMillis);
@@ -693,7 +716,8 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
                     ? track.startMillis - activityStartMillis
                     : activityStartMillis > track.endMillis
                     ? activityStartMillis - track.endMillis : 0L;
-            if (distance <= 5 * 60 * 1000L && distance < nearestDistance) {
+            if (distance <= GPS_TRACK_MATCH_WINDOW_MILLIS
+                    && distance < nearestDistance) {
                 nearestDistance = distance;
                 matchKey = entry.getKey();
             }
@@ -705,9 +729,9 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
     }
 
     private static ActivityKind sleepKind(final int status) {
-        if (status >= 80) {
+        if (status >= SLEEP_DEEP_STATUS_MIN) {
             return ActivityKind.DEEP_SLEEP;
-        } else if (status >= 30) {
+        } else if (status >= SLEEP_LIGHT_STATUS_MIN) {
             return ActivityKind.LIGHT_SLEEP;
         }
         return ActivityKind.AWAKE_SLEEP;
@@ -729,7 +753,7 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
     }
 
     private void handleFind(final byte[] payload) {
-        if (payload.length < 2 || payload[0] != 1) {
+        if (payload.length < 2 || payload[0] != GearFitConstants.FIND_EVENT_TYPE) {
             return;
         }
         final GBDeviceEventFindPhone event = new GBDeviceEventFindPhone();
@@ -880,13 +904,13 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
             return;
         }
 
-        int temperature = weatherSpec.getCurrentTemp() - 273;
-        int unit = 1;
+        int temperature = weatherSpec.getCurrentTemp() - KELVIN_CELSIUS_OFFSET;
+        int unit = GearFitConstants.WEATHER_UNIT_CELSIUS;
         final String unitPreference = GBApplication.getPrefs()
                 .getString(SettingsActivity.PREF_UNIT_TEMPERATURE, "celsius");
         if ("fahrenheit".equals(unitPreference)) {
-            temperature = Math.round(temperature * 9f / 5f + 32f);
-            unit = 0;
+            temperature = Math.round((float) TemperatureUtils.celsiusToFahrenheit(temperature));
+            unit = GearFitConstants.WEATHER_UNIT_FAHRENHEIT;
         }
 
         final String icon = GearFitProtocol.openWeatherIcon(weatherSpec.getCurrentConditionCode());
@@ -985,7 +1009,7 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
     public void onDeleteNotification(final int id) {
         activeNotifications.remove((long) id);
         if (id == activeAlarmNotificationId) {
-            activeAlarmNotificationId = -1;
+            activeAlarmNotificationId = NO_ACTIVE_ALARM_NOTIFICATION_ID;
             send(GearFitProtocol.alarmClear());
         }
     }
@@ -1030,7 +1054,7 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
             send(GearFitProtocol.notification(GearFitConstants.NOTIFICATION_MESSAGE, id,
                     sender, number, title, body, timestamp));
         }
-        while (activeNotifications.size() > 100) {
+        while (activeNotifications.size() > MAX_ACTIVE_NOTIFICATIONS) {
             activeNotifications.remove(activeNotifications.keySet().iterator().next());
         }
     }
@@ -1042,7 +1066,7 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
             case CallSpec.CALL_START:
                 activeCallNumber = callSpec.getNumber();
                 send(GearFitProtocol.incomingCall(
-                        System.currentTimeMillis() / 1000L,
+                        TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()),
                         firstNonEmpty(callSpec.getName(), callSpec.getNumber(), "Gadgetbridge"),
                         firstNonEmpty(callSpec.getNumber()),
                         System.currentTimeMillis()));
@@ -1065,7 +1089,7 @@ public class GearFitSupport extends AbstractBTBRDeviceSupport {
     @Override
     public void onSetCannedMessages(final CannedMessagesSpec spec) {
         final String[] messages = spec.getCannedMessages() == null ? new String[0] : spec.getCannedMessages();
-        final int count = Math.min(messages.length, 10);
+        final int count = Math.min(messages.length, MAX_CANNED_REPLY_MESSAGES);
         if (spec.getType() == CannedMessagesSpec.TYPE_REJECTEDCALLS) {
             rejectedCallReplies = copyMessages(messages, count);
             sendCannedMessages(GearFitConstants.PORT_CALL, 4, rejectedCallReplies);

@@ -50,6 +50,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 import nodomain.freeyourgadget.gadgetbridge.model.CalendarEventSpec;
 
@@ -79,7 +80,7 @@ public final class GearFitProtocol {
     public static byte[] setTime(final boolean is24Hour) {
         final long nowMillis = System.currentTimeMillis();
         final TimeZone timeZone = Calendar.getInstance().getTimeZone();
-        final int rawOffsetMinutes = timeZone.getRawOffset() / 60000;
+        final int rawOffsetMinutes = (int) TimeUnit.MILLISECONDS.toMinutes(timeZone.getRawOffset());
         final boolean inDaylightTime = timeZone.inDaylightTime(new Date(nowMillis));
         final boolean useDaylightTime = timeZone.useDaylightTime();
 
@@ -102,7 +103,7 @@ public final class GearFitProtocol {
 
         final Writer w = new Writer();
         w.u8(HOME_TYPE_SET_TIME);
-        w.i32((int) (nowMillis / 1000L));
+        w.i32((int) TimeUnit.MILLISECONDS.toSeconds(nowMillis));
         w.i32(rawOffsetMinutes / 60);
         w.i32(rawOffsetMinutes % 60);
         w.u8(TEXT_DATE_FORMAT_TYPE);
@@ -112,7 +113,7 @@ public final class GearFitProtocol {
         w.u8(useDaylightTime ? 1 : 0);
         w.i32(previousTransition);
         w.i32(nextTransition);
-        w.i32(timeZone.getDSTSavings() / 1000);
+        w.i32((int) TimeUnit.MILLISECONDS.toSeconds(timeZone.getDSTSavings()));
         return frame(PORT_HOME, w.toByteArray());
     }
 
@@ -208,7 +209,7 @@ public final class GearFitProtocol {
         w.string8(truncate(title, MAX_TITLE_CHARS));
         w.string16(truncate(message, MAX_MESSAGE_CHARS));
         w.u8(0);
-        w.i32((int) (timestampMillis / 1000L));
+        w.i32((int) TimeUnit.MILLISECONDS.toSeconds(timestampMillis));
         return frame(PORT_NOTIFICATION, w.toByteArray());
     }
 
@@ -224,7 +225,7 @@ public final class GearFitProtocol {
         w.u8(0); // number of attachments, shifted
         w.u8(0); // quick reply supported
         w.u8(0); // image attached
-        w.i32((int) (timestampMillis / 1000L));
+        w.i32((int) TimeUnit.MILLISECONDS.toSeconds(timestampMillis));
         return frame(PORT_NOTIFICATION, w.toByteArray());
     }
 
@@ -236,7 +237,7 @@ public final class GearFitProtocol {
         w.u8(0);
         w.string8(truncate(name, MAX_TITLE_CHARS));
         w.string8(truncate(number, MAX_TITLE_CHARS));
-        w.i32((int) (timestampMillis / 1000L));
+        w.i32((int) TimeUnit.MILLISECONDS.toSeconds(timestampMillis));
         return frame(PORT_CALL, w.toByteArray());
     }
 
@@ -275,29 +276,29 @@ public final class GearFitProtocol {
         w.i32(temperature);
         w.u8(unit);
         w.u8(0);
-        w.i32((int) (timestampMillis / 1000L));
-        w.i32((int) (timestampMillis / 1000L));
+        w.i32((int) TimeUnit.MILLISECONDS.toSeconds(timestampMillis));
+        w.i32((int) TimeUnit.MILLISECONDS.toSeconds(timestampMillis));
         return frame(PORT_HOME, w.toByteArray());
     }
 
     /** Encodes a string the way the watch expects it: BOM plus UTF-16LE. */
     public static byte[] encodeString(final String value) {
         final byte[] utf16 = (value == null ? "" : value).getBytes(StandardCharsets.UTF_16LE);
-        final byte[] result = new byte[2 + utf16.length];
+        final byte[] result = new byte[GearFitConstants.UTF16_BOM_SIZE + utf16.length];
         result[0] = (byte) 0xFF;
         result[1] = (byte) 0xFE;
-        System.arraycopy(utf16, 0, result, 2, utf16.length);
+        System.arraycopy(utf16, 0, result, GearFitConstants.UTF16_BOM_SIZE, utf16.length);
         return result;
     }
 
     public static byte[] frame(final int port, final byte[] payload) {
-        final byte[] result = new byte[5 + payload.length];
+        final byte[] result = new byte[GearFitConstants.FRAME_HEADER_SIZE + payload.length];
         result[0] = (byte) port;
         result[1] = (byte) payload.length;
         result[2] = (byte) (payload.length >>> 8);
         result[3] = (byte) (payload.length >>> 16);
         result[4] = (byte) (payload.length >>> 24);
-        System.arraycopy(payload, 0, result, 5, payload.length);
+        System.arraycopy(payload, 0, result, GearFitConstants.FRAME_HEADER_SIZE, payload.length);
         return result;
     }
 
@@ -313,26 +314,28 @@ public final class GearFitProtocol {
     }
 
     public static byte[] calendarEvent(final CalendarEventSpec event) {
-        final long start = event.getTimestamp() * 1000L;
-        final long end = start + Math.max(0L, event.getDurationInSeconds()) * 1000L;
+        final long start = TimeUnit.SECONDS.toMillis(event.getTimestamp());
+        final long end = start + TimeUnit.SECONDS.toMillis(Math.max(0L, event.getDurationInSeconds()));
         final String title = event.getTitle() == null || event.getTitle().isEmpty() ? "Event" : event.getTitle();
         final String description = event.getDescription() == null ? "" : event.getDescription();
         final Writer writer = new Writer().u8(GearFitConstants.HOME_TYPE_CALENDAR_EVENTS).i32(1)
                 .i64(event.getId()).u8(0).u8(event.getAllDay() ? 1 : 0).i32(event.getColor())
-                .string8Raw(title).i32((int) (start / 1000L)).i32((int) (end / 1000L))
+                .string8Raw(title)
+                .i32((int) TimeUnit.MILLISECONDS.toSeconds(start))
+                .i32((int) TimeUnit.MILLISECONDS.toSeconds(end))
                 .string8Raw(description).u8(event.getAllDay() || isLongEvent(start, end) ? 1 : 0);
         return frame(PORT_HOME, writer.toByteArray());
     }
 
     public static byte[] calendarEventRemoved(final long id) {
-        final int now = (int) (System.currentTimeMillis() / 1000L);
+        final int now = (int) TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis());
         final Writer writer = new Writer().u8(GearFitConstants.HOME_TYPE_CALENDAR_EVENTS).i32(1)
                 .i64(id).u8(1).u8(0).i32(0).u8(0).i32(now).i32(now).u8(0).u8(0);
         return frame(PORT_HOME, writer.toByteArray());
     }
 
     private static boolean isLongEvent(final long start, final long end) {
-        return end - start >= 24L * 60L * 60L * 1000L;
+        return end - start >= TimeUnit.HOURS.toMillis(24);
     }
 
     private static byte[] rawString(final String value) {
@@ -464,7 +467,7 @@ public final class GearFitProtocol {
 
         Writer string8Raw(final String value) {
             final byte[] encoded = rawString(value == null ? "" : value);
-            final int length = Math.min(254, encoded.length & ~1);
+            final int length = Math.min(GearFitConstants.MAX_STRING8_BYTES, encoded.length & ~1);
             u8(length);
             out.write(encoded, 0, length);
             return this;
@@ -496,7 +499,7 @@ public final class GearFitProtocol {
 
         Writer string8(final String value) {
             final byte[] encoded = encodeString(value);
-            final int len = Math.min(254, encoded.length);
+            final int len = Math.min(GearFitConstants.MAX_STRING8_BYTES, encoded.length);
             u8(len);
             out.write(encoded, 0, len);
             return this;
