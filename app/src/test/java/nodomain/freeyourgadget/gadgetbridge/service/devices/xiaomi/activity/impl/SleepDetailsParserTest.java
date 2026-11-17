@@ -818,12 +818,32 @@ public class SleepDetailsParserTest extends TestBase {
     }
 
     @Test
-    public void deviceNotFoundReturnsFalse() {
-        final GBDevice unknownGbDevice = createDummyGDevice("99:88:77:66:55:44");
+    public void v6EmptyStageUpdateDoesNotOverwriteFinalizedSession() {
         final int bedTime = 1700000000;
-        final byte[] bytes = v6File(bedTime, bedTime + 60 * 60, 1, new int[][]{{1, 60}});
+        final int wakeupTime = bedTime + 60 * 60;
 
-        assertFalse(new SleepDetailsParser().parse(getContext(), unknownGbDevice, sleepFileId(6, bedTime), bytes));
+        // Step 1: Save valid finalized session
+        final byte[] validBytes = v6File(
+                bedTime,
+                wakeupTime,
+                1,
+                new int[][]{{1, 30}, {2, 30}}
+        );
+        assertTrue(new SleepDetailsParser().parse(getContext(), gbDevice, sleepFileId(6, bedTime), validBytes));
+        assertEquals(2, orderedStages().size());
+        assertEquals(Long.valueOf(wakeupTime * 1000L), singleSummary().getWakeupTime());
+
+        // Step 2: Incoming file with no stage packets (empty stages list)
+        final ByteBuffer buf = v6Header(bedTime, wakeupTime + 30 * 60, 1);
+        buf.order(ByteOrder.LITTLE_ENDIAN);
+        buf.putShort((short) 60); // HR unit
+        buf.putShort((short) 0);  // HR count = 0
+        final byte[] emptyStagesBytes = withCrc(trim(buf));
+
+        // Expectation: Existing finalized summary + stages are untouched!
+        assertTrue(new SleepDetailsParser().parse(getContext(), gbDevice, sleepFileId(6, bedTime), emptyStagesBytes));
+        assertEquals(Long.valueOf(wakeupTime * 1000L), singleSummary().getWakeupTime());
+        assertEquals(2, orderedStages().size());
     }
 
     @Test
