@@ -54,6 +54,20 @@ public final class GearFitConstants {
     public static final int COACHING_VARS_SIZE = 54;
     public static final int COACHING_EXERCISE_RESULT_SIZE = 28;
 
+    public static final int DEFAULT_MEDIA_VOLUME = 7;
+    public static final int GPS_LOCATION_INTERVAL_MILLIS = (int) TimeUnit.SECONDS.toMillis(1);
+    public static final int MAX_PENDING_GPS_TRACKS = 20;
+    public static final int MAX_ACTIVE_NOTIFICATIONS = 100;
+    public static final int MAX_CANNED_REPLY_MESSAGES = 10;
+    public static final float MAX_GPS_POINT_DISTANCE_METERS = 5000f;
+    public static final long GPS_TRACK_MATCH_WINDOW_MILLIS = TimeUnit.MINUTES.toMillis(5);
+    public static final long MAX_SLEEP_WINDOW_MILLIS = TimeUnit.HOURS.toMillis(24);
+    public static final long SLEEP_SAMPLE_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
+    public static final int SLEEP_DEEP_STATUS_MIN = 80;
+    public static final int SLEEP_LIGHT_STATUS_MIN = 30;
+    public static final int KELVIN_CELSIUS_OFFSET = 273;
+    public static final int NO_ACTIVE_ALARM_NOTIFICATION_ID = -1;
+
     public static final int GPS_EXERCISE_START_MIN_SIZE = 16;
     public static final int WEATHER_UNIT_FAHRENHEIT = 0;
     public static final int WEATHER_UNIT_CELSIUS = 1;
