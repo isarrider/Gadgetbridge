@@ -185,6 +185,10 @@ public class PebbleLESupport {
         }
         if (command == 0x02) { // some request?
             LOG.info("got command 0x02");
+            // The watch restarts its numbering at 0 on a reset, and drops data with any other number
+            if (mPipeReader != null) {
+                mPipeReader.mmSequence = 0;
+            }
             if (value.length > 1) {
                 sendDataToPebble(new byte[]{0x03, 0x19, 0x19}); // no we don't know what that means
                 createPipedInputReader(); // maybe better not here?
@@ -218,7 +222,7 @@ public class PebbleLESupport {
     }
 
     private class PipeReader extends Thread {
-        int mmSequence = 0;
+        volatile int mmSequence = 0;
 
         PipeReader(){
             super("PebbleLESupport_read_" + THREAD_COUNTER.getAndIncrement());
