@@ -127,6 +127,8 @@ public abstract class XiaomiSppPacketV2 {
 
         public static class Builder extends XiaomiSppPacketV2.Builder<Builder> {
             private int opCode = -1;
+            private int txWindow = -1;
+            private int sendTimeoutMillis = -1;
 
             public Builder() {
                 setPacketType(PACKET_TYPE_SESSION_CONFIG);
@@ -137,6 +139,16 @@ public abstract class XiaomiSppPacketV2 {
                 return this;
             }
 
+            public Builder setTxWindow(final int txWindow) {
+                this.txWindow = txWindow;
+                return this;
+            }
+
+            public Builder setSendTimeoutMillis(final int sendTimeoutMillis) {
+                this.sendTimeoutMillis = sendTimeoutMillis;
+                return this;
+            }
+
             @Override
             public XiaomiSppPacketV2 build() {
                 return new SessionConfigPacket(this);
@@ -144,14 +156,33 @@ public abstract class XiaomiSppPacketV2 {
         }
 
         private final int opCode;
+        private final int txWindow;
+        private final int sendTimeoutMillis;
 
         protected SessionConfigPacket(final Builder builder) {
             super(builder.packetType, builder.packetNumber);
             this.opCode = builder.opCode;
+            this.txWindow = builder.txWindow;
+            this.sendTimeoutMillis = builder.sendTimeoutMillis;
         }
 
         public int getOpCode() {
             return this.opCode;
+        }
+
+        /**
+         * @return the number of unacked packets the sender of this config accepts, or -1 if it did not say
+         */
+        public int getTxWindow() {
+            return this.txWindow;
+        }
+
+        /**
+         * @return the time in ms after which the sender of this config expects unacked packets to be
+         * resent, or -1 if it did not say
+         */
+        public int getSendTimeoutMillis() {
+            return this.sendTimeoutMillis;
         }
 
         @Override
@@ -192,6 +223,8 @@ public abstract class XiaomiSppPacketV2 {
             }
 
             final int opCode = buffer.get() & 0xff;
+            int txWindow = -1;
+            int sendTimeoutMillis = -1;
 
             switch (opCode) {
                 case OPCODE_START_SESSION_REQUEST:
@@ -205,7 +238,6 @@ public abstract class XiaomiSppPacketV2 {
                             break;
                         }
 
-                        // TODO store and handle values
                         switch (key) {
                             case KEY_VERSION: {
                                 if (valueSize != VALUE_SIZE_VERSION) {
@@ -236,7 +268,8 @@ public abstract class XiaomiSppPacketV2 {
                                     break;
                                 }
 
-                                LOG.debug("received tx win: {}", buffer.getShort() & 0xffff);
+                                txWindow = buffer.getShort() & 0xffff;
+                                LOG.debug("received tx win: {}", txWindow);
                                 break;
                             }
                             case KEY_SEND_TIMEOUT: {
@@ -246,7 +279,8 @@ public abstract class XiaomiSppPacketV2 {
                                     break;
                                 }
 
-                                LOG.debug("received send timeout: {}ms", buffer.getShort() & 0xffff);
+                                sendTimeoutMillis = buffer.getShort() & 0xffff;
+                                LOG.debug("received send timeout: {}ms", sendTimeoutMillis);
                                 break;
                             }
                             default: {
@@ -275,6 +309,8 @@ public abstract class XiaomiSppPacketV2 {
             return new Builder()
                     .setSequenceNumber(sequenceNumber)
                     .setOpCode(opCode)
+                    .setTxWindow(txWindow)
+                    .setSendTimeoutMillis(sendTimeoutMillis)
                     .build();
         }
     }

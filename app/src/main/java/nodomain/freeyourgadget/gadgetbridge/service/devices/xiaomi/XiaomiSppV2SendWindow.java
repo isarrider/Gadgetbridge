@@ -96,6 +96,13 @@ final class XiaomiSppV2SendWindow {
     }
 
     /**
+     * @return the number of frames sent but not yet acked
+     */
+    synchronized int size() {
+        return unacked.size();
+    }
+
+    /**
      * @return the unacked frames, oldest first, as they were written
      */
     synchronized List<byte[]> getUnackedFrames() {

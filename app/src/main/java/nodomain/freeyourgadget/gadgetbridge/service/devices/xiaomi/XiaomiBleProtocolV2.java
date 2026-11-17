@@ -9,6 +9,8 @@ import static nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.Xiaomi
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.Nullable;
 
@@ -19,12 +21,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventUpdateDeviceInfo;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
@@ -37,6 +40,11 @@ import nodomain.freeyourgadget.gadgetbridge.util.GB;
 public class XiaomiBleProtocolV2 extends AbstractXiaomiBleProtocol {
     private static final Logger LOG = LoggerFactory.getLogger(XiaomiBleProtocolV2.class);
 
+    /// Used until the device announces its own window in the session config.
+    static final int DEFAULT_TX_WINDOW = XiaomiSppV2SendWindow.MAX_TRACKED_FRAMES;
+    /// Used until the device announces its own send timeout in the session config.
+    static final long DEFAULT_RESEND_TIMEOUT_MILLIS = 10_000L;
+
     private final XiaomiSupport xiaomiSupport;
     private final AbstractBTLESingleDeviceSupport commsSupport;
     private final GBDevice mGbDevice;
@@ -44,11 +52,38 @@ public class XiaomiBleProtocolV2 extends AbstractXiaomiBleProtocol {
     private BluetoothGattCharacteristic btCharacteristicRead;
     private BluetoothGattCharacteristic btCharacteristicWrite;
 
-    private final AtomicInteger packetSequenceCounter = new AtomicInteger(0);
     private int maxWriteSize = 244; // MTU of 247 - 3 bytes for the ATT overhead
 
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     private final Map<XiaomiChannelHandler.Channel, XiaomiChannelHandler> mChannelHandlers = new HashMap<>();
+
+    /// Data packets written to the device and not yet acked, and the sequence numbers.
+    private final XiaomiSppV2SendWindow sendWindow = new XiaomiSppV2SendWindow();
+    /// Data packets that are encoded but wait for room in the device's window, oldest first.
+    private final ArrayDeque<PendingFrame> pendingFrames = new ArrayDeque<>();
+    /// Guards {@link #pendingFrames}, {@link #txWindow} and the decision to write or hold a frame.
+    private final Object sendLock = new Object();
+    private int txWindow = DEFAULT_TX_WINDOW;
+    private long resendTimeoutMillis = DEFAULT_RESEND_TIMEOUT_MILLIS;
+    /// Sequence number a nack-triggered resend started from, -1 if none since the last ack progress.
+    private int resendFromSequenceNumber = -1;
+
+    private final Handler timeoutHandler = new Handler(Looper.getMainLooper());
+    private final Runnable timeoutRunnable = this::onResendTimeout;
+    private boolean timeoutPending = false;
+    private int timeoutsWithoutAck = 0;
+
+    private static final class PendingFrame {
+        final String taskName;
+        final int sequenceNumber;
+        final byte[] bytes;
+
+        PendingFrame(final String taskName, final int sequenceNumber, final byte[] bytes) {
+            this.taskName = taskName;
+            this.sequenceNumber = sequenceNumber;
+            this.bytes = bytes;
+        }
+    }
 
     public XiaomiBleProtocolV2(final XiaomiBleSupport xiaomiBleSupport) {
         this.xiaomiSupport = xiaomiBleSupport.getXiaomiSupport();
@@ -98,13 +133,20 @@ public class XiaomiBleProtocolV2 extends AbstractXiaomiBleProtocol {
 
     @Override
     public void reset() {
-        packetSequenceCounter.set(0);
+        cancelResendTimeout();
+        synchronized (sendLock) {
+            sendWindow.clear();
+            pendingFrames.clear();
+            txWindow = DEFAULT_TX_WINDOW;
+            resendTimeoutMillis = DEFAULT_RESEND_TIMEOUT_MILLIS;
+            resendFromSequenceNumber = -1;
+        }
         buffer.reset();
     }
 
     @Override
     public void dispose() {
-
+        cancelResendTimeout();
     }
 
     @Override
@@ -225,9 +267,9 @@ public class XiaomiBleProtocolV2 extends AbstractXiaomiBleProtocol {
         final byte[] commandBytes = command.toByteArray();
         LOG.debug("sendCommand(): encoded command for task '{}': {}", builder.getTaskName(), GB.lazyHexdump(commandBytes));
         if (command.getType() == XiaomiAuthService.COMMAND_TYPE) {
-            writeChunks(builder, encodePacket(XiaomiChannelHandler.Channel.Authentication, commandBytes));
+            sendDataPacket(builder, XiaomiChannelHandler.Channel.Authentication, commandBytes);
         } else {
-            writeChunks(builder, encodePacket(XiaomiChannelHandler.Channel.ProtobufCommand, commandBytes));
+            sendDataPacket(builder, XiaomiChannelHandler.Channel.ProtobufCommand, commandBytes);
         }
         // do not queue here, that's the job of the caller
     }
@@ -236,7 +278,7 @@ public class XiaomiBleProtocolV2 extends AbstractXiaomiBleProtocol {
     public void sendDataChunk(final String taskName, final byte[] chunk, @Nullable final XiaomiSendCallback callback) {
         LOG.debug("sendDataChunk(): encoded data chunk for task '{}': {}", taskName, GB.lazyHexdump(chunk));
         final TransactionBuilder builder = this.commsSupport.createTransactionBuilder("send " + taskName);
-        writeChunks(builder, encodePacket(XiaomiChannelHandler.Channel.Data, chunk));
+        sendDataPacket(builder, XiaomiChannelHandler.Channel.Data, chunk);
         builder.queue();
 
         if (callback != null) {
@@ -255,6 +297,24 @@ public class XiaomiBleProtocolV2 extends AbstractXiaomiBleProtocol {
 
             // TODO handle different protocol versions
             // Right now, we expect 3
+        }
+
+        xiaomiSupport.getAuthService().startEncryptedHandshake();
+    }
+
+    private void handleSessionConfig(final XiaomiSppPacketV2.SessionConfigPacket sessionConfig) {
+        LOG.info("Received session config, opcode={}", sessionConfig.getOpCode());
+
+        synchronized (sendLock) {
+            final int deviceTxWindow = sessionConfig.getTxWindow();
+            if (deviceTxWindow > 0) {
+                txWindow = Math.min(deviceTxWindow, XiaomiSppV2SendWindow.MAX_TRACKED_FRAMES);
+            }
+            final int deviceSendTimeout = sessionConfig.getSendTimeoutMillis();
+            if (deviceSendTimeout > 0) {
+                resendTimeoutMillis = deviceSendTimeout;
+            }
+            LOG.debug("Using tx window {} and resend timeout {} ms", txWindow, resendTimeoutMillis);
         }
 
         xiaomiSupport.getAuthService().startEncryptedHandshake();
@@ -314,9 +374,7 @@ public class XiaomiBleProtocolV2 extends AbstractXiaomiBleProtocol {
         if (decodedPacket != null) {
             switch (decodedPacket.getPacketType()) {
                 case PACKET_TYPE_SESSION_CONFIG:
-                    // TODO handle device's session config
-                    LOG.info("Received session config, opcode={}", ((XiaomiSppPacketV2.SessionConfigPacket) decodedPacket).getOpCode());
-                    xiaomiSupport.getAuthService().startEncryptedHandshake();
+                    handleSessionConfig((XiaomiSppPacketV2.SessionConfigPacket) decodedPacket);
                     break;
                 case PACKET_TYPE_DATA:
                     XiaomiSppPacketV2.DataPacket dataPacket = (XiaomiSppPacketV2.DataPacket) decodedPacket;
@@ -330,9 +388,10 @@ public class XiaomiBleProtocolV2 extends AbstractXiaomiBleProtocol {
                     break;
                 case PACKET_TYPE_ACK:
                     LOG.debug("receive ack for packet {}", decodedPacket.getSequenceNumber());
+                    onAck(decodedPacket.getSequenceNumber());
                     break;
                 case PACKET_TYPE_NACK:
-                    LOG.warn("receive nack, watch expects packet {}", decodedPacket.getSequenceNumber());
+                    onNack(decodedPacket.getSequenceNumber());
                     break;
                 default:
                     LOG.warn("Unhandled packet with type {} (decoded type {})", decodedPacket.getPacketType(), decodedPacket.getClass().getSimpleName());
@@ -343,10 +402,150 @@ public class XiaomiBleProtocolV2 extends AbstractXiaomiBleProtocol {
         return new AbstractXiaomiSppProtocol.ParseResult(AbstractXiaomiSppProtocol.ParseResult.Status.Complete, packetSize);
     }
 
-    public byte[] encodePacket(final XiaomiChannelHandler.Channel channel, final byte[] payloadBytes) {
+    /**
+     * Encodes a data packet with the next sequence number. It is written to the given builder if
+     * the device's window has room, otherwise it waits in {@link #pendingFrames} and is written in
+     * its own transaction once enough earlier packets are acked.
+     */
+    private void sendDataPacket(final TransactionBuilder builder,
+                                final XiaomiChannelHandler.Channel channel,
+                                final byte[] payloadBytes) {
+        synchronized (sendLock) {
+            final int sequenceNumber = sendWindow.nextSequenceNumber();
+            final byte[] frame = encodePacket(channel, sequenceNumber, payloadBytes);
+
+            if (pendingFrames.isEmpty() && sendWindow.size() < txWindow) {
+                writeChunks(builder, frame);
+                sendWindow.onSent(sequenceNumber, frame);
+                armResendTimeout();
+            } else {
+                LOG.debug("tx window full ({} unacked), holding packet {} for task '{}'",
+                        sendWindow.size(), sequenceNumber, builder.getTaskName());
+                pendingFrames.addLast(new PendingFrame(builder.getTaskName(), sequenceNumber, frame));
+            }
+        }
+    }
+
+    /**
+     * Writes held packets, oldest first, while the device's window has room.
+     */
+    private void sendPendingFrames() {
+        synchronized (sendLock) {
+            while (!pendingFrames.isEmpty() && sendWindow.size() < txWindow) {
+                final PendingFrame pending = pendingFrames.removeFirst();
+                LOG.debug("tx window has room, sending held packet {} for task '{}'",
+                        pending.sequenceNumber, pending.taskName);
+                final TransactionBuilder builder = commsSupport.createTransactionBuilder(pending.taskName);
+                writeChunks(builder, pending.bytes);
+                // track before queueing, so an ack that arrives right after the write finds the frame
+                sendWindow.onSent(pending.sequenceNumber, pending.bytes);
+                builder.queue();
+            }
+        }
+        armResendTimeout();
+    }
+
+    private void onAck(final int sequenceNumber) {
+        if (sendWindow.onAck(sequenceNumber) > 0) {
+            onAckProgress();
+            sendPendingFrames();
+        }
+    }
+
+    private void onNack(final int expectedSequenceNumber) {
+        // everything before the expected packet has arrived
+        onAck((expectedSequenceNumber - 1) & 0xff);
+
+        if (sendWindow.getOldestUnacked() != expectedSequenceNumber) {
+            LOG.warn("receive nack, watch expects packet {}, which is not pending", expectedSequenceNumber);
+            return;
+        }
+
+        synchronized (sendLock) {
+            // the watch nacks every packet that arrives after a gap; resend once per gap, not once per nack
+            if (resendFromSequenceNumber == expectedSequenceNumber) {
+                LOG.debug("receive nack, watch expects packet {}, already resent", expectedSequenceNumber);
+                return;
+            }
+            resendFromSequenceNumber = expectedSequenceNumber;
+        }
+
+        LOG.warn("receive nack, watch expects packet {}, resending", expectedSequenceNumber);
+        resendUnacked(String.format(Locale.ROOT, "resend from %d", expectedSequenceNumber));
+    }
+
+    private void resendUnacked(final String taskName) {
+        final List<byte[]> frames = sendWindow.getUnackedFrames();
+        if (frames.isEmpty()) {
+            return;
+        }
+        LOG.debug("resending {} unacked packets", frames.size());
+        final TransactionBuilder builder = commsSupport.createTransactionBuilder(taskName);
+        for (final byte[] frame : frames) {
+            writeChunks(builder, frame);
+        }
+        builder.queue();
+        armResendTimeout();
+    }
+
+    private void onAckProgress() {
+        synchronized (sendLock) {
+            resendFromSequenceNumber = -1;
+        }
+        synchronized (timeoutRunnable) {
+            timeoutsWithoutAck = 0;
+            timeoutHandler.removeCallbacks(timeoutRunnable);
+            timeoutPending = false;
+        }
+        armResendTimeout();
+    }
+
+    private void armResendTimeout() {
+        if (sendWindow.isEmpty()) {
+            return;
+        }
+        final long timeoutMillis;
+        synchronized (sendLock) {
+            timeoutMillis = resendTimeoutMillis;
+        }
+        synchronized (timeoutRunnable) {
+            if (!timeoutPending) {
+                timeoutPending = true;
+                timeoutHandler.postDelayed(timeoutRunnable, timeoutMillis);
+            }
+        }
+    }
+
+    private void cancelResendTimeout() {
+        synchronized (timeoutRunnable) {
+            timeoutHandler.removeCallbacks(timeoutRunnable);
+            timeoutPending = false;
+            timeoutsWithoutAck = 0;
+        }
+    }
+
+    private void onResendTimeout() {
+        final int timeouts;
+        synchronized (timeoutRunnable) {
+            timeoutPending = false;
+            if (sendWindow.isEmpty()) {
+                timeoutsWithoutAck = 0;
+                return;
+            }
+            timeouts = ++timeoutsWithoutAck;
+        }
+
+        // A lost BLE link is noticed and reset by the BLE stack, so keep resending while connected
+        LOG.warn("no ack for packet {} (timeout #{}), resending", sendWindow.getOldestUnacked(), timeouts);
+        resendUnacked(String.format(Locale.ROOT, "resend from %d after timeout", sendWindow.getOldestUnacked()));
+    }
+
+    private byte[] encodePacket(final XiaomiChannelHandler.Channel channel,
+                                final int sequenceNumber,
+                                final byte[] payloadBytes) {
         return XiaomiSppPacketV2.newDataPacketBuilder()
                 .setChannel(channel)
-                .setSequenceNumber(packetSequenceCounter.getAndIncrement())
+                .setSequenceNumber(sequenceNumber)
                 .setOpCode(XiaomiSppPacketV2.DataPacket.getOpCodeForChannel(channel))
                 .setPayload(payloadBytes)
                 .build()
